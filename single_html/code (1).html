@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WAKE UP // INTERACTIVE_DIRECTIVE</title>
+    <style>
+        /* --- CSS START --- */
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        :root {
+            --glow-color: #0f0;
+            --error-color: #f00;
+            --text-color: #eee;
+            --bg-color: #050505;
+            --scanline-color: rgba(0, 255, 0, 0.08);
+            /* Glitch speed is now dynamic via JS */
+            --glitch-speed-base: 120ms; /* Slower base speed */
+            --glitch-speed-mod: 0; /* Modifier based on mouse X */
+            --glitch-speed: calc(var(--glitch-speed-base) - var(--glitch-speed-mod) * 1ms);
+            --flicker-speed: 1.5s;
+            --pulse-speed: 1s;
+            --mouse-x: 0.5;
+            --mouse-y: 0.5;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            height: 100%; width: 100%; overflow: hidden;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'VT323', monospace; cursor: crosshair;
+        }
+
+        #start-prompt {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 1000;
+            font-size: 1.5rem; text-align: center;
+            transition: opacity 0.5s ease-out, visibility 0.5s ease-out;
+        }
+        #start-prompt.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+        #start-button {
+            font-family: 'VT323', monospace; font-size: 1.8rem; background: none;
+            border: 2px solid var(--glow-color); color: var(--glow-color);
+            padding: 10px 20px; margin: 20px; cursor: pointer;
+            text-shadow: 0 0 5px var(--glow-color); transition: all 0.2s ease;
+        }
+        #start-button:hover { background: var(--glow-color); color: var(--bg-color); box-shadow: 0 0 15px var(--glow-color); }
+
+        #container {
+            width: 100%; height: 100%; position: relative; display: flex;
+            justify-content: center; align-items: center; opacity: 0;
+            transition: opacity 0.5s ease-in; /* Fade in content */
+        }
+
+        /* --- OVERLAYS --- */
+        .scanlines {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 500;
+            background: linear-gradient(to bottom, transparent 0%, transparent 50%, var(--scanline-color) 51%, transparent 100%);
+            background-size: 100% 4px; animation: scanlines 15s linear infinite; opacity: 0.6;
+        }
+        @keyframes scanlines { 0% { background-position: 0 0; } 100% { background-position: 0 100%; } }
+
+        .vignette {
+             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+             pointer-events: none; z-index: 499;
+             box-shadow: inset 0 0 15vw 5vw rgba(0, 0, 0, 0.8); opacity: 0.8;
+        }
+
+        /* --- INTERACTIVE OVERLAYS --- */
+        .click-burst-effect {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 600;
+            background: radial-gradient(circle at center, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 50%);
+            opacity: 0;
+            animation: click-burst 0.2s ease-out forwards;
+        }
+        @keyframes click-burst {
+            0% { opacity: 1; transform: scale(0.5) translate(0, 0); filter: brightness(1.5) contrast(1.2); }
+            50% { transform: scale(1) translate(2px, -3px); } /* Add shake */
+            100% { opacity: 0; transform: scale(1.2) translate(-1px, 1px); filter: brightness(1) contrast(1); }
+        }
+
+        .keypress-effect { /* Subtle screen jitter on keypress */
+             animation: keypress-shake 0.1s linear forwards;
+        }
+        @keyframes keypress-shake {
+             0%, 100% { transform: translate(0, 0); }
+             25% { transform: translate(1px, -1px); }
+             50% { transform: translate(-1px, 1px); }
+             75% { transform: translate(1px, 1px); }
+        }
+
+
+        /* --- 3D SCENE --- */
+        .scene { width: 80vw; height: 80vh; perspective: 1000px; }
+        .world {
+            width: 100%; height: 100%; position: relative;
+            transform-style: preserve-3d;
+            transform: rotateX(calc((var(--mouse-y) - 0.5) * -30deg))
+                       rotateY(calc((var(--mouse-x) - 0.5) * 30deg));
+            transition: transform 0.1s linear;
+        }
+        .text-layer {
+            position: absolute; top: 50%; left: 50%;
+            transform-style: preserve-3d; text-align: center; width: 100%;
+        }
+        .layer-1 { transform: translate3d(-50%, -50%, 150px); }
+        .layer-2 { transform: translate3d(-50%, -50%, 50px); }
+        .layer-3 { transform: translate3d(-50%, -50%, 0px); font-size: 1.8rem; }
+        .layer-4 { transform: translate3d(-50%, -50%, -80px); font-size: 1rem; opacity: 0.7;}
+        .layer-5 { transform: translate3d(-50%, -50%, -200px); }
+        .layer-6 { transform: translate3d(-50%, -50%, -350px); font-size: 2.5rem; animation: broken-drift 15s linear infinite alternate; }
+        .layer-7 { transform: translate3d(-50%, -50%, -500px); font-size: 4rem; }
+
+        /* --- TEXT STYLES & EFFECTS --- */
+        h1 { font-size: 5rem; color: var(--glow-color); }
+        h2 { font-size: 3rem; color: #0ff; }
+        h3 { font-size: 4rem; color: #f0f; }
+        p { font-size: 1.5rem; line-height: 1.4; }
+        .neil-quote { color: #aaa; font-style: italic; }
+        .error { color: var(--error-color); text-shadow: 0 0 5px var(--error-color); animation: fast-flicker 0.3s linear infinite; }
+        .final-word { text-shadow: 0 0 10px var(--glow-color); }
+
+        /* --- GLITCH EFFECT --- */
+        .glitch {
+            position: relative;
+            text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75),
+                         -0.025em -0.05em 0 rgba(0, 255, 0, 0.75),
+                         0.025em 0.05em 0 rgba(0, 0, 255, 0.75);
+            /* Animation duration uses the CSS variable */
+            animation: glitch var(--glitch-speed) infinite;
+        }
+        .glitch::before, .glitch::after {
+            content: attr(data-text); position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color); overflow: hidden;
+            clip-path: inset(50% 50% 50% 50%);
+        }
+        .glitch::before {
+            left: -2px; text-shadow: -1px 0 var(--error-color);
+            animation: glitch-anim-1 var(--glitch-speed) infinite linear alternate-reverse;
+        }
+        .glitch::after {
+            left: 2px; text-shadow: -1px 0 #0ff;
+            animation: glitch-anim-2 var(--glitch-speed) infinite linear alternate-reverse;
+        }
+
+        .glitch.fast { animation-duration: calc(var(--glitch-speed) * 0.6) !important; }
+        .glitch.fast::before, .glitch.fast::after { animation-duration: calc(var(--glitch-speed) * 0.6) !important; }
+        .glitch.extreme { animation-duration: calc(var(--glitch-speed) * 0.3) !important; }
+        .glitch.extreme::before, .glitch.extreme::after { animation-duration: calc(var(--glitch-speed) * 0.3) !important; }
+        .glitch.static {
+             text-shadow: 1px 1px 0px var(--glow-color), -1px -1px 0px var(--error-color);
+             animation: static-flicker 0.05s infinite;
+        }
+        @keyframes static-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.8; transform: skewX(2deg); } }
+
+        @keyframes glitch-anim-1 { /* Same as before */
+            0% { clip-path: inset(3% 0 94% 0); } 20% { clip-path: inset(75% 0 3% 0); }
+            40% { clip-path: inset(40% 0 45% 0); } 60% { clip-path: inset(80% 0 5% 0); }
+            80% { clip-path: inset(25% 0 60% 0); } 100% { clip-path: inset(55% 0 33% 0); }
+        }
+        @keyframes glitch-anim-2 { /* Same as before */
+            0% { clip-path: inset(83% 0 10% 0); } 20% { clip-path: inset(15% 0 77% 0); }
+            40% { clip-path: inset(92% 0 3% 0); } 60% { clip-path: inset(38% 0 48% 0); }
+            80% { clip-path: inset(60% 0 21% 0); } 100% { clip-path: inset(30% 0 62% 0); }
+        }
+        @keyframes glitch { /* Same as before */
+            0% { transform: translate(0); } 20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(-2px, -2px); } 60% { transform: translate(2px, 2px); }
+            80% { transform: translate(2px, -2px); } 100% { transform: translate(0); }
+        }
+
+        /* --- OTHER ANIMATIONS --- */
+        .flicker { animation: text-flicker var(--flicker-speed) infinite linear alternate; }
+        @keyframes text-flicker { /* Same as before */
+            0%, 18%, 22%, 25%, 53%, 57%, 100% {
+                text-shadow: 0 0 4px #fff, 0 0 10px #fff, 0 0 18px var(--glow-color), 0 0 38px var(--glow-color), 0 0 70px var(--glow-color); opacity: 1;
+            } 20%, 24%, 55% { text-shadow: none; opacity: 0.4; }
+        }
+        .pulse { animation: pulse var(--pulse-speed) infinite ease-in-out alternate; }
+        .pulse-alt { animation: pulse var(--pulse-speed) infinite ease-in-out alternate-reverse; }
+        @keyframes pulse { /* Same as before, uses --tz variable */
+            from { opacity: 0.6; text-shadow: 0 0 5px var(--glow-color); transform: translate3d(-50%, -50%, var(--tz)) scale(0.98); }
+            to { opacity: 1; text-shadow: 0 0 15px var(--glow-color), 0 0 25px var(--glow-color); transform: translate3d(-50%, -50%, var(--tz)) scale(1.02); }
+        }
+        .layer-3.pulse { --tz: 0px; } .layer-7.pulse-alt { --tz: -500px; }
+        @keyframes fast-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .broken { animation: broken-text 0.1s linear infinite, broken-drift 15s linear infinite alternate; color: var(--error-color); } /* Combined animations */
+        @keyframes broken-text { /* Same as before */
+            0% { transform: translate3d(-50%, -50%, -350px) skewX(0deg); } 25% { transform: translate3d(-52%, -48%, -350px) skewX(5deg); }
+            50% { transform: translate3d(-49%, -51%, -350px) skewX(0deg); } 75% { transform: translate3d(-50%, -52%, -350px) skewX(-5deg); }
+            100% { transform: translate3d(-51%, -50%, -350px) skewX(0deg); }
+        }
+        @keyframes broken-drift { /* Same as before */
+            from { /* Need to re-specify start transform for combine */ transform: translate3d(-50%, -50%, -350px) rotateZ(-1deg); }
+            to { transform: translate3d(-51%, -49%, -340px) rotateZ(1deg); }
+        }
+
+        /* Class for temporary intense glitch (used by JS) */
+        .temp-glitch-boost { animation-duration: 20ms !important; }
+        .temp-glitch-boost::before, .temp-glitch-boost::after { animation-duration: 20ms !important; }
+        /* --- CSS END --- */
+    </style>
+</head>
+<body>
+    <div id="start-prompt">
+        <p>SYSTEM REQUIRES INPUT.</p>
+        <button id="start-button">INITIATE_SEQUENCE</button>
+        <p>(Sound Enabled)</p>
+    </div>
+
+    <div id="container">
+        <div class="scanlines"></div>
+        <div class="vignette"></div>
+        <div id="interaction-overlay"></div> <!-- For catching clicks/visual effects -->
+
+        <div class="scene">
+            <div class="world">
+                <!-- Layers remain the same -->
+                <div class="text-layer layer-1"> <h1 class="glitch" data-text="STAGNANT.">STAGNANT.</h1> </div>
+                <div class="text-layer layer-2"> <h2 class="glitch fast" data-text="AFRAID TO QUESTION?">AFRAID TO QUESTION?</h2> </div>
+                <div class="text-layer layer-3 pulse"> <p>Teaching <span class="error">IS</span> Life.<br>Life <span class="error">IS</span> Learning.</p> </div>
+                <div class="text-layer layer-4 flicker"> <p class="neil-quote">"The function of the child is to live his own life..." <br>- A.S. Neill</p> </div>
+                <div class="text-layer layer-5"> <h3 class="glitch extreme" data-text="BE CURIOUS.">BE CURIOUS.</h3> </div>
+                <div class="text-layer layer-6 broken"> <p>BREAK FREE.</p> </div>
+                <div class="text-layer layer-7 pulse-alt"> <p class="final-word">QUESTION <br><span class="glitch static" data-text="EVERYTHING">EVERYTHING</span></p> </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden audio elements -->
+    <!-- REMEMBER: Put actual sound files in a 'sounds' subfolder! -->
+    <audio id="bg-static" loop src="sounds/static-hum.mp3" preload="auto"></audio>
+    <audio id="glitch-1" src="sounds/glitch-short-1.mp3" preload="auto"></audio>
+    <audio id="glitch-2" src="sounds/glitch-short-2.mp3" preload="auto"></audio>
+    <audio id="glitch-3" src="sounds/glitch-error.mp3" preload="auto"></audio>
+    <audio id="glitch-impact" src="sounds/glitch-impact.mp3" preload="auto"></audio> <!-- For clicks -->
+    <audio id="glitch-blip" src="sounds/glitch-blip.mp3" preload="auto"></audio> <!-- For keypress -->
+
+
+    <script>
+        // --- JAVASCRIPT START ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elements
+            const startPrompt = document.getElementById('start-prompt');
+            const startButton = document.getElementById('start-button');
+            const container = document.getElementById('container');
+            const world = document.querySelector('.world');
+            const interactionOverlay = document.getElementById('interaction-overlay'); // For effects
+            const root = document.documentElement;
+
+            // Audio
+            const bgStatic = document.getElementById('bg-static');
+            const glitchSounds = [
+                document.getElementById('glitch-1'),
+                document.getElementById('glitch-2'),
+                document.getElementById('glitch-3')
+            ].filter(a => a); // Filter out nulls if elements missing
+            const impactSound = document.getElementById('glitch-impact');
+            const blipSound = document.getElementById('glitch-blip');
+
+            let soundsEnabled = false;
+            let experienceActive = false;
+
+            // --- Initialization ---
+            function initExperience() {
+                if (experienceActive) return;
+                experienceActive = true;
+
+                startPrompt.classList.add('hidden');
+                container.style.opacity = '1';
+
+                // Start audio
+                soundsEnabled = true;
+                bgStatic.volume = 0.15;
+                bgStatic.play().catch(e => console.warn("Audio autoplay failed:", e));
+
+                // Start interactions
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('click', handleClick);
+                document.addEventListener('keydown', handleKeyDown);
+                startRandomGlitches();
+
+                console.log("%cSYSTEM ONLINE. STATUS: AGITATED.", "color: #f00; font-size: 1.5em; font-family: monospace;");
+                console.log("%cINTERACTIVITY ENGAGED. INPUT DETECTED.", "color: #0f0; font-family: monospace;");
+            }
+
+            startButton.addEventListener('click', initExperience);
+            startButton.addEventListener('keydown', (e) => { if (e.key === 'Enter') initExperience(); });
+
+            // --- Mouse Interaction (3D Tilt + Glitch Speed) ---
+            function handleMouseMove(event) {
+                if (!experienceActive) return;
+                const { clientX, clientY } = event;
+                const { innerWidth, innerHeight } = window;
+
+                const mouseX = clientX / innerWidth; // Normalize 0-1
+                const mouseY = clientY / innerHeight; // Normalize 0-1
+
+                // Update CSS variables for 3D tilt
+                root.style.setProperty('--mouse-x', mouseX);
+                root.style.setProperty('--mouse-y', mouseY);
+
+                // Update Glitch Speed Modifier: more intense (lower number) towards edges
+                // Map distance from center (0 to 0.5) to a speed modifier (0 to ~80)
+                const maxMod = 80; // Max reduction in ms from base speed
+                const distFromCenterX = Math.abs(mouseX - 0.5) * 2; // 0 (center) to 1 (edge)
+                const speedMod = Math.min(maxMod, Math.pow(distFromCenterX, 2) * maxMod); // Exponential increase towards edge
+
+                root.style.setProperty('--glitch-speed-mod', speedMod.toFixed(2));
+            }
+
+            // --- Click Interaction ---
+            function handleClick() {
+                if (!experienceActive) return;
+
+                // Play impact sound
+                if (soundsEnabled && impactSound) {
+                    impactSound.volume = 0.5 + Math.random() * 0.3;
+                    impactSound.currentTime = 0;
+                    impactSound.play().catch(e => console.warn("Impact sound play failed:", e));
+                }
+
+                // Create and remove visual burst effect
+                const burst = document.createElement('div');
+                burst.className = 'click-burst-effect';
+                // Append to body to ensure it's on top
+                document.body.appendChild(burst);
+
+                // Clean up the element after animation
+                burst.addEventListener('animationend', () => {
+                    burst.remove();
+                });
+            }
+
+            // --- Key Press Interaction ---
+            function handleKeyDown(event) {
+                 if (!experienceActive || event.repeat) return;
+                 // Ignore modifier keys if they are the only ones pressed
+                 if (['Control', 'Shift', 'Alt', 'Meta'].includes(event.key)) return;
+                 // Basic check to avoid interfering with potential future inputs (though none exist here)
+                 if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA') return;
+
+
+                // Play blip sound
+                if (soundsEnabled && blipSound) {
+                    blipSound.volume = 0.2 + Math.random() * 0.2;
+                    blipSound.currentTime = 0;
+                    blipSound.play().catch(e => console.warn("Blip sound play failed:", e));
+                }
+
+                // Add temporary jitter class to the main container
+                 container.classList.add('keypress-effect');
+                 setTimeout(() => {
+                     container.classList.remove('keypress-effect');
+                 }, 100); // Duration of the keypress-shake animation
+            }
+
+
+            // --- Random Glitches (Sound + Visual Boost) ---
+            function playRandomGlitchSound() {
+                if (!soundsEnabled || glitchSounds.length === 0) return;
+                const sound = glitchSounds[Math.floor(Math.random() * glitchSounds.length)];
+                sound.volume = Math.random() * 0.3 + 0.1;
+                sound.currentTime = 0;
+                sound.play().catch(e => console.warn("Glitch sound play failed:", e));
+            }
+
+            function startRandomGlitches() {
+                setInterval(() => {
+                    if (!experienceActive) return;
+
+                    // Trigger sound
+                    if (Math.random() < 0.10) { // Slightly lower chance than before
+                        playRandomGlitchSound();
+                    }
+
+                    // Trigger visual boost
+                    const elementsToGlitch = document.querySelectorAll('.glitch:not(.extreme):not(.static)');
+                     if (elementsToGlitch.length > 0 && Math.random() < 0.04) { // Lower chance
+                        const randomEl = elementsToGlitch[Math.floor(Math.random() * elementsToGlitch.length)];
+                        randomEl.classList.add('temp-glitch-boost');
+                        setTimeout(() => randomEl.classList.remove('temp-glitch-boost'), 80); // Shorter boost
+                     }
+
+                }, 250); // Slightly longer interval
+            }
+
+        });
+        // --- JAVASCRIPT END ---
+    </script>
+</body>
+</html>
