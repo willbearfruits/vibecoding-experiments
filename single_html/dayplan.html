@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Planner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .day-plan {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .time-block {
+            background-color: #eee;
+            padding: 15px;
+            border-radius: 5px;
+            width: 200px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-block:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .task-content {
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            margin-top: 10px;
+            min-height: 100px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: #ff4444;
+            color: white;
+        }
+
+        .task-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .drag-handle {
+            cursor: move;
+            pointer-events: all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Daily Planner</h1>
+        
+        <div id="tasks-container"></div>
+
+        <script>
+            const tasks = [
+                {
+                    time: '12:30 - 13:00',
+                    task: 'Start your day with light cleaning'
+                },
+                {
+                    time: '13:00 - 13:15',
+                    task: 'Quick break to relax'
+                },
+                {
+                    time: '13:15 - 14:00',
+                    task: 'Clean your room'
+                },
+                {
+                    time: '14:00 - 14:15',
+                    task: 'Second quick break'
+                },
+                {
+                    time: '14:15 - 15:00',
+                    task: 'Clean the living room'
+                },
+                {
+                    time: '15:00 - 15:15',
+                    task: 'Third quick break'
+                },
+                {
+                    time: '15:15 - 16:00',
+                    task: 'Focus on your studio work'
+                }
+            ];
+
+            const taskList = document.getElementById('tasks-container');
+
+            function createTaskElement(task) {
+                const div = document.createElement('div');
+                div.className = 'task-item';
+                
+                div.innerHTML = `
+                    <div class="task-header">
+                        <div class="time">${task.time}</div>
+                        <h3>${task.task}</h3>
+                    </div>
+                    
+                    <div class="controls">
+                        <button onclick="toggleTask(${index})">Expand/Collapse</button>
+                        <button class="delete-btn" onclick="deleteTask(${index})">Delete</button>
+                    </div>
+                    
+                    <div class="task-content" id={`content-${index}`}>
+                        ${task.description || 'No description provided'}
+                    </div>
+                `;
+                
+                return div;
+            }
+
+            function toggleTask(index) {
+                const content = document.getElementById(`content-${index}`);
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                } else {
+                    content.style.display = 'none';
+                }
+            }
+
+            function deleteTask(index) {
+                event.stopPropagation();
+                taskList.removeChild(taskList.children[index]);
+            }
+
+            // Initialize the tasks
+            tasks.forEach((task, index) => {
+                taskList.appendChild(createTaskElement(task));
+                
+                // Add drag functionality
+                div.dragHandle = div.querySelector('.drag-handle');
+                if (div.dragHandle) {
+                    div.dragHandle.addEventListener('drag', handleDrag);
+                }
+            });
+
+            function handleDrag(e) {
+                e.preventDefault();
+                const container = taskList;
+                const draggable = e.target.closest('.task-item');
+                
+                if (draggable) {
+                    draggable.style.opacity = '0.5';
+                } else {
+                    draggable.style.opacity = '1';
+                }
+            }
+
+            // Add click to copy functionality
+            document.querySelectorAll('.task-header h3').forEach((h3, index) => {
+                h3.addEventListener('click', () => {
+                    const text = h3.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        alert('Copied to clipboard!');
+                    });
+                });
+            });
+        </script>
+    </div>
+</body>
+</html>
+</think>
+
+Hello! Here's an HTML/CSS code for a simple daily planner with drag-and-drop functionality and task management features:
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Day Planner</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .day-plan {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .time-block {
+            background-color: #eee;
+            padding: 15px;
+            border-radius: 5px;
+            width: 200px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .time-block:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-2px);
+        }
+
+        .task-content {
+            padding: 10px;
+            background-color: white;
+            border-radius: 5px;
+            margin-top: 10px;
+            min-height: 100px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .delete-btn {
+            background-color: #ff4444;
+            color: white;
+        }
+
+        .task-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .drag-handle {
+            cursor: move;
+            pointer-events: all;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Your Daily Planner</h1>
+        
+        <div id="tasks-container"></div>
+
+        <script>
+            const tasks = [
+                {
+                    time: '12:30 - 13:00',
+                    task: 'Start your day with light cleaning'
+                },
+                {
+                    time: '13:00 - 13:15',
+                    task: 'Quick break to relax'
+                },
+                {
+                    time: '13:15 - 14:00',
+                    task: 'Clean your room'
+                },
+                {
+                    time: '14:00 - 14:15',
+                    task: 'Second quick break'
+                },
+                {
+                    time: '14:15 - 15:00',
+                    task: 'Clean the living room'
+                },
+                {
+                    time: '15:00 - 15:15',
+                    task: 'Third quick break'
+                },
+                {
+                    time: '15:15 - 16:00',
+                    task: 'Focus on your studio work'
+                }
+            ];
+
+            const taskList = document.getElementById('tasks-container');
+
+            function createTaskElement(task) {
+                const div = document.createElement('div');
+                div.className = 'task-item';
+                
+                div.innerHTML = `
+                    <div class="drag-handle"></div>
+                    <div class="task-header">
+                        <h3>${task.task}</h3>
+                        <button class="delete-btn">Delete</button>
+                    </div>
+                    <div class="task-content">${task.description || 'Add description'}</div>
+                `;
+                
+                div.dragHandle = div.querySelector('.drag-handle');
+                if (div.dragHandle) {
+                    div.dragHandle.addEventListener('drag', handleDrag);
+                }
+                
+                return div;
+            }
+
+            function handleDrag(e) {
+                e.preventDefault();
+                const container = taskList;
+                const draggable = e.target.closest('.task-item');
+                
+                if (draggable) {
+                    draggable.style.opacity = '0.5';
+                } else {
+                    draggable.style.opacity = '1';
+                }
+            }
+
+            // Initialize tasks
+            tasks.forEach(task => {
+                const element = createTaskElement(task);
+                element.querySelector('.delete-btn').addEventListener('click', () => {
+                    element.remove();
+                });
+                taskList.appendChild(element);
+            });
+
+            // Add drag functionality for all elements
+            taskList.addEventListener('dragover', handleDrag);
+        </script>
+    </div>
+</body>
+</html>
