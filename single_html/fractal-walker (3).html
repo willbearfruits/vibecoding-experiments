@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Dithering Doom Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: monospace;
+            color: white;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+            text-shadow: 0 0 3px black;
+            color: white;
+            font-size: 16px;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            text-align: left;
+            z-index: 100;
+            pointer-events: none;
+            text-shadow: 0 0 3px black;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
+        #debug {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            text-align: left;
+            z-index: 100;
+            text-shadow: 0 0 3px black;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+            border-radius: 5px;
+            color: white;
+            font-size: 12px;
+        }
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 100;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Fractal Dithering Doom Explorer</div>
+    <div id="controls">
+        WASD/Arrows - Move | Mouse Drag - Look<br>
+        P - Palette | T - Dithering | F - Fog | G - Geometry<br>
+        1-3 - Biome | Q/E - Speed | R - Reset | O - Performance
+    </div>
+    <div id="debug"></div>
+    <div id="crosshair">+</div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const info = document.getElementById('info');
+        const debug = document.getElementById('debug');
+        
+        // Basic setup
+        let width, height;
+        let mouse = { x: 0, y: 0, down: false };
+        let cameraPos = { x: 0, y: 1.6, z: 0 }; // Eye height ~1.6m
+        let cameraRot = { x: 0, y: 0 };
+        let keys = {};
+        
+        // Rendering settings
+        let useDithering = true;
+        let useFog = true;
+        let useGeometry = true;
+        let paletteIndex = 0;
+        let time = 0;
+        let moveSpeed = 5;
+        let currentBiome = 0; // 0 = mixed, 1 = desert, 2 = labyrinth
+        let performanceMode = false; // Performance mode toggle
+        
+        // World settings
+        const worldSize = 500;
+        const cellSize = 5; // Size of a wall segment
+        const mapSize = 32; // Size of map (32x32)
+        let worldMap = []; // 2D grid for walls
+        let entities = []; // 3D objects in the world
+        
+        // Color palettes (5 colors each)
+        const palettes = [
+            // Doom-like
+            [
+                [30, 20, 20],
+                [70, 40, 30],
+                [120, 60, 40],
+                [170, 90, 60],
+                [220, 140, 90]
+            ],
+            // Acid green
+            [
+                [10, 30, 0],
+                [20, 70, 10],
+                [30, 120, 20],
+                [50, 170, 40],
+                [80, 220, 70]
+            ],
+            // Classic blue
+            [
+                [10, 10, 40],
+                [20, 20, 80],
+                [40, 40, 120],
+                [60, 60, 180],
+                [100, 100, 240]
+            ],
+            // Neon synthwave
+            [
+                [40, 0, 60],
+                [100, 20, 120],
+                [180, 30, 180],
+                [255, 50, 150],
+                [255, 150, 220]
+            ],
+            // Industrial gray
+            [
+                [20, 20, 20],
+                [50, 50, 50],
+                [80, 80, 80],
+                [120, 120, 120],
+                [180, 180, 180]
+            ],
+            // Blood red
+            [
+                [40, 0, 0],
+                [80, 10, 10],
+                [130, 20, 20],
+                [180, 40, 40],
+                [255, 100, 100]
+            ]
+        ];
+        
+        // Shaders (visual effects)
+        const shaders = [
+            // Default (no effect)
+            (color, x, y, time) => color,
+            
+            // Pulse
+            (color, x, y, time) => {
+                const pulse = Math.sin(time * 2) * 0.2 + 0.8;
+                return color.map(c => Math.min(255, Math.max(0, Math.floor(c * pulse))));
+            },
+            
+            // Horizontal scanlines
+            (color, x, y, time) => {
+                const scanline = Math.sin(y * 0.1 + time * 5) * 0.15 + 0.85;
+                return color.map(c => Math.floor(c * scanline));
+            },
+            
+            // CRT distortion
+            (color, x, y, time) => {
+                const distort = Math.sin(time * 0.5) * 0.01;
+                const wave = Math.sin(y * 0.05 + time) * distort;
+                // Just return the color as we can't distort positions easily
+                return color;
+            },
+            
+            // Pixelation
+            (color, x, y, time) => {
+                // This is already pixelated, so just return the color
+                return color;
+            }
+        ];
+        
+        let currentShader = 0;
+        
+        // Biome-specific palettes
+        const biomePalettes = {
+            0: [0, 2, 3, 5], // Mixed world palette indices
+            1: [0, 5], // Desert palette indices
+            2: [0, 3, 4]  // Labyrinth palette indices
+        };
+        
+        // 4x4 Bayer dithering matrix
+        const bayerMatrix = [
+            [0, 8, 2, 10],
+            [12, 4, 14, 6],
+            [3, 11, 1, 9],
+            [15, 7, 13, 5]
+        ];
+        
+        // Initialize
+        function init() {
+            // Set canvas size
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Mouse tracking for look control
+            canvas.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mousedown', () => { 
+                mouse.down = true;
+                if (document.pointerLockElement !== canvas) {
+                    canvas.requestPointerLock();
+                }
+            });
+            document.addEventListener('mouseup', () => { mouse.down = false; });
+            
+            // Pointer lock API
+            document.addEventListener('pointerlockchange', () => {
+                if (document.pointerLockElement === canvas) {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                    document.addEventListener('mousemove', handleMouseLook);
+                } else {
+                    document.removeEventListener('mousemove', handleMouseLook);
+                }
+            });
+            
+            // Keyboard controls
+            window.addEventListener('keydown', (e) => { 
+                keys[e.code] = true;
+                handleSpecialKeys(e);
+            });
+            window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+            
+            // Generate world
+            generateWorld();
+            
+            // Add some entities
+            generateEntities();
+            
+            // Start animation loop
+            animate();
+        }
+        
+        function handleMouseLook(e) {
+            // FPS-style mouse look
+            cameraRot.y += e.movementX * 0.002;
+            cameraRot.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraRot.x - e.movementY * 0.002));
+        }
+        
+        // Handle special key presses (toggles)
+        function handleSpecialKeys(e) {
+            if (e.code === 'KeyP') {
+                // Cycle through available palettes for this biome
+                const biomePaletteIndices = biomePalettes[currentBiome];
+                const currentPalettePosition = biomePaletteIndices.indexOf(paletteIndex);
+                const nextPalettePosition = (currentPalettePosition + 1) % biomePaletteIndices.length;
+                paletteIndex = biomePaletteIndices[nextPalettePosition];
+                info.textContent = `Palette: ${paletteIndex + 1} - ${getPaletteName(paletteIndex)}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyT') { // Changed from D to T
+                useDithering = !useDithering;
+                info.textContent = `Dithering: ${useDithering ? 'ON' : 'OFF'}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyF') {
+                useFog = !useFog;
+                info.textContent = `Fog: ${useFog ? 'ON' : 'OFF'}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyG') {
+                useGeometry = !useGeometry;
+                info.textContent = `Geometry: ${useGeometry ? 'ON' : 'OFF'}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyO') {
+                performanceMode = !performanceMode;
+                info.textContent = `Performance Mode: ${performanceMode ? 'ON' : 'OFF'}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyH') {
+                // Cycle shaders
+                currentShader = (currentShader + 1) % shaders.length;
+                info.textContent = `Shader: ${getShaderName(currentShader)}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyQ') {
+                moveSpeed = Math.max(1, moveSpeed - 1);
+                info.textContent = `Movement Speed: ${moveSpeed}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyE') {
+                moveSpeed = Math.min(15, moveSpeed + 1);
+                info.textContent = `Movement Speed: ${moveSpeed}`;
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'KeyR') {
+                // Reset position
+                cameraPos = { x: 0, y: 1.6, z: 0 };
+                cameraRot = { x: 0, y: 0 };
+                info.textContent = "Position Reset";
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'Digit1') {
+                currentBiome = 0; // Mixed
+                paletteIndex = biomePalettes[currentBiome][0];
+                generateWorld();
+                info.textContent = "Biome: Mixed World";
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'Digit2') {
+                currentBiome = 1; // Desert
+                paletteIndex = biomePalettes[currentBiome][0];
+                generateWorld();
+                info.textContent = "Biome: Desert";
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            } else if (e.code === 'Digit3') {
+                currentBiome = 2; // Labyrinth
+                paletteIndex = biomePalettes[currentBiome][0];
+                generateWorld();
+                info.textContent = "Biome: Labyrinth";
+                setTimeout(() => {
+                    info.textContent = "DOOM-style Fractal Explorer";
+                }, 2000);
+            }
+        }
+        
+        // Get palette name
+        function getPaletteName(index) {
+            const names = [
+                "Doom Classic",
+                "Acid Green",
+                "Classic Blue",
+                "Neon Synthwave",
+                "Industrial Gray",
+                "Blood Red"
+            ];
+            return names[index];
+        }
+        
+        // Get shader name
+        function getShaderName(index) {
+            const names = [
+                "None",
+                "Pulse",
+                "Scanlines",
+                "CRT",
+                "Pixelated"
+            ];
+            return names[index];
+        }
+        
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        function handleMouseMove(e) {
+            if (mouse.down && document.pointerLockElement !== canvas) {
+                // Only use this when pointer lock isn't active
+                cameraRot.y += (e.clientX - mouse.x) * 0.005;
+                cameraRot.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraRot.x + (e.clientY - mouse.y) * 0.005));
+            }
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        }
+        
+        // Generate different maps based on biome
+        function generateWorld() {
+            // Create a 2D grid of wall/no-wall
+            worldMap = Array(mapSize).fill().map(() => Array(mapSize).fill(0));
+            
+            // Different generation based on biome
+            switch(currentBiome) {
+                case 1: // Desert - scattered structures
+                    generateDesertMap();
+                    break;
+                case 2: // Labyrinth - maze-like
+                    generateLabyrinthMap();
+                    break;
+                default: // Mixed - random structures
+                    generateMixedMap();
+            }
+            
+            // Also regenerate entities
+            generateEntities();
+        }
+        
+        // Generate entities (3D objects in the world)
+        function generateEntities() {
+            entities = [];
+            
+            // Add fewer decorative items for better performance
+            const count = 10;
+            
+            for (let i = 0; i < count; i++) {
+                let type, x, z, height, width;
+                
+                // Place entities in empty spaces
+                do {
+                    x = (Math.random() * mapSize - mapSize/2) * cellSize;
+                    z = (Math.random() * mapSize - mapSize/2) * cellSize;
+                } while (isWallAt(x, z));
+                
+                // Different entities for different biomes (simplified)
+                switch(currentBiome) {
+                    case 1: // Desert - just pillars and pyramids
+                        type = Math.random() > 0.5 ? 'pillar' : 'pyramid';
+                        height = 2 + Math.random() * 2;
+                        width = 1 + Math.random();
+                        break;
+                    case 2: // Labyrinth - torches only
+                        type = 'torch';
+                        height = 1 + Math.random();
+                        width = 0.5 + Math.random() * 0.5;
+                        break;
+                    default: // Mixed - simpler selection
+                        type = ['pillar', 'cube'][Math.floor(Math.random() * 2)];
+                        height = 1 + Math.random() * 3;
+                        width = 0.5 + Math.random() * 1.5;
+                }
+                
+                entities.push({
+                    type,
+                    x,
+                    y: 0, // On the ground
+                    z,
+                    height,
+                    width,
+                    color: Math.floor(Math.random() * 5) // Random color from palette
+                });
+            }
+        }
+        
+        // Generate a mixed world with random structures
+        function generateMixedMap() {
+            // Add some random walls
+            for (let i = 0; i < mapSize; i++) {
+                for (let j = 0; j < mapSize; j++) {
+                    if (Math.random() < 0.1) {
+                        worldMap[i][j] = 1;
+                    }
+                }
+            }
+            
+            // Add some solid structures
+            for (let s = 0; s < 5; s++) {
+                const x = Math.floor(Math.random() * (mapSize - 6)) + 3;
+                const y = Math.floor(Math.random() * (mapSize - 6)) + 3;
+                const size = Math.floor(Math.random() * 4) + 3;
+                
+                // Create a room or solid block
+                const isRoom = Math.random() > 0.5;
+                
+                for (let i = x; i < x + size; i++) {
+                    for (let j = y; j < y + size; j++) {
+                        if (isRoom) {
+                            // Room - walls around perimeter
+                            if (i === x || i === x + size - 1 || j === y || j === y + size - 1) {
+                                worldMap[i][j] = 1;
+                            } else {
+                                worldMap[i][j] = 0;
+                            }
+                        } else {
+                            // Solid block
+                            worldMap[i][j] = 1;
+                        }
+                    }
+                }
+                
+                // Add a door if it's a room
+                if (isRoom) {
+                    const doorWall = Math.floor(Math.random() * 4);
+                    let doorX, doorY;
+                    
+                    switch(doorWall) {
+                        case 0: // North
+                            doorX = x + Math.floor(Math.random() * (size - 2)) + 1;
+                            doorY = y;
+                            break;
+                        case 1: // East
+                            doorX = x + size - 1;
+                            doorY = y + Math.floor(Math.random() * (size - 2)) + 1;
+                            break;
+                        case 2: // South
+                            doorX = x + Math.floor(Math.random() * (size - 2)) + 1;
+                            doorY = y + size - 1;
+                            break;
+                        case 3: // West
+                            doorX = x;
+                            doorY = y + Math.floor(Math.random() * (size - 2)) + 1;
+                            break;
+                    }
+                    
+                    worldMap[doorX][doorY] = 0;
+                }
+            }
+        }
+        
+        // Generate a desert map with scattered structures
+        function generateDesertMap() {
+            // Desert has fewer walls, mostly empty
+            
+            // Add some scattered small structures
+            for (let s = 0; s < 10; s++) {
+                const x = Math.floor(Math.random() * (mapSize - 4)) + 2;
+                const y = Math.floor(Math.random() * (mapSize - 4)) + 2;
+                const size = Math.floor(Math.random() * 3) + 2;
+                
+                // Create various small structures
+                const type = Math.floor(Math.random() * 3);
+                
+                switch(type) {
+                    case 0: // Small enclosure
+                        for (let i = x; i < x + size; i++) {
+                            for (let j = y; j < y + size; j++) {
+                                if (i === x || i === x + size - 1 || j === y || j === y + size - 1) {
+                                    worldMap[i][j] = 1;
+                                }
+                            }
+                        }
+                        break;
+                    case 1: // Solid block
+                        for (let i = x; i < x + size; i++) {
+                            for (let j = y; j < y + size; j++) {
+                                worldMap[i][j] = 1;
+                            }
+                        }
+                        break;
+                    case 2: // L-shape
+                        for (let i = x; i < x + size; i++) {
+                            worldMap[i][y] = 1;
+                        }
+                        for (let j = y; j < y + size; j++) {
+                            worldMap[x][j] = 1;
+                        }
+                        break;
+                }
+            }
+            
+            // Add one larger "temple" in a random location
+            const templeX = Math.floor(Math.random() * (mapSize - 10)) + 5;
+            const templeY = Math.floor(Math.random() * (mapSize - 10)) + 5;
+            const templeSize = 7;
+            
+            // Create temple walls
+            for (let i = templeX; i < templeX + templeSize; i++) {
+                for (let j = templeY; j < templeY + templeSize; j++) {
+                    if (i === templeX || i === templeX + templeSize - 1 || 
+                        j === templeY || j === templeY + templeSize - 1) {
+                        worldMap[i][j] = 1;
+                    }
+                }
+            }
+            
+            // Add entrance to temple
+            const entranceSide = Math.floor(Math.random() * 4);
+            let entranceX, entranceY;
+            
+            switch(entranceSide) {
+                case 0: // North
+                    entranceX = templeX + Math.floor(templeSize / 2);
+                    entranceY = templeY;
+                    break;
+                case 1: // East
+                    entranceX = templeX + templeSize - 1;
+                    entranceY = templeY + Math.floor(templeSize / 2);
+                    break;
+                case 2: // South
+                    entranceX = templeX + Math.floor(templeSize / 2);
+                    entranceY = templeY + templeSize - 1;
+                    break;
+                case 3: // West
+                    entranceX = templeX;
+                    entranceY = templeY + Math.floor(templeSize / 2);
+                    break;
+            }
+            
+            worldMap[entranceX][entranceY] = 0;
+            
+            // Add some interior walls to the temple
+            const interiorWalls = Math.floor(Math.random() * 3) + 1;
+            
+            for (let w = 0; w < interiorWalls; w++) {
+                if (Math.random() > 0.5) {
+                    // Horizontal wall
+                    const wallY = templeY + 1 + Math.floor(Math.random() * (templeSize - 2));
+                    for (let i = templeX + 1; i < templeX + templeSize - 1; i++) {
+                        if (Math.random() > 0.3) { // Gaps in the wall
+                            worldMap[i][wallY] = 1;
+                        }
+                    }
+                } else {
+                    // Vertical wall
+                    const wallX = templeX + 1 + Math.floor(Math.random() * (templeSize - 2));
+                    for (let j = templeY + 1; j < templeY + templeSize - 1; j++) {
+                        if (Math.random() > 0.3) { // Gaps in the wall
+                            worldMap[wallX][j] = 1;
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Generate labyrinth map (Doom-like maze)
+        function generateLabyrinthMap() {
+            // Start with outer walls only
+            for (let i = 0; i < mapSize; i++) {
+                worldMap[i][0] = 1;
+                worldMap[i][mapSize-1] = 1;
+                worldMap[0][i] = 1;
+                worldMap[mapSize-1][i] = 1;
+            }
+            
+            // Generate a simplified grid-based maze
+            // Use larger spacing for better performance
+            for (let i = 4; i < mapSize - 4; i += 4) {
+                for (let j = 4; j < mapSize - 4; j += 4) {
+                    // Place pillars/walls with 50% chance
+                    if (Math.random() < 0.5) {
+                        worldMap[i][j] = 1;
+                        
+                        // Sometimes extend walls
+                        if (Math.random() < 0.7) {
+                            // Extend either horizontally or vertically
+                            const direction = Math.floor(Math.random() * 4);
+                            switch(direction) {
+                                case 0: // North
+                                    for (let k = 1; k < 4 && j-k >= 0; k++) worldMap[i][j-k] = 1;
+                                    break;
+                                case 1: // East
+                                    for (let k = 1; k < 4 && i+k < mapSize; k++) worldMap[i+k][j] = 1;
+                                    break;
+                                case 2: // South
+                                    for (let k = 1; k < 4 && j+k < mapSize; k++) worldMap[i][j+k] = 1;
+                                    break;
+                                case 3: // West
+                                    for (let k = 1; k < 4 && i-k >= 0; k++) worldMap[i-k][j] = 1;
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Add a few simple rooms (fewer for better performance)
+            const numRooms = 3;
+            for (let r = 0; r < numRooms; r++) {
+                const roomX = 4 + Math.floor(Math.random() * (mapSize - 12));
+                const roomY = 4 + Math.floor(Math.random() * (mapSize - 12));
+                const roomSize = 3 + Math.floor(Math.random() * 2);
+                
+                // Add wall around the room
+                for (let i = roomX; i < roomX + roomSize * 2; i++) {
+                    if (i < mapSize-1) {
+                        worldMap[i][roomY] = 1;
+                        if (roomY + roomSize * 2 < mapSize-1) {
+                            worldMap[i][roomY + roomSize * 2 - 1] = 1;
+                        }
+                    }
+                }
+                
+                for (let j = roomY; j < roomY + roomSize * 2; j++) {
+                    if (j < mapSize-1) {
+                        worldMap[roomX][j] = 1;
+                        if (roomX + roomSize * 2 < mapSize-1) {
+                            worldMap[roomX + roomSize * 2 - 1][j] = 1;
+                        }
+                    }
+                }
+                
+                // Add a door
+                const doorSide = Math.floor(Math.random() * 4);
+                let doorX, doorY;
+                
+                switch(doorSide) {
+                    case 0: // North
+                        doorX = roomX + Math.floor(roomSize);
+                        doorY = roomY;
+                        break;
+                    case 1: // East
+                        doorX = roomX + roomSize * 2 - 1;
+                        doorY = roomY + Math.floor(roomSize);
+                        break;
+                    case 2: // South
+                        doorX = roomX + Math.floor(roomSize);
+                        doorY = roomY + roomSize * 2 - 1;
+                        break;
+                    case 3: // West
+                        doorX = roomX;
+                        doorY = roomY + Math.floor(roomSize);
+                        break;
+                }
+                
+                if (doorX < mapSize-1 && doorY < mapSize-1) {
+                    worldMap[doorX][doorY] = 0;
+                }
+            }
+        }
+        
+        // Check if a point is inside a wall
+        function isWallAt(x, z) {
+            // Convert world coordinates to map coordinates
+            const mapX = Math.floor((x / cellSize) + mapSize / 2);
+            const mapZ = Math.floor((z / cellSize) + mapSize / 2);
+            
+            // Check bounds
+            if (mapX < 0 || mapX >= mapSize || mapZ < 0 || mapZ >= mapSize) {
+                return true; // Treat out of bounds as walls
+            }
+            
+            return worldMap[mapX][mapZ] === 1;
+        }
+        
+        // Generate noise using a simple hash function
+        function noise(x, z) {
+            const X = Math.floor(x);
+            const Z = Math.floor(z);
+            
+            x -= X;
+            z -= Z;
+            
+            // Hash function for random values
+            const hash = (a, b) => {
+                const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+                return h - Math.floor(h);
+            };
+            
+            // Get corner values
+            const a = hash(X, Z);
+            const b = hash(X + 1, Z);
+            const c = hash(X, Z + 1);
+            const d = hash(X + 1, Z + 1);
+            
+            // Smooth interpolation
+            const sx = x * x * (3 - 2 * x);
+            const sz = z * z * (3 - 2 * z);
+            
+            // Bilinear interpolation
+            return a * (1 - sx) * (1 - sz) +
+                   b * sx * (1 - sz) +
+                   c * (1 - sx) * sz +
+                   d * sx * sz;
+        }
+        
+        // Fractal Brownian Motion (multiple layers of noise)
+        function fbm(x, z, octaves = 5) {
+            let value = 0;
+            let amplitude = 0.5;
+            let frequency = 0.01;
+            
+            for (let i = 0; i < octaves; i++) {
+                value += amplitude * noise(x * frequency, z * frequency);
+                amplitude *= 0.5;
+                frequency *= 2;
+            }
+            
+            return value;
+        }
+        
+        // Get terrain height at a specific point
+        function getTerrainHeight(x, z) {
+            // Adjust height based on biome
+            switch(currentBiome) {
+                case 1: // Desert - undulating dunes
+                    return Math.sin(x * 0.05) * Math.cos(z * 0.05) * 2 + fbm(x, z, 3) * 2;
+                case 2: // Labyrinth - mostly flat with slight variations
+                    return fbm(x * 0.1, z * 0.1, 2) * 0.5;
+                default: // Mixed - varied terrain
+                    return fbm(x, z, 5) * 3;
+            }
+        }
+        
+        // Apply dithering to a color value
+        function applyDither(value, x, y) {
+            if (!useDithering) return value;
+            
+            // Ensure x and y are valid integers between 0-3
+            const bx = Math.abs(Math.floor(x)) % 4;
+            const by = Math.abs(Math.floor(y)) % 4;
+            
+            const threshold = bayerMatrix[by][bx] / 16;
+            return value < threshold ? Math.floor(value * 5) / 5 : Math.ceil(value * 5) / 5;
+        }
+        
+        // Cast a ray to find wall distance in a specific direction
+        function castRay(angle) {
+            // Ray direction
+            const rayDirX = Math.sin(angle);
+            const rayDirZ = Math.cos(angle);
+            
+            // Current map position
+            const mapX = Math.floor((cameraPos.x / cellSize) + mapSize / 2);
+            const mapZ = Math.floor((cameraPos.z / cellSize) + mapSize / 2);
+            
+            // Length of ray from current position to next x or z-side
+            let sideDistX, sideDistZ;
+            
+            // Length of ray from one x or z-side to next x or z-side
+            const deltaDistX = Math.abs(1 / (rayDirX || 0.001)); // Avoid division by zero
+            const deltaDistZ = Math.abs(1 / (rayDirZ || 0.001)); // Avoid division by zero
+            
+            // Direction to step in x or z direction (either +1 or -1)
+            const stepX = rayDirX < 0 ? -1 : 1;
+            const stepZ = rayDirZ < 0 ? -1 : 1;
+            
+            // Calculate distance to first grid line
+            if (rayDirX < 0) {
+                sideDistX = (cameraPos.x / cellSize - (mapX - mapSize / 2)) * deltaDistX;
+            } else {
+                sideDistX = ((mapX + 1 - mapSize / 2) - cameraPos.x / cellSize) * deltaDistX;
+            }
+            
+            if (rayDirZ < 0) {
+                sideDistZ = (cameraPos.z / cellSize - (mapZ - mapSize / 2)) * deltaDistZ;
+            } else {
+                sideDistZ = ((mapZ + 1 - mapSize / 2) - cameraPos.z / cellSize) * deltaDistZ;
+            }
+            
+            // DDA algorithm (simplified)
+            let hit = false;
+            let side = 0; // Was a NS or a EW wall hit?
+            let currentMapX = mapX;
+            let currentMapZ = mapZ;
+            
+            const maxSteps = 20; // Limit max ray steps for performance
+            let steps = 0;
+            
+            while (!hit && steps < maxSteps) {
+                // Jump to next map square in x or z direction
+                if (sideDistX < sideDistZ) {
+                    sideDistX += deltaDistX;
+                    currentMapX += stepX;
+                    side = 0;
+                } else {
+                    sideDistZ += deltaDistZ;
+                    currentMapZ += stepZ;
+                    side = 1;
+                }
+                
+                steps++;
+                
+                // Check if ray has hit a wall
+                if (currentMapX < 0 || currentMapX >= mapSize || currentMapZ < 0 || currentMapZ >= mapSize) {
+                    hit = true; // Ray hit boundary
+                }
+                else if (worldMap[currentMapX][currentMapZ] === 1) {
+                    hit = true;
+                }
+            }
+            
+            // Calculate distance projected on camera direction
+            let wallDist;
+            if (side === 0) {
+                wallDist = Math.max(0.1, (currentMapX - mapX + (1 - stepX) / 2) / rayDirX);
+            } else {
+                wallDist = Math.max(0.1, (currentMapZ - mapZ + (1 - stepZ) / 2) / rayDirZ);
+            }
+            
+            // Convert to world units
+            wallDist *= cellSize;
+            
+            // Return distance and side (for wall color adjustment)
+            return { 
+                distance: Math.abs(wallDist),
+                side,
+                mapPos: { x: currentMapX, z: currentMapZ }
+            };
+        }
+        
+        // Update camera position based on keyboard input
+        function updateCamera(deltaTime) {
+            const speed = moveSpeed * deltaTime;
+            const forward = {};
+            const right = {};
+            
+            // Calculate forward and right vectors based on camera rotation
+            forward.x = Math.sin(cameraRot.y);
+            forward.z = Math.cos(cameraRot.y);
+            
+            right.x = Math.sin(cameraRot.y + Math.PI/2);
+            right.z = Math.cos(cameraRot.y + Math.PI/2);
+            
+            // Store current position for collision detection
+            const prevX = cameraPos.x;
+            const prevZ = cameraPos.z;
+            
+            // Handle keyboard movement
+            if (keys['KeyW'] || keys['ArrowUp']) {
+                cameraPos.x += forward.x * speed;
+                cameraPos.z += forward.z * speed;
+            }
+            if (keys['KeyS'] || keys['ArrowDown']) {
+                cameraPos.x -= forward.x * speed;
+                cameraPos.z -= forward.z * speed;
+            }
+            if (keys['KeyA'] || keys['ArrowLeft']) {
+                cameraPos.x -= right.x * speed;
+                cameraPos.z -= right.z * speed;
+            }
+            if (keys['KeyD'] || keys['ArrowRight']) {
+                cameraPos.x += right.x * speed;
+                cameraPos.z += right.z * speed;
+            }
+            
+            // Collision detection with walls
+            if (isWallAt(cameraPos.x, cameraPos.z)) {
+                // Collision - revert to previous position
+                cameraPos.x = prevX;
+                cameraPos.z = prevZ;
+            }
+            
+            // World boundaries
+            const worldLimit = worldSize / 2;
+            cameraPos.x = Math.max(-worldLimit, Math.min(worldLimit, cameraPos.x));
+            cameraPos.z = Math.max(-worldLimit, Math.min(worldLimit, cameraPos.z));
+            
+            // Update Y position based on terrain
+            const terrainY = getTerrainHeight(cameraPos.x, cameraPos.z);
+            cameraPos.y = 1.6 + terrainY; // 1.6 units above terrain (average eye height)
+            
+            // Update debug info
+            debug.textContent = `Position: (${cameraPos.x.toFixed(1)}, ${cameraPos.y.toFixed(1)}, ${cameraPos.z.toFixed(1)})
+Biome: ${['Mixed', 'Desert', 'Labyrinth'][currentBiome]}
+Palette: ${getPaletteName(paletteIndex)}
+Speed: ${moveSpeed}
+FPS: ${(1/deltaTime).toFixed(0)}`;
+        }
+        
+        // Render the scene using raycasting (DOOM-style)
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Create sky gradient based on current biome and palette
+            const gradient = ctx.createLinearGradient(0, 0, 0, height/2);
+            
+            // Sky colors based on biome
+            let skyTop, skyBottom;
+            
+            switch(currentBiome) {
+                case 1: // Desert
+                    skyTop = 'rgb(100, 150, 255)';
+                    skyBottom = 'rgb(255, 200, 150)';
+                    break;
+                case 2: // Labyrinth
+                    skyTop = 'rgb(20, 20, 40)';
+                    skyBottom = 'rgb(40, 40, 80)';
+                    break;
+                default: // Mixed
+                    skyTop = 'rgb(20, 30, 80)';
+                    skyBottom = 'rgb(100, 150, 200)';
+            }
+            
+            gradient.addColorStop(0, skyTop);
+            gradient.addColorStop(1, skyBottom);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height/2);
+            
+            // Create floor gradient
+            const floorGradient = ctx.createLinearGradient(0, height/2, 0, height);
+            
+            // Floor colors based on biome
+            let floorTop, floorBottom;
+            
+            switch(currentBiome) {
+                case 1: // Desert
+                    floorTop = 'rgb(200, 180, 100)';
+                    floorBottom = 'rgb(150, 120, 50)';
+                    break;
+                case 2: // Labyrinth
+                    floorTop = 'rgb(60, 60, 80)';
+                    floorBottom = 'rgb(30, 30, 40)';
+                    break;
+                default: // Mixed
+                    floorTop = 'rgb(60, 100, 60)';
+                    floorBottom = 'rgb(30, 50, 30)';
+            }
+            
+            floorGradient.addColorStop(0, floorTop);
+            floorGradient.addColorStop(1, floorBottom);
+            ctx.fillStyle = floorGradient;
+            ctx.fillRect(0, height/2, width, height/2);
+            
+            // Render walls using raycasting
+            if (useGeometry) {
+                renderWalls();
+            } else {
+                renderPointCloud();
+            }
+            
+            // Apply shader effect
+            applyShaderEffect();
+        }
+        
+        // Render walls using raycasting (DOOM-style)
+        function renderWalls() {
+            // Adaptive ray count based on screen width (lower for better performance)
+            const rayStep = 4; // Cast a ray every 4 pixels for better performance
+            
+            // Calculate field of view (in radians)
+            const fov = Math.PI / 3; // 60 degrees
+            
+            // Cast rays from left to right
+            for (let x = 0; x < width; x += rayStep) {
+                // Calculate ray angle
+                const rayAngle = cameraRot.y - fov/2 + (x / width) * fov;
+                
+                // Cast ray
+                const ray = castRay(rayAngle);
+                
+                // Calculate wall height
+                const wallHeight = height / ray.distance * cellSize;
+                
+                // Get color from palette
+                let colorIndex;
+                if (ray.distance < 50) {
+                    colorIndex = Math.min(4, Math.max(0, 4 - Math.floor(ray.distance / 10)));
+                } else {
+                    colorIndex = 0;
+                }
+                
+                // Darker color for walls facing north/south for depth effect
+                if (ray.side === 1) {
+                    colorIndex = Math.max(0, colorIndex - 1);
+                }
+                
+                const wallColor = palettes[paletteIndex][colorIndex];
+                
+                // Apply dithering only to visible part of the wall slice
+                const wallStart = Math.max(0, Math.floor(height/2 - wallHeight/2));
+                const wallEnd = Math.min(height, Math.ceil(height/2 + wallHeight/2));
+                
+                // Use a simplified approach - single color per wall slice
+                let finalColor = wallColor;
+                if (useFog) {
+                    finalColor = wallColor.map(c => Math.floor(c * (1 - ray.distance/100)));
+                }
+                
+                ctx.fillStyle = `rgb(${finalColor[0]}, ${finalColor[1]}, ${finalColor[2]})`;
+                ctx.fillRect(x, wallStart, rayStep, wallEnd - wallStart);
+                
+                // Optionally add dithering effect (only if enabled and for closer walls)
+                if (useDithering && ray.distance < 30) {
+                    // Simple pattern for lighter shade at top of wall
+                    const patternHeight = Math.min(10, (wallEnd - wallStart) / 4);
+                    ctx.fillStyle = `rgb(${Math.min(255, finalColor[0] + 30)}, 
+                                         ${Math.min(255, finalColor[1] + 30)}, 
+                                         ${Math.min(255, finalColor[2] + 30)})`;
+                    ctx.fillRect(x, wallStart, rayStep, patternHeight);
+                }
+            }
+            
+            // Render entities with reduced detail
+            renderEntities();
+        }
+        
+        // Render entities (3D objects in the world)
+        function renderEntities() {
+            // Limit the number of entities rendered for performance
+            const maxEntitiesToRender = 10;
+            
+            // Sort entities by distance (furthest first)
+            const sortedEntities = [...entities]
+                .sort((a, b) => {
+                    const distA = Math.sqrt((a.x - cameraPos.x) ** 2 + (a.z - cameraPos.z) ** 2);
+                    const distB = Math.sqrt((b.x - cameraPos.x) ** 2 + (b.z - cameraPos.z) ** 2);
+                    return distB - distA;
+                })
+                .slice(0, maxEntitiesToRender); // Only render closest entities
+            
+            // Render each entity
+            for (const entity of sortedEntities) {
+                // Calculate distance and angle to entity
+                const dx = entity.x - cameraPos.x;
+                const dz = entity.z - cameraPos.z;
+                const distance = Math.sqrt(dx * dx + dz * dz);
+                
+                // Skip if too far away
+                if (distance > 30) continue; // Reduced draw distance
+                
+                // Calculate angle to entity
+                const angle = Math.atan2(dx, dz);
+                
+                // Check if entity is in field of view
+                const relativeAngle = normalizeAngle(angle - cameraRot.y);
+                if (Math.abs(relativeAngle) > Math.PI / 2) continue;
+                
+                // Project entity to screen
+                const fov = Math.PI / 3; // 60 degrees
+                const screenX = width / 2 + (relativeAngle / (fov/2)) * (width / 2);
+                
+                // Calculate entity size on screen
+                const size = height / distance * entity.width * 2;
+                
+                // Entity height calculation
+                const bottomY = height / 2 + (entity.y - cameraPos.y) / distance * height;
+                const entityHeight = size * entity.height / entity.width;
+                
+                // Draw entity based on type (simplified for performance)
+                let color = palettes[paletteIndex][entity.color];
+                
+                // Apply fog
+                if (useFog) {
+                    color = color.map(c => Math.floor(c * (1 - distance/50)));
+                }
+                
+                ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+                
+                // Use simpler shapes for all entities
+                switch(entity.type) {
+                    case 'pillar':
+                    case 'cube':
+                        // Simple rectangle
+                        ctx.fillRect(screenX - size/2, bottomY - entityHeight, size, entityHeight);
+                        break;
+                    case 'pyramid':
+                    case 'torch':
+                        // Simple triangle
+                        ctx.beginPath();
+                        ctx.moveTo(screenX, bottomY - entityHeight);
+                        ctx.lineTo(screenX - size/2, bottomY);
+                        ctx.lineTo(screenX + size/2, bottomY);
+                        ctx.fill();
+                        break;
+                    case 'sphere':
+                    case 'debris':
+                        // Simple circle
+                        ctx.beginPath();
+                        ctx.arc(screenX, bottomY - size/2, size/2, 0, Math.PI * 2);
+                        ctx.fill();
+                        break;
+                }
+            }
+        }
+        
+        // Normalize angle to range [-PI, PI]
+        function normalizeAngle(angle) {
+            while (angle > Math.PI) angle -= Math.PI * 2;
+            while (angle < -Math.PI) angle += Math.PI * 2;
+            return angle;
+        }
+        
+        // Render point cloud (original style)
+        function renderPointCloud() {
+            // Use larger steps for better performance
+            const gridSize = 40;
+            const resolution = 4; // Increased from 2 for better performance
+            
+            // Sort points by distance for proper rendering (back to front)
+            const points = [];
+            
+            // Calculate visible area based on camera position and rotation
+            for (let gx = -gridSize; gx <= gridSize; gx += resolution) {
+                for (let gz = -gridSize; gz <= gridSize; gz += resolution) {
+                    // World coordinates
+                    const wx = cameraPos.x + gx;
+                    const wz = cameraPos.z + gz + 20; // Offset to see terrain ahead
+                    
+                    // Skip points behind the camera
+                    if (wz - cameraPos.z < 0) continue;
+                    
+                    // Skip points too far away
+                    const dist = Math.sqrt(gx*gx + gz*gz);
+                    if (dist > 50) continue;
+                    
+                    // Get terrain height
+                    const wy = getTerrainHeight(wx, wz);
+                    
+                    // Project 3D point to 2D screen
+                    const scale = 300 / (wz - cameraPos.z);
+                    const sx = width/2 + (wx - cameraPos.x) * scale;
+                    const sy = height/2 - (wy - cameraPos.y) * scale;
+                    
+                    // Skip points outside the canvas
+                    if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue;
+                    
+                    // Calculate if point is a wall
+                    const isWall = isWallAt(wx, wz);
+                    
+                    // Store points for sorted rendering
+                    points.push({
+                        x: sx,
+                        y: sy,
+                        dist: dist,
+                        height: (wy + 5) / 20,
+                        isWall: isWall
+                    });
+                }
+            }
+            
+            // Sort points by distance (far to near)
+            points.sort((a, b) => b.dist - a.dist);
+            
+            // Limit number of points for performance
+            const maxPoints = 1000;
+            const pointsToRender = points.length > maxPoints ? 
+                points.slice(0, maxPoints) : points;
+            
+            // Draw points in sorted order
+            for (const point of pointsToRender) {
+                // Apply dithering
+                const ditheredHeight = useDithering ? 
+                    applyDither(point.height, point.x, point.y) : 
+                    point.height;
+                
+                // Get color from palette
+                let colorIndex;
+                if (point.isWall) {
+                    // Walls are brighter
+                    colorIndex = Math.min(4, Math.max(2, Math.floor(ditheredHeight * 5)));
+                } else {
+                    colorIndex = Math.min(4, Math.max(0, Math.floor(ditheredHeight * 5)));
+                }
+                
+                let color = palettes[paletteIndex][colorIndex];
+                
+                // Apply fog (distance fading)
+                if (useFog) {
+                    const fogFactor = Math.min(1, point.dist / 80);
+                    color = color.map(c => Math.floor(c * (1 - fogFactor) + 40 * fogFactor));
+                }
+                
+                // Draw larger pixel for better coverage with fewer points
+                ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+                ctx.fillRect(point.x, point.y, resolution + 1, resolution + 1);
+            }
+        }
+        
+        // Apply shader effect to the entire screen
+        function applyShaderEffect() {
+            if (currentShader === 0) return; // Skip if no shader
+            
+            // Get image data
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            // Apply shader
+            for (let i = 0; i < data.length; i += 4) {
+                const x = (i / 4) % width;
+                const y = Math.floor((i / 4) / width);
+                
+                // Get color
+                const color = [data[i], data[i+1], data[i+2]];
+                
+                // Apply shader
+                const processed = shaders[currentShader](color, x, y, time);
+                
+                // Update color
+                data[i] = processed[0];
+                data[i+1] = processed[1];
+                data[i+2] = processed[2];
+            }
+            
+            // Put image data back
+            ctx.putImageData(imageData, 0, 0);
+        }
+        
+        // Animation loop
+        let lastTime = 0;
+        function animate(timestamp = 0) {
+            const deltaTime = Math.min(0.05, (timestamp - lastTime) / 1000); // Cap at 20ms to avoid large jumps
+            lastTime = timestamp;
+            
+            time += deltaTime;
+            updateCamera(deltaTime);
+            render();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
