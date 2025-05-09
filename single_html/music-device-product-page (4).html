@@ -1,0 +1,2589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NOISE MACHINES | RAW SONIC DESTRUCTION</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Base Styles - GRIT & CHAOS */
+        :root {
+            --primary: #000000;
+            --secondary: #0a0000;
+            --accent: #ff0000;
+            --accent-dim: #990000;
+            --blood: #cc0000;
+            --text: #cccccc;
+            --text-dark: #777777;
+            --dirt: #221111;
+        }
+
+        @font-face {
+            font-family: 'Glitch';
+            src: url('https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--primary);
+            color: var(--text);
+            font-family: 'Courier Prime', monospace;
+            overflow-x: hidden;
+            cursor: crosshair;
+            line-height: 1.6;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+        }
+
+        /* HEAVY DISTORTION AND NOISE EFFECTS */
+        .noise-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.07;
+            z-index: 997;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+        }
+
+        .film-grain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='grainFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.55' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23grainFilter)' opacity='0.02'/%3E%3C/svg%3E");
+            opacity: 0.07;
+            z-index: 998;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+
+        .vhs-lines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                transparent,
+                transparent 4px,
+                rgba(0, 0, 0, 0.2) 4px,
+                rgba(0, 0, 0, 0.2) 5px
+            );
+            opacity: 0.13;
+            z-index: 999;
+            pointer-events: none;
+            animation: vhs-scroll 12s linear infinite;
+        }
+
+        @keyframes vhs-scroll {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        .scratches {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='scratch' patternUnits='userSpaceOnUse' width='200' height='200'%3E%3Cpath d='M10,10 L190,190' stroke='%23ffffff' stroke-width='1' opacity='0.1'/%3E%3Cpath d='M50,20 L150,180' stroke='%23ffffff' stroke-width='0.5' opacity='0.1'/%3E%3Cpath d='M120,30 L80,170' stroke='%23ffffff' stroke-width='0.8' opacity='0.1'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23scratch)'/%3E%3C/svg%3E");
+            opacity: 0.07;
+            z-index: 996;
+            pointer-events: none;
+        }
+
+        .blood-splatter {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='30%25' cy='20%25' r='60' fill='%23cc0000' opacity='0.05'/%3E%3Ccircle cx='70%25' cy='80%25' r='80' fill='%23cc0000' opacity='0.04'/%3E%3Ccircle cx='10%25' cy='90%25' r='40' fill='%23cc0000' opacity='0.03'/%3E%3Ccircle cx='90%25' cy='10%25' r='100' fill='%23cc0000' opacity='0.02'/%3E%3Ccircle cx='50%25' cy='50%25' r='120' fill='%23cc0000' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.15;
+            z-index: 995;
+            pointer-events: none;
+            mix-blend-mode: multiply;
+        }
+
+        .glitch-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: rgba(255, 0, 0, 0.5);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            animation: glitch-horizontal 5s infinite;
+        }
+
+        @keyframes glitch-horizontal {
+            0% { 
+                opacity: 0;
+                transform: translateY(-1000%);
+            }
+            10% { 
+                opacity: 0;
+            }
+            10.1% { 
+                opacity: 1;
+                transform: translateY(100px);
+            }
+            10.2% { 
+                opacity: 0;
+                transform: translateY(120px);
+            }
+            50% {
+                opacity: 0;
+                transform: translateY(1000%);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(1000%);
+            }
+        }
+
+        /* TORN PAPER EFFECT FOR SECTIONS */
+        .torn-top {
+            position: absolute;
+            top: -1px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,0 L10,15 L20,5 L30,18 L40,2 L50,12 L60,4 L70,15 L80,8 L90,20 L100,0 L110,15 L120,5 L130,18 L140,2 L150,12 L160,4 L170,15 L180,8 L190,20 L200,0 L210,15 L220,5 L230,18 L240,2 L250,12 L260,4 L270,15 L280,8 L290,20 L300,0 L310,15 L320,5 L330,18 L340,2 L350,12 L360,4 L370,15 L380,8 L390,20 L400,0 L410,15 L420,5 L430,18 L440,2 L450,12 L460,4 L470,15 L480,8 L490,20 L500,0' fill='%23000000'/%3E%3C/svg%3E");
+            transform: rotate(180deg);
+            z-index: 2;
+        }
+
+        .torn-bottom {
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 20px;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0,0 L10,15 L20,5 L30,18 L40,2 L50,12 L60,4 L70,15 L80,8 L90,20 L100,0 L110,15 L120,5 L130,18 L140,2 L150,12 L160,4 L170,15 L180,8 L190,20 L200,0 L210,15 L220,5 L230,18 L240,2 L250,12 L260,4 L270,15 L280,8 L290,20 L300,0 L310,15 L320,5 L330,18 L340,2 L350,12 L360,4 L370,15 L380,8 L390,20 L400,0 L410,15 L420,5 L430,18 L440,2 L450,12 L460,4 L470,15 L480,8 L490,20 L500,0' fill='%23000000'/%3E%3C/svg%3E");
+            z-index: 2;
+        }
+
+        /* BRUTAL NAVIGATION */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            border-bottom: 3px solid var(--accent);
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--accent);
+            letter-spacing: -1px;
+            position: relative;
+            text-transform: uppercase;
+            transform: skew(-5deg);
+            font-family: Impact, sans-serif;
+        }
+
+        .logo::after {
+            content: "NOISE MACHINES";
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            color: rgba(255, 255, 255, 0.1);
+            z-index: -1;
+            filter: blur(1px);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent);
+            transform: skew(-15deg);
+        }
+
+        /* BLOODY HERO SECTION */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 8rem 2rem 4rem;
+            overflow: hidden;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(20,0,0,0.8) 100%);
+        }
+
+        .hero::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='grunge'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='20' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23grunge)' fill='none' stroke='%23ff0000' stroke-width='0.5' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.15;
+            z-index: 1;
+        }
+
+        .hero-content {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 5rem;
+            line-height: 1;
+            margin-bottom: 2rem;
+            text-transform: uppercase;
+            font-family: Impact, sans-serif;
+            letter-spacing: -2px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .hero h1 span {
+            display: block;
+        }
+
+        .build {
+            color: #ffffff;
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+
+        .or {
+            font-size: 3rem;
+            color: var(--text-dark);
+            position: relative;
+            z-index: 1;
+        }
+
+        .buy {
+            color: var(--accent);
+            position: relative;
+            z-index: 2;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+        }
+
+        /* GLITCH EFFECT FOR HEADINGS */
+        .glitch-text {
+            position: relative;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0.8;
+        }
+
+        .glitch-text::before {
+            color: #0000ff;
+            z-index: -2;
+            animation: glitch-animation 0.5s infinite;
+        }
+
+        .glitch-text::after {
+            color: #ff0000;
+            z-index: -1;
+            animation: glitch-animation 0.52s infinite reverse;
+        }
+
+        @keyframes glitch-animation {
+            0% {
+                transform: translate(0);
+            }
+            20% {
+                transform: translate(-3px, 3px);
+            }
+            40% {
+                transform: translate(-3px, -3px);
+            }
+            60% {
+                transform: translate(3px, 3px);
+            }
+            80% {
+                transform: translate(3px, -3px);
+            }
+            100% {
+                transform: translate(0);
+            }
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin-bottom: 2.5rem;
+            color: var(--text-dark);
+            position: relative;
+        }
+
+        .static-text {
+            display: inline-block;
+            position: relative;
+        }
+        
+        .static-text::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.3;
+            pointer-events: none;
+        }
+
+        .cta-container {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .cta-button {
+            padding: 1rem 2.5rem;
+            border: none;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: transparent;
+            outline: none;
+        }
+
+        .cta-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            z-index: -1;
+            transform: skew(-10deg);
+        }
+
+        .cta-build::before {
+            background: var(--accent-dim);
+        }
+
+        .cta-buy::before {
+            background: var(--accent);
+        }
+
+        .cta-button {
+            color: white;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+        }
+
+        .cta-button:hover::before {
+            transform: skew(-20deg);
+        }
+
+        /* CHAOTIC BLOB SHAPE INSTEAD OF CUBE */
+        .shape-container {
+            position: relative;
+            width: 100%;
+            height: 400px;
+            margin: 3rem 0;
+            display: flex;
+            justify-content: center;
+            perspective: 800px;
+        }
+
+        .blob {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            transform-style: preserve-3d;
+            animation: rotate 20s infinite linear, morph 10s infinite alternate;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotateY(0) rotateX(10deg); }
+            100% { transform: rotateY(360deg) rotateX(10deg); }
+        }
+
+        @keyframes morph {
+            0% { 
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+                background-position: 0% 0%;
+            }
+            50% { 
+                border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+                background-position: 100% 100%;
+            }
+            100% { 
+                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+                background-position: 0% 0%;
+            }
+        }
+
+        .shape-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #110000;
+            border: 2px solid var(--accent);
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.3) inset;
+            background-image: 
+                radial-gradient(circle at 30% 30%, rgba(255, 0, 0, 0.1), transparent 40%),
+                radial-gradient(circle at 70% 60%, rgba(255, 0, 0, 0.05), transparent 30%);
+        }
+
+        .shape-face::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' fill='%23ff0000' opacity='0.05'/%3E%3C/svg%3E");
+            mix-blend-mode: overlay;
+            opacity: 0.5;
+        }
+
+        .shape-face i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            position: relative;
+            z-index: 1;
+        }
+
+        .shape-face h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            text-transform: uppercase;
+            position: relative;
+            z-index: 1;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+
+        .shape-face p {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .face1 { transform: translateZ(10px); animation: morph 8s infinite alternate; }
+        .face2 { transform: translateZ(-10px) rotateY(180deg); animation: morph 7s infinite alternate-reverse; }
+        .face3 { transform: rotateY(90deg) translateZ(10px); animation: morph 9s infinite alternate; }
+        .face4 { transform: rotateY(-90deg) translateZ(10px); animation: morph 10s infinite alternate-reverse; }
+        .face5 { transform: rotateX(90deg) translateZ(10px); animation: morph 7.5s infinite alternate; }
+        .face6 { transform: rotateX(-90deg) translateZ(10px); animation: morph 8.5s infinite alternate-reverse; }
+
+        /* DISTRESSED SECTIONS */
+        .section {
+            padding: 6rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .section::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='grunge'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='20' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23grunge)' fill='none' stroke='%23333333' stroke-width='0.5' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .section-dark {
+            background-color: var(--secondary);
+            border-top: 3px solid var(--accent);
+            border-bottom: 3px solid var(--accent);
+        }
+
+        .section-title {
+            font-size: 3rem;
+            margin-bottom: 2rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: Impact, sans-serif;
+            letter-spacing: -1px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .section-title::before {
+            content: "//";
+            color: rgba(255, 0, 0, 0.5);
+            margin-right: 0.5rem;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .section-description {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin-bottom: 3rem;
+            color: var(--text-dark);
+            position: relative;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* PHILOSOPHY SECTION - RAW AND DISTRESSED */
+        .philosophy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .philosophy-card {
+            background: rgba(20, 0, 0, 0.3);
+            padding: 2rem;
+            border-left: 4px solid var(--accent);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .philosophy-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='%23000000' opacity='0.5'/%3E%3C/svg%3E");
+            opacity: 0.1;
+            z-index: -1;
+        }
+
+        .philosophy-card h3 {
+            color: var(--accent);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+
+        .philosophy-card p {
+            color: var(--text-dark);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .quote {
+            padding: 2rem;
+            margin: 4rem auto;
+            max-width: 800px;
+            background: rgba(20, 0, 0, 0.3);
+            border-left: 4px solid var(--accent);
+            font-style: italic;
+            position: relative;
+        }
+
+        .quote p {
+            font-size: 1.2rem;
+            color: var(--text);
+            position: relative;
+            z-index: 1;
+        }
+
+        .quote-author {
+            margin-top: 1rem;
+            text-align: right;
+            color: var(--accent);
+            font-style: normal;
+        }
+
+        .quote::before {
+            content: """;
+            position: absolute;
+            top: 0;
+            left: 20px;
+            font-size: 10rem;
+            color: rgba(255, 0, 0, 0.1);
+            font-family: Georgia, serif;
+            line-height: 1;
+            z-index: 0;
+        }
+
+        /* PRODUCTS GRID - DISTRESSED AND GRITTY */
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+
+        .product-card {
+            background: rgba(10, 0, 0, 0.5);
+            border: 1px solid var(--accent-dim);
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .product-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--accent);
+            z-index: 1;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent);
+        }
+
+        .product-image {
+            height: 250px;
+            width: 100%;
+            background: #0a0000;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-image::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' fill='%23ff0000' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.3;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        .product-image img {
+            max-width: 100%;
+            height: auto;
+            position: relative;
+            z-index: 0;
+        }
+
+        .product-placeholder {
+            text-align: center;
+            font-size: 3rem;
+            color: var(--accent);
+            position: relative;
+            z-index: 0;
+        }
+        
+        /* Distorted product images */
+        .distorted-image-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .distorted-image {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            animation: imageDistort 8s infinite alternate;
+        }
+        
+        .void-scanner {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='0' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='20' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Crect x='50' y='50' width='300' height='100' rx='20' fill='%23220000' /%3E%3Crect x='80' y='100' width='240' height='50' rx='10' fill='%23330000' /%3E%3Ccircle cx='100' cy='80' r='20' fill='%23ff0000' opacity='0.4' /%3E%3Ccircle cx='150' cy='80' r='15' fill='%23ff0000' opacity='0.3' /%3E%3Ccircle cx='200' cy='80' r='18' fill='%23ff0000' opacity='0.5' /%3E%3Ccircle cx='250' cy='80' r='12' fill='%23ff0000' opacity='0.3' /%3E%3Ccircle cx='300' cy='80' r='20' fill='%23ff0000' opacity='0.4' /%3E%3Crect x='100' y='170' width='200' height='80' rx='5' fill='%23220000' /%3E%3Cline x1='50' y1='200' x2='350' y2='200' stroke='%23ff0000' stroke-width='2' opacity='0.2' /%3E%3Cline x1='50' y1='180' x2='350' y2='180' stroke='%23ff0000' stroke-width='1' opacity='0.1' /%3E%3Cline x1='50' y1='220' x2='350' y2='220' stroke='%23ff0000' stroke-width='1' opacity='0.1' /%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .glitch-prophet {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='1' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='20' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Crect x='70' y='30' width='260' height='160' rx='10' fill='%23220000' /%3E%3Crect x='90' y='50' width='220' height='120' rx='5' fill='%23330000' /%3E%3Cpath d='M100,90 L140,70 L180,110 L220,60 L260,95 L300,75' stroke='%23ff0000' stroke-width='3' fill='none' opacity='0.6' /%3E%3Cpath d='M100,130 L140,150 L180,100 L220,130 L260,110 L300,140' stroke='%23ff0000' stroke-width='2' fill='none' opacity='0.4' /%3E%3Crect x='100' y='200' width='200' height='50' rx='5' fill='%23220000' /%3E%3Crect x='120' y='210' width='15' height='15' rx='50%25' fill='%23ff0000' opacity='0.6' /%3E%3Crect x='150' y='210' width='15' height='15' rx='50%25' fill='%23ff0000' opacity='0.6' /%3E%3Crect x='180' y='210' width='15' height='15' rx='50%25' fill='%23ff0000' opacity='0.6' /%3E%3Crect x='210' y='210' width='15' height='15' rx='50%25' fill='%23ff0000' opacity='0.6' /%3E%3Crect x='240' y='210' width='15' height='15' rx='50%25' fill='%23ff0000' opacity='0.6' /%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .contact-crawler {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='2' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='20' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Ccircle cx='200' cy='100' r='70' fill='%23220000' /%3E%3Ccircle cx='200' cy='100' r='50' fill='%23330000' /%3E%3Cline x1='130' y1='100' x2='270' y2='100' stroke='%23ff0000' stroke-width='3' opacity='0.5' /%3E%3Cline x1='200' y1='30' x2='200' y2='170' stroke='%23ff0000' stroke-width='3' opacity='0.5' /%3E%3Ccircle cx='200' cy='100' r='20' fill='%23ff0000' opacity='0.4' /%3E%3Crect x='90' y='200' width='220' height='60' rx='5' fill='%23220000' /%3E%3Crect x='110' y='220' width='40' height='20' rx='5' fill='%23330000' /%3E%3Crect x='180' y='220' width='40' height='20' rx='5' fill='%23330000' /%3E%3Crect x='250' y='220' width='40' height='20' rx='5' fill='%23330000' /%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .radio-wraith {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='3' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='20' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Crect x='80' y='50' width='240' height='200' rx='10' fill='%23220000' /%3E%3Cpath d='M100,100 C120,80 140,130 160,90 C180,50 200,150 220,100 C240,80 260,120 280,90' stroke='%23ff0000' stroke-width='2' fill='none' opacity='0.5' /%3E%3Cpath d='M100,150 C120,170 140,130 160,180 C180,200 200,120 220,150 C240,170 260,140 280,180' stroke='%23ff0000' stroke-width='2' fill='none' opacity='0.5' /%3E%3Ccircle cx='120' cy='200' r='15' fill='%23330000' stroke='%23ff0000' stroke-width='1' opacity='0.8' /%3E%3Ccircle cx='200' cy='200' r='15' fill='%23330000' stroke='%23ff0000' stroke-width='1' opacity='0.8' /%3E%3Ccircle cx='280' cy='200' r='15' fill='%23330000' stroke='%23ff0000' stroke-width='1' opacity='0.8' /%3E%3Crect x='120' y='70' width='160' height='40' rx='5' fill='%23330000' /%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        @keyframes imageDistort {
+            0% {
+                transform: scale(1.0) skew(0deg);
+                filter: brightness(1) contrast(1);
+            }
+            25% {
+                transform: scale(1.02) skew(1deg);
+                filter: brightness(1.1) contrast(1.1);
+            }
+            50% {
+                transform: scale(0.98) skew(-1deg);
+                filter: brightness(0.9) contrast(1.2);
+            }
+            75% {
+                transform: scale(1.03) skew(2deg);
+                filter: brightness(1.2) contrast(0.9);
+            }
+            100% {
+                transform: scale(1.0) skew(-2deg);
+                filter: brightness(1) contrast(1.3);
+            }
+        }
+        
+        .glitch-effect-1 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            mix-blend-mode: screen;
+            animation: glitchEffect1 6s infinite;
+        }
+        
+        .glitch-effect-2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: inherit;
+            background-size: cover;
+            background-position: center;
+            opacity: 0.3;
+            mix-blend-mode: multiply;
+            animation: glitchEffect2 4s infinite;
+        }
+        
+        .static-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' fill='%23ff0000' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.2;
+            pointer-events: none;
+            z-index: 2;
+        }
+        
+        @keyframes glitchEffect1 {
+            0% {
+                transform: translate(0);
+                opacity: 0.3;
+            }
+            20% {
+                transform: translate(-10px, 5px);
+                opacity: 0.4;
+            }
+            40% {
+                transform: translate(-5px, -5px);
+                opacity: 0.2;
+            }
+            60% {
+                transform: translate(5px, 5px);
+                opacity: 0.5;
+            }
+            80% {
+                transform: translate(5px, -5px);
+                opacity: 0.3;
+            }
+            100% {
+                transform: translate(0);
+                opacity: 0.3;
+            }
+        }
+        
+        @keyframes glitchEffect2 {
+            0% {
+                transform: translate(0);
+                opacity: 0.3;
+            }
+            25% {
+                transform: translate(10px, -10px);
+                opacity: 0.2;
+            }
+            50% {
+                transform: translate(-8px, 8px);
+                opacity: 0.4;
+            }
+            75% {
+                transform: translate(8px, 8px);
+                opacity: 0.2;
+            }
+            100% {
+                transform: translate(0);
+                opacity: 0.3;
+            }
+        }
+
+        .product-content {
+            padding: 1.5rem;
+        }
+
+        .product-name {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+
+        .product-description {
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed rgba(255, 0, 0, 0.2);
+        }
+
+        .product-price {
+            font-size: 1.2rem;
+            color: var(--accent);
+            font-weight: bold;
+            font-family: 'Courier Prime', monospace;
+        }
+
+        .product-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .product-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-button::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            z-index: -1;
+            transform: skew(-10deg);
+        }
+
+        .buy-button::before {
+            background: var(--accent);
+        }
+
+        .buy-button {
+            color: white;
+        }
+
+        .diy-button {
+            color: var(--accent);
+            background: transparent;
+            border: 1px solid var(--accent);
+        }
+
+        .diy-button::before {
+            display: none;
+        }
+
+        .product-button:hover {
+            transform: skew(-10deg);
+        }
+
+        /* CIRCUIT DIAGRAMS - RAW AND TECHNICAL */
+        .circuit-diagram {
+            border: 2px dashed var(--accent-dim);
+            padding: 2rem;
+            margin: 3rem 0;
+            background: rgba(0, 0, 0, 0.7);
+            overflow-x: auto;
+            font-family: monospace;
+            position: relative;
+        }
+
+        .circuit-diagram::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' fill='%23ff0000' opacity='0.02'/%3E%3C/svg%3E");
+            opacity: 0.3;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .circuit-diagram pre {
+            color: var(--accent);
+            overflow-x: auto;
+            white-space: pre;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            position: relative;
+            z-index: 1;
+        }
+
+        .parts-list {
+            padding: 2rem;
+            background: rgba(10, 0, 0, 0.5);
+            margin: 3rem 0;
+            border-left: 4px solid var(--accent-dim);
+            position: relative;
+        }
+
+        .parts-list h3 {
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+
+        .parts-list ul {
+            list-style-type: none;
+        }
+
+        .parts-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px dotted rgba(255, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .parts-list li:last-child {
+            border-bottom: none;
+        }
+
+        .part-name {
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .part-source {
+            color: var(--text-dark);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .part-source a {
+            color: var(--accent-dim);
+            text-decoration: none;
+        }
+
+        .part-source a:hover {
+            color: var(--accent);
+            text-decoration: underline;
+        }
+
+        /* WORKSHOP STYLES */
+        .workshop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .workshop-card {
+            background: rgba(10, 0, 0, 0.7);
+            border: 1px solid var(--accent-dim);
+            padding: 1.5rem;
+            position: relative;
+            overflow: hidden;
+            transform: skew(-2deg);
+        }
+        
+        .workshop-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--accent);
+            z-index: 1;
+        }
+        
+        .workshop-card:nth-child(even) {
+            transform: skew(2deg);
+        }
+        
+        .workshop-date-tag {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: var(--accent);
+            color: black;
+            padding: 0.5rem;
+            font-weight: bold;
+            transform: rotate(5deg);
+            z-index: 2;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+        }
+        
+        .workshop-card h3 {
+            font-size: 1.5rem;
+            margin: 1.5rem 0 1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .workshop-card p {
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .workshop-details {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            border-left: 2px solid var(--accent-dim);
+            margin-bottom: 1.5rem;
+        }
+        
+        .workshop-details span {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.8rem;
+            color: var(--text);
+        }
+        
+        .workshop-image-container {
+            height: 150px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 1.5rem;
+        }
+        
+        .workshop-image {
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        
+        .circuit-bending {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='5' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='10' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Crect x='50' y='30' width='300' height='90' rx='5' fill='%23220000' /%3E%3Cpath d='M70,50 L120,50 L120,70 L150,70 L150,50 L200,50 L200,90 L250,90 L250,70 L300,70 L300,100' stroke='%23ff0000' stroke-width='2' fill='none' /%3E%3Ccircle cx='120' cy='70' r='5' fill='%23ff0000' /%3E%3Ccircle cx='150' cy='70' r='5' fill='%23ff0000' /%3E%3Ccircle cx='200' cy='90' r='5' fill='%23ff0000' /%3E%3Ccircle cx='250' cy='90' r='5' fill='%23ff0000' /%3E%3Ccircle cx='250' cy='70' r='5' fill='%23ff0000' /%3E%3C/g%3E%3C/svg%3E");
+            animation: glitchImage 10s infinite alternate;
+        }
+        
+        .feedback-systems {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='6' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='10' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Crect x='50' y='20' width='300' height='110' rx='10' fill='%23220000' /%3E%3Cpath d='M50,75 C100,20 150,130 200,50 C250,100 300,30 350,75' stroke='%23ff0000' stroke-width='3' fill='none' opacity='0.6' /%3E%3Cpath d='M50,90 C100,130 150,40 200,110 C250,60 300,100 350,90' stroke='%23ff0000' stroke-width='2' fill='none' opacity='0.4' /%3E%3Ccircle cx='120' cy='75' r='10' fill='%23ff0000' opacity='0.3' /%3E%3Ccircle cx='220' cy='75' r='15' fill='%23ff0000' opacity='0.3' /%3E%3Ccircle cx='300' cy='75' r='12' fill='%23ff0000' opacity='0.3' /%3E%3C/g%3E%3C/svg%3E");
+            animation: glitchImage 12s infinite alternate-reverse;
+        }
+        
+        .contact-mics {
+            background-image: url("data:image/svg+xml,%3Csvg width='400' height='150' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='7' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='10' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3Ccircle cx='100' cy='75' r='40' fill='%23220000' /%3E%3Ccircle cx='100' cy='75' r='25' fill='%23330000' /%3E%3Crect x='160' y='35' width='200' height='80' rx='5' fill='%23220000' /%3E%3Cline x1='100' y1='75' x2='160' y2='75' stroke='%23ff0000' stroke-width='2' /%3E%3Cline x1='160' y1='55' x2='360' y2='55' stroke='%23ff0000' stroke-width='1' opacity='0.5' /%3E%3Cline x1='160' y1='75' x2='360' y2='75' stroke='%23ff0000' stroke-width='1' opacity='0.5' /%3E%3Cline x1='160' y1='95' x2='360' y2='95' stroke='%23ff0000' stroke-width='1' opacity='0.5' /%3E%3Crect x='200' y='60' width='20' height='30' rx='2' fill='%23ff0000' opacity='0.3' /%3E%3Crect x='250' y='60' width='20' height='30' rx='2' fill='%23ff0000' opacity='0.3' /%3E%3Crect x='300' y='60' width='20' height='30' rx='2' fill='%23ff0000' opacity='0.3' /%3E%3C/g%3E%3C/svg%3E");
+            animation: glitchImage 8s infinite alternate;
+        }
+        
+        @keyframes glitchImage {
+            0% {
+                transform: scale(1) skew(0deg);
+                filter: brightness(1) contrast(1);
+            }
+            25% {
+                transform: scale(1.05) skew(1deg);
+                filter: brightness(1.2) contrast(1.1);
+            }
+            50% {
+                transform: scale(0.95) skew(-1deg);
+                filter: brightness(0.9) contrast(1.2);
+            }
+            75% {
+                transform: scale(1.02) skew(2deg);
+                filter: brightness(1.1) contrast(0.9);
+            }
+            100% {
+                transform: scale(1) skew(-1deg);
+                filter: brightness(1) contrast(1.1);
+            }
+        }
+        
+        /* VIDEO SECTION STYLES */
+        .videos-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 2rem;
+            margin: 3rem 0;
+        }
+        
+        .video-wrapper {
+            background: rgba(10, 0, 0, 0.6);
+            border: 1px solid var(--accent-dim);
+            overflow: hidden;
+        }
+        
+        .video-player {
+            position: relative;
+            width: 100%;
+            height: 0;
+            padding-bottom: 56.25%; /* 16:9 aspect ratio */
+            background: black;
+            overflow: hidden;
+        }
+        
+        .video-placeholder {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise' x='0%25' y='0%25' width='100%25' height='100%25'%3E%3CfeTurbulence baseFrequency='0.05 0.05' numOctaves='2' type='fractalNoise' seed='8' result='noise' /%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='10' xChannelSelector='R' yChannelSelector='G' /%3E%3C/filter%3E%3Cg filter='url(%23noise)'%3E%3Crect width='100%25' height='100%25' fill='%23110000' /%3E%3C/g%3E%3C/svg%3E");
+        }
+        
+        .video-placeholder-text {
+            color: var(--accent);
+            font-family: 'Courier Prime', monospace;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            text-align: center;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+        }
+        
+        .play-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(255, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: white;
+            font-size: 1.5rem;
+            animation: pulseButton 2s infinite;
+        }
+        
+        .play-button:hover {
+            background: rgba(255, 0, 0, 0.8);
+            transform: scale(1.1);
+        }
+        
+        @keyframes pulseButton {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0.7);
+            }
+            70% {
+                transform: scale(1.05);
+                box-shadow: 0 0 0 10px rgba(255, 0, 0, 0);
+            }
+            100% {
+                transform: scale(1);
+                box-shadow: 0 0 0 0 rgba(255, 0, 0, 0);
+            }
+        }
+        
+        .video-static {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='staticNoise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23staticNoise)' fill='%23ffffff' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        .video-glitch-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 0, 0, 0.7);
+            z-index: 2;
+            pointer-events: none;
+            animation: videoScanline 2s linear infinite;
+        }
+        
+        @keyframes videoScanline {
+            0% {
+                top: 0%;
+            }
+            100% {
+                top: 100%;
+            }
+        }
+        
+        .video-info {
+            padding: 1.5rem;
+        }
+        
+        .video-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .video-info p {
+            color: var(--text-dark);
+            font-size: 0.9rem;
+        }
+        
+        /* NEWSLETTER STYLES */
+        .newsletter-signup {
+            margin-top: 3rem;
+            padding: 2rem;
+            background: rgba(10, 0, 0, 0.5);
+            border: 1px solid var(--accent-dim);
+            position: relative;
+        }
+        
+        .newsletter-signup::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' fill='%23ff0000' opacity='0.02'/%3E%3C/svg%3E");
+            opacity: 0.3;
+            z-index: 0;
+            pointer-events: none;
+        }
+        
+        .newsletter-signup h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .newsletter-signup p {
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .newsletter-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .newsletter-note {
+            font-size: 0.8rem !important;
+            color: var(--text-dark);
+            font-style: italic;
+            margin-top: 1rem;
+        }
+        
+        /* SOUND VISUALIZER - DISTORTED AND GLITCHY */
+        .visualizer-container {
+            max-width: 800px;
+            height: 200px;
+            margin: 3rem auto;
+            background: rgba(10, 0, 0, 0.7);
+            border: 1px solid var(--accent-dim);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .visualizer-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' fill='%23ff0000' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.1;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .visualizer-bars {
+            display: flex;
+            height: 100%;
+            align-items: flex-end;
+            width: 100%;
+            gap: 2px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .bar {
+            flex: 1;
+            background: var(--accent);
+            transition: height 0.1s;
+        }
+
+        .sound-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .sound-button {
+            padding: 0.8rem 1.5rem;
+            background: transparent;
+            color: var(--accent);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+            position: relative;
+            border: 1px solid var(--accent-dim);
+        }
+
+        .sound-button:hover {
+            background: var(--accent);
+            color: black;
+            transform: skew(-10deg);
+        }
+        
+        .sound-info {
+            max-width: 800px;
+            margin: 2rem auto;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1.5rem;
+            border-left: 3px solid var(--accent-dim);
+            display: none;
+        }
+        
+        .sound-info.active {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .sound-info h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .sound-info p {
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .sound-specs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .sound-spec {
+            padding: 0.5rem;
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid var(--accent-dim);
+            font-size: 0.8rem;
+            color: var(--text);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* FOOTER - DARK AND GRIMY */
+        footer {
+            background: #000000;
+            padding: 4rem 2rem 2rem;
+            position: relative;
+            border-top: 3px solid var(--accent);
+        }
+
+        footer::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100%25' height='100%25' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='grunge'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' result='noise'/%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='10' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/defs%3E%3Crect width='100%25' height='100%25' filter='url(%23grunge)' fill='none' stroke='%23ff0000' stroke-width='0.5' opacity='0.05'/%3E%3C/svg%3E");
+            opacity: 0.1;
+            z-index: 0;
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: inline-block;
+            font-family: Impact, sans-serif;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+
+        .footer-manifesto {
+            grid-column: span 2;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-dark);
+        }
+
+        .footer-manifesto p {
+            margin-bottom: 1rem;
+        }
+
+        .footer-links h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+
+        .footer-links ul {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.8rem;
+        }
+
+        .footer-links a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+            transform: skew(-10deg);
+            display: inline-block;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            border: 1px solid var(--accent-dim);
+            position: relative;
+        }
+
+        .social-link i {
+            color: var(--accent);
+            font-size: 1.2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .social-link:hover {
+            background: var(--accent);
+            transform: rotate(15deg);
+        }
+
+        .social-link:hover i {
+            color: black;
+        }
+
+        .footer-bottom {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 0, 0, 0.2);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+            position: relative;
+            z-index: 1;
+        }
+
+        .copyleft {
+            transform: rotate(180deg);
+            display: inline-block;
+        }
+
+        /* DISTRESSED FORM ELEMENTS */
+        .contact-form {
+            background: rgba(10, 0, 0, 0.5);
+            padding: 2rem;
+            border: 1px solid var(--accent-dim);
+            margin-top: 3rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--accent);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            font-family: 'Courier Prime', monospace;
+            letter-spacing: 1px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid var(--accent-dim);
+            color: var(--text);
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        .form-submit {
+            padding: 0.8rem 1.5rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            letter-spacing: 1px;
+            position: relative;
+        }
+
+        .form-submit:hover {
+            transform: skew(-10deg);
+        }
+
+        /* Media Queries - RESPONSIVE BUT DIRTY */
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 1rem;
+            }
+            
+            .hero h1 {
+                font-size: 3rem;
+            }
+            
+            .shape-container {
+                height: 300px;
+            }
+            
+            .cta-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .product-card {
+                transform: skew(0);
+            }
+            
+            .product-card:hover {
+                transform: skew(0) translateY(-5px);
+            }
+        }
+
+        /* Animation for GRITTY scroll reveal */
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .fade-in.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .glitch-in {
+            opacity: 0;
+            transform: translateY(20px) skew(-5deg);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .glitch-in.active {
+            opacity: 1;
+            transform: translateY(0) skew(-5deg);
+        }
+        
+        /* RANDOM GLITCH ELEMENT - appears occasionally */
+        .random-glitch {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            background: rgba(255, 0, 0, 0.1);
+            z-index: 1000;
+            pointer-events: none;
+            opacity: 0;
+            mix-blend-mode: overlay;
+        }
+    </style>
+</head>
+<body>
+    <!-- DISTORTION EFFECTS -->
+    <div class="noise-layer"></div>
+    <div class="film-grain"></div>
+    <div class="vhs-lines"></div>
+    <div class="scratches"></div>
+    <div class="blood-splatter"></div>
+    <div class="glitch-line"></div>
+    <div class="random-glitch" id="random-glitch"></div>
+
+    <!-- BRUTAL NAVIGATION -->
+    <nav>
+        <div class="logo">NOISE MACHINES</div>
+        <div class="nav-links">
+            <a href="#manifesto">Manifesto</a>
+            <a href="#devices">Devices</a>
+            <a href="#diy">DIY Guides</a>
+            <a href="#sound">Sound Lab</a>
+            <a href="#contact">Contact</a>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="glitch-in" data-text="BUILD OR BUY">
+                <span class="build">BUILD</span>
+                <span class="or">OR</span>
+                <span class="buy">BUY</span>
+            </h1>
+            <p class="fade-in static-text">Experimental noise devices for sonic destruction. All circuit diagrams are free to use, but if you'd rather skip the soldering, you can buy my handcrafted machines.</p>
+            
+            <div class="cta-container">
+                <button class="cta-button cta-build fade-in">
+                    <i class="fas fa-wrench"></i> DIY GUIDES
+                </button>
+                <button class="cta-button cta-buy fade-in">
+                    <i class="fas fa-shopping-cart"></i> SHOP DEVICES
+                </button>
+            </div>
+            
+            <!-- CHAOTIC BLOB SHAPE -->
+            <div class="shape-container fade-in">
+                <div class="blob">
+                    <div class="shape-face face1">
+                        <i class="fas fa-wave-square"></i>
+                        <h3>NOISE GENERATOR</h3>
+                        <p>Raw chaotic sound device</p>
+                    </div>
+                    <div class="shape-face face2">
+                        <i class="fas fa-sliders-h"></i>
+                        <h3>CONTROL INTERFACE</h3>
+                        <p>Chaos manipulation panel</p>
+                    </div>
+                    <div class="shape-face face3">
+                        <i class="fas fa-volume-up"></i>
+                        <h3>AUDIO OUTPUT</h3>
+                        <p>Pure noise emission</p>
+                    </div>
+                    <div class="shape-face face4">
+                        <i class="fas fa-plug"></i>
+                        <h3>CONNECTIONS</h3>
+                        <p>Multiple I/O options</p>
+                    </div>
+                    <div class="shape-face face5">
+                        <i class="fas fa-microchip"></i>
+                        <h3>CIRCUIT DESIGN</h3>
+                        <p>Open-source architecture</p>
+                    </div>
+                    <div class="shape-face face6">
+                        <i class="fas fa-random"></i>
+                        <h3>CHAOS ENGINE</h3>
+                        <p>Unpredictable sonic destruction</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PHILOSOPHY SECTION -->
+    <section class="section section-dark" id="manifesto">
+        <div class="container">
+            <h2 class="section-title glitch-in">NOISE MANIFESTO</h2>
+            
+            <div class="philosophy-grid">
+                <div class="philosophy-card fade-in">
+                    <h3>DIY ETHOS</h3>
+                    <p>I share all knowledge freely. Every device I sell includes complete schematics and build instructions. Buy it or build it yourself - your choice. This isn't about profit; it's about sonic freedom through noise.</p>
+                </div>
+                
+                <div class="philosophy-card fade-in">
+                    <h3>RAW SOUND</h3>
+                    <p>These aren't polished consumer products. They're raw, experimental weapons for sound destruction. Each machine is handmade with salvaged parts when possible, designed for maximum chaos with minimum compromise.</p>
+                </div>
+                
+                <div class="philosophy-card fade-in">
+                    <h3>NOISE LIBERATION</h3>
+                    <p>Noise is the ultimate rejection of musical constraints. It's pure sonic expression unbound by structure or convention. These machines are tools for liberating sound from the prison of "music".</p>
+                </div>
+            </div>
+            
+            <div class="quote fade-in">
+                <p>"The distinction between noise and music is nothing but cultural conditioning. Embrace the chaos, reject the structure, find freedom in the static."</p>
+                <div class="quote-author">— Not some celebrity, just me after too much caffeine</div>
+            </div>
+            
+            <p class="fade-in" style="text-align: center; color: var(--text-dark);">All circuit diagrams and schematics are <span class="copyleft">©</span> COPYLEFT — steal them, change them, break them.</p>
+        </div>
+    </section>
+
+    <!-- DEVICES SECTION -->
+    <section class="section" id="devices">
+        <div class="container">
+            <h2 class="section-title glitch-in">NOISE DEVICES</h2>
+            <p class="section-description fade-in">Each machine is handcrafted, unique, and comes with full schematics so you can repair, modify, or build your own version of sonic hell.</p>
+            
+            <div class="products-grid">
+                <div class="product-card fade-in">
+                    <div class="product-image">
+                        <div class="distorted-image-container">
+                            <div class="distorted-image void-scanner">
+                                <div class="glitch-effect-1"></div>
+                                <div class="glitch-effect-2"></div>
+                                <div class="static-overlay"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">VOID SCANNER</h3>
+                        <p class="product-description">Chaotic drone generator with feedback matrix and multiple distortion paths. Creates walls of noise that evolve and decay over time. Built with salvaged parts from dead electronics.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$189</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">BUY</button>
+                                <button class="product-button diy-button">DIY GUIDE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-card fade-in">
+                    <div class="product-image">
+                        <div class="distorted-image-container">
+                            <div class="distorted-image glitch-prophet">
+                                <div class="glitch-effect-1"></div>
+                                <div class="glitch-effect-2"></div>
+                                <div class="static-overlay"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">GLITCH PROPHET</h3>
+                        <p class="product-description">Digital noise generator with unstable oscillators and granular processor. Transforms input audio into broken digital fragments. Housed in repurposed vintage hardware.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$249</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">BUY</button>
+                                <button class="product-button diy-button">DIY GUIDE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-card fade-in">
+                    <div class="product-image">
+                        <div class="distorted-image-container">
+                            <div class="distorted-image contact-crawler">
+                                <div class="glitch-effect-1"></div>
+                                <div class="glitch-effect-2"></div>
+                                <div class="static-overlay"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">CONTACT CRAWLER</h3>
+                        <p class="product-description">Advanced contact mic system with built-in processing. Amplifies microscopic vibrations from any surface and transforms them through filters and distortion circuits.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$139</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">BUY</button>
+                                <button class="product-button diy-button">DIY GUIDE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-card fade-in">
+                    <div class="product-image">
+                        <div class="distorted-image-container">
+                            <div class="distorted-image radio-wraith">
+                                <div class="glitch-effect-1"></div>
+                                <div class="glitch-effect-2"></div>
+                                <div class="static-overlay"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">RADIO WRAITH</h3>
+                        <p class="product-description">Circuit-bent radio receiver that scans and processes electromagnetic frequencies. Creates eerie soundscapes from radio waves, WiFi signals, and electronic device emissions.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$215</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">BUY</button>
+                                <button class="product-button diy-button">DIY GUIDE</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DIY CIRCUIT SECTION -->
+    <section class="section section-dark" id="diy">
+        <div class="container">
+            <h2 class="section-title glitch-in">DIY NOISE CIRCUITS</h2>
+            <p class="section-description fade-in">Build your own experimental sound devices with these open-source schematics. Each circuit can be created from readily available or salvaged components.</p>
+            
+            <!-- CIRCUIT DIAGRAM EXAMPLE -->
+            <div class="circuit-diagram fade-in">
+                <pre>
+                             9V
+                              │
+                              ▼
+                              │
+                 R1          │
+          ┌──────────────┐   │
+          │              │   │
+          │       8      ├───┘
+          │  ┌─────────┐ │
+          └──┤4        │ │
+             │         │ │
+   ┌─────────┤2      3 ├─┴──────┐
+   │         │   555   │        │
+   │  C1     │         │        │  R3
+   │         │6        │        ├──────────┐
+   │   │     └────┬────┘        │          │
+   │   │          │             │          │
+   └───┴──────────┴─────────────┘          │
+          │                                 │       R4
+          │                                 │    ┌──────────┐
+          │       8                         │    │          │   OUTPUT
+          │  ┌─────────┐                    └────┤3         ├─────○
+    C2    └──┤4        │                         │          │
+    │        │         │                         │   POT    │
+    ├────────┤2      3 ├─────────────────────────┤          │
+    │        │   555   │                         │          │
+    │        │         │        ┌────────────────┤1         │
+    │        │6        │        │ R5             └──────────┘
+    │        └────┬────┘        │                     │
+    │             │             │                     │
+    └─────────────┴─────────────┴─────────────────────┘
+                                                      │
+                                                      ▼
+                                                     GND
+                </pre>
+            </div>
+            
+            <div class="parts-list fade-in">
+                <h3>ATARI PUNK CONSOLE PARTS</h3>
+                <ul>
+                    <li>
+                        <span class="part-name">2 × 555 Timer ICs</span>
+                        <span class="part-source">Salvage from old electronics or any electronics supplier</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R1: 10kΩ Resistor</span>
+                        <span class="part-source">Literally anywhere that sells electronics</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R3: 1kΩ Resistor</span>
+                        <span class="part-source">Common in almost all electronic devices</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R5: 100kΩ Resistor</span>
+                        <span class="part-source">Common in almost all electronic devices</span>
+                    </li>
+                    <li>
+                        <span class="part-name">C1: 0.01μF Capacitor</span>
+                        <span class="part-source">Salvage from old circuit boards</span>
+                    </li>
+                    <li>
+                        <span class="part-name">C2: 0.1μF Capacitor</span>
+                        <span class="part-source">Salvage from old circuit boards</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R4: 100kΩ Potentiometer</span>
+                        <span class="part-source">Old radios, TVs, etc.</span>
+                    </li>
+                    <li>
+                        <span class="part-name">9V Battery Clip</span>
+                        <span class="part-source">Dead smoke detectors or electronics stores</span>
+                    </li>
+                    <li>
+                        <span class="part-name">Audio Jack (1/8" or 1/4")</span>
+                        <span class="part-source">Broken headphones or electronics stores</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <p class="fade-in" style="text-align: center; margin-top: 3rem; color: var(--accent); font-size: 1.2rem;">More circuit diagrams included with each device purchase or available upon request</p>
+        </div>
+    </section>
+
+    <!-- SOUND VISUALIZER -->
+    <section class="section" id="sound">
+        <div class="container">
+            <h2 class="section-title glitch-in">SOUND LABORATORY</h2>
+            <p class="section-description fade-in">Raw output from the handbuilt noise machines. Each sample demonstrates what these circuits can do when pushed to their limits.</p>
+            
+            <div class="visualizer-container fade-in">
+                <div class="visualizer-bars" id="visualizer">
+                    <!-- Bars will be generated by JS -->
+                </div>
+            </div>
+            
+            <div class="sound-controls fade-in">
+                <button class="sound-button" data-sound="drone">WALL OF NOISE</button>
+                <button class="sound-button" data-sound="glitch">DIGITAL GLITCH</button>
+                <button class="sound-button" data-sound="punk">ATARI PUNK</button>
+                <button class="sound-button" data-sound="feedback">FEEDBACK LOOP</button>
+                <button class="sound-button" data-sound="radio">RADIO WAVES</button>
+                <button class="sound-button" data-sound="metal">METAL MACHINE</button>
+            </div>
+            
+            <div id="drone-info" class="sound-info">
+                <h3>WALL OF NOISE</h3>
+                <p>Continuous drone generated by the Void Scanner. Multiple feedback paths and distortion circuits creating an evolving wall of sound. Recorded direct from the device with no additional processing.</p>
+                <div class="sound-specs">
+                    <span class="sound-spec">DEVICE: VOID SCANNER</span>
+                    <span class="sound-spec">CIRCUIT: FEEDBACK MATRIX</span>
+                    <span class="sound-spec">DURATION: 03:47</span>
+                </div>
+            </div>
+            
+            <div id="glitch-info" class="sound-info">
+                <h3>DIGITAL GLITCH</h3>
+                <p>Chaotic bit-crushing and sample rate reduction from the Glitch Prophet. This sample demonstrates the unstable digital oscillators and granular processor fragmenting an input signal.</p>
+                <div class="sound-specs">
+                    <span class="sound-spec">DEVICE: GLITCH PROPHET</span>
+                    <span class="sound-spec">CIRCUIT: DIGITAL CORRUPTION</span>
+                    <span class="sound-spec">DURATION: 02:38</span>
+                </div>
+            </div>
+            
+            <div id="punk-info" class="sound-info">
+                <h3>ATARI PUNK</h3>
+                <p>Classic square wave tones from a dual 555 timer circuit. This is the foundational circuit demonstrated in our workshops, capable of producing piercing electronic tones and rhythmic patterns.</p>
+                <div class="sound-specs">
+                    <span class="sound-spec">DEVICE: ATARI PUNK CONSOLE</span>
+                    <span class="sound-spec">CIRCUIT: DUAL 555 OSCILLATOR</span>
+                    <span class="sound-spec">DURATION: 01:45</span>
+                </div>
+            </div>
+            
+            <div id="feedback-info" class="sound-info">
+                <h3>FEEDBACK LOOP</h3>
+                <p>Pure audio feedback generated by the Contact Crawler with its output feeding back into its input. The resulting loop is shaped by bandpass filters and distortion to create this unstable, screaming sound.</p>
+                <div class="sound-specs">
+                    <span class="sound-spec">DEVICE: CONTACT CRAWLER</span>
+                    <span class="sound-spec">CIRCUIT: FEEDBACK SYSTEM</span>
+                    <span class="sound-spec">DURATION: 02:22</span>
+                </div>
+            </div>
+            
+            <div id="radio-info" class="sound-info">
+                <h3>RADIO WAVES</h3>
+                <p>Electromagnetic frequencies captured and processed by the Radio Wraith. This sample contains fragments of radio broadcasts, WiFi signals, and electronic device emissions, all warped beyond recognition.</p>
+                <div class="sound-specs">
+                    <span class="sound-spec">DEVICE: RADIO WRAITH</span>
+                    <span class="sound-spec">CIRCUIT: EM RECEIVER</span>
+                    <span class="sound-spec">DURATION: 04:12</span>
+                </div>
+            </div>
+            
+            <div id="metal-info" class="sound-info">
+                <h3>METAL MACHINE</h3>
+                <p>Heavy, distorted textures created by amplifying metal objects with contact microphones. The resonant frequencies of the metal are then processed through a chain of distortion and filter circuits.</p>
+                <div class="sound-specs">
+                    <span class="sound-spec">DEVICE: CONTACT CRAWLER</span>
+                    <span class="sound-spec">CIRCUIT: RESONANT FILTER</span>
+                    <span class="sound-spec">DURATION: 03:36</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WORKSHOP SECTION -->
+    <section class="section" id="workshops">
+        <div class="container">
+            <h2 class="section-title glitch-in">NOISE WORKSHOPS</h2>
+            <p class="section-description fade-in">Join our underground noise-building sessions. Create sonic weapons together in squats, DIY spaces, and abandoned locations.</p>
+            
+            <div class="workshop-grid">
+                <div class="workshop-card fade-in">
+                    <div class="workshop-date-tag">31 OCT</div>
+                    <h3>CIRCUIT-BENDING MAYHEM</h3>
+                    <p>Bring dead electronics, children's toys, and anything with circuits. We'll mutilate them into noise generators. No experience needed, just a desire for destruction.</p>
+                    <div class="workshop-details">
+                        <span class="workshop-location">LOCATION: THE ABANDONED FACTORY, JERUSALEM</span>
+                        <span class="workshop-time">TIME: 20:00 - WHENEVER</span>
+                        <span class="workshop-cost">COST: PAY WHAT YOU CAN / BRING SCRAP ELECTRONICS</span>
+                    </div>
+                    <div class="workshop-image-container">
+                        <div class="workshop-image circuit-bending">
+                            <div class="glitch-effect-1"></div>
+                            <div class="static-overlay"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="workshop-card fade-in">
+                    <div class="workshop-date-tag">15 NOV</div>
+                    <h3>FEEDBACK SYSTEMS</h3>
+                    <p>Create self-generating noise circuits that produce walls of sound. We'll build audio feedback loops with various distortion points. Bring earplugs - this will be loud.</p>
+                    <div class="workshop-details">
+                        <span class="workshop-location">LOCATION: RESISTANCE SQUAT, TEL AVIV</span>
+                        <span class="workshop-time">TIME: 19:00 - LATE</span>
+                        <span class="workshop-cost">COST: FREE / DONATIONS FOR MATERIALS</span>
+                    </div>
+                    <div class="workshop-image-container">
+                        <div class="workshop-image feedback-systems">
+                            <div class="glitch-effect-1"></div>
+                            <div class="static-overlay"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="workshop-card fade-in">
+                    <div class="workshop-date-tag">05 DEC</div>
+                    <h3>CONTACT MIC CONSTRUCTION</h3>
+                    <p>Build sensitive contact microphones that can turn any surface into an instrument. We'll create complete pickup systems with preamps and filters for maximum noise potential.</p>
+                    <div class="workshop-details">
+                        <span class="workshop-location">LOCATION: THE OLD POWER STATION, HAIFA</span>
+                        <span class="workshop-time">TIME: 18:00 - 22:00</span>
+                        <span class="workshop-cost">COST: 50₪ (INCLUDES ALL MATERIALS)</span>
+                    </div>
+                    <div class="workshop-image-container">
+                        <div class="workshop-image contact-mics">
+                            <div class="glitch-effect-1"></div>
+                            <div class="static-overlay"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- VIDEO SECTION -->
+    <section class="section section-dark" id="videos">
+        <div class="container">
+            <h2 class="section-title glitch-in">NOISE DESTRUCTION</h2>
+            <p class="section-description fade-in">Witness the sonic hell these machines create. Raw, unfiltered demonstration videos.</p>
+            
+            <div class="videos-container">
+                <div class="video-wrapper fade-in">
+                    <div class="video-player">
+                        <div class="video-placeholder">
+                            <div class="video-placeholder-text">VOID SCANNER DEMONSTRATION</div>
+                            <div class="play-button"><i class="fas fa-play"></i></div>
+                            <div class="video-static"></div>
+                            <div class="video-glitch-line"></div>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        <h3>VOID SCANNER DESTRUCTION TEST</h3>
+                        <p>Captured during a live noise session in an abandoned subway tunnel. Raw feedback system pushed to its limits.</p>
+                    </div>
+                </div>
+                
+                <div class="video-wrapper fade-in">
+                    <div class="video-player">
+                        <div class="video-placeholder">
+                            <div class="video-placeholder-text">SIGNAL CORRUPTION PROCESS</div>
+                            <div class="play-button"><i class="fas fa-play"></i></div>
+                            <div class="video-static"></div>
+                            <div class="video-glitch-line"></div>
+                        </div>
+                    </div>
+                    <div class="video-info">
+                        <h3>SIGNAL CORRUPTION PROCESS</h3>
+                        <p>Step-by-step guide to building the Glitch Prophet with circuit explanations and testing. Complete beginner-friendly guide.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONTACT FORM -->
+    <section class="section section-dark" id="contact">
+        <div class="container">
+            <h2 class="section-title glitch-in">MAKE CONTACT</h2>
+            <p class="section-description fade-in">Questions about building or buying? Need help with a circuit? Want to make some noise together?</p>
+            
+            <div class="contact-form fade-in">
+                <form>
+                    <div class="form-group">
+                        <label for="name">NAME / CODENAME</label>
+                        <input type="text" id="name" class="form-input" placeholder="Your name or alias">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">TRANSMISSION POINT</label>
+                        <input type="email" id="email" class="form-input" placeholder="Email or contact method">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">YOUR NOISE</label>
+                        <textarea id="message" class="form-input" rows="5" placeholder="What's your frequency?"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="form-submit">TRANSMIT</button>
+                </form>
+            </div>
+            
+            <div class="newsletter-signup fade-in">
+                <h3>JOIN THE NOISE CULT</h3>
+                <p>Get circuit diagrams, workshop announcements, and noise philosophy directly to your inbox. No spam, just occasional transmissions from the noise void.</p>
+                <div class="newsletter-form">
+                    <input type="email" class="form-input" placeholder="YOUR EMAIL ADDRESS">
+                    <button type="submit" class="form-submit">SUBSCRIBE</button>
+                </div>
+                <p class="newsletter-note">* You can unsubscribe anytime. I won't sell your data because I don't believe in digital capitalism.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-manifesto">
+                <div class="footer-logo">NOISE MACHINES</div>
+                <p>This is a hybrid zone - I sell handmade noise machines, but I also share all the knowledge needed to build them yourself. The choice is yours.</p>
+                <p>If you buy from me, you're supporting more development, more circuit designs, and more noise experiments. If you build it yourself, you're still part of the sonic rebellion. Either way, noise wins.</p>
+                
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="fab fa-bandcamp"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-links">
+                <h3>DEVICES</h3>
+                <ul>
+                    <li><a href="#">Noise Machines</a></li>
+                    <li><a href="#">DIY Kits</a></li>
+                    <li><a href="#">Components</a></li>
+                    <li><a href="#">Custom Builds</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-links">
+                <h3>DIY</h3>
+                <ul>
+                    <li><a href="#">Circuit Diagrams</a></li>
+                    <li><a href="#">Build Guides</a></li>
+                    <li><a href="#">Workshops</a></li>
+                    <li><a href="#">Resources</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-links">
+                <h3>COMMUNITY</h3>
+                <ul>
+                    <li><a href="#">Noise Collective</a></li>
+                    <li><a href="#">Forums</a></li>
+                    <li><a href="#">Performances</a></li>
+                    <li><a href="#">Collaborations</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>This site is <span class="copyleft">©</span> COPYLEFT. Take what you need, share what you learn.</p>
+            <p>No cookies, no tracking, no corporate bullshit. Just noise.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Create visualizer bars
+        const visualizer = document.getElementById('visualizer');
+        const barCount = 40;
+        
+        for (let i = 0; i < barCount; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = '0px';
+            visualizer.appendChild(bar);
+        }
+        
+        // Simple visualizer animation
+        let isPlaying = false;
+        let currentSound = null;
+        
+        function animateVisualizer() {
+            const bars = document.querySelectorAll('.bar');
+            
+            function updateBars() {
+                if (!isPlaying) return;
+                
+                if (currentSound === 'drone') {
+                    // Wall of noise - mostly high values with slow fluctuation
+                    bars.forEach(bar => {
+                        const height = 50 + Math.random() * 50;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'glitch') {
+                    // Digital glitch - erratic, jumpy pattern
+                    bars.forEach(bar => {
+                        const height = Math.random() > 0.5 ? Math.random() * 100 : 0;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'punk') {
+                    // Atari Punk - square wave-like pattern
+                    bars.forEach((bar, index) => {
+                        const height = Math.sin(Date.now() * 0.01 + index * 0.2) > 0 ? 80 : 20;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'feedback') {
+                    // Feedback - growing and falling intensity
+                    const base = (Math.sin(Date.now() * 0.001) + 1) * 50;
+                    bars.forEach(bar => {
+                        const height = base + (Math.random() * 20 - 10);
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'radio') {
+                    // Radio - static-like
+                    bars.forEach(bar => {
+                        const height = 20 + Math.random() * 60;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'metal') {
+                    // Metal - heavy bass and treble
+                    bars.forEach((bar, index) => {
+                        let height;
+                        if (index < 8 || index > 24) {
+                            height = 60 + Math.random() * 40;
+                        } else {
+                            height = 20 + Math.random() * 30;
+                        }
+                        bar.style.height = `${height}%`;
+                    });
+                }
+                
+                requestAnimationFrame(updateBars);
+            }
+            
+            updateBars();
+        }
+        
+        // Sound buttons functionality
+        const soundButtons = document.querySelectorAll('.sound-button');
+        const soundInfos = document.querySelectorAll('.sound-info');
+        
+        soundButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const sound = button.getAttribute('data-sound');
+                
+                // Reset all buttons
+                soundButtons.forEach(btn => {
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--accent)';
+                });
+                
+                // Hide all sound info panels
+                soundInfos.forEach(info => {
+                    info.classList.remove('active');
+                });
+                
+                if (currentSound === sound && isPlaying) {
+                    // Stop current sound if clicking the same button
+                    isPlaying = false;
+                    currentSound = null;
+                    
+                    // Reset all bars
+                    const bars = document.querySelectorAll('.bar');
+                    bars.forEach(bar => {
+                        bar.style.height = '0px';
+                    });
+                } else {
+                    // Start new sound
+                    button.style.background = 'var(--accent)';
+                    button.style.color = 'black';
+                    
+                    // Show corresponding sound info
+                    document.getElementById(`${sound}-info`).classList.add('active');
+                    
+                    isPlaying = true;
+                    currentSound = sound;
+                    
+                    if (!isPlaying) {
+                        animateVisualizer();
+                    }
+                }
+            });
+        });
+        
+        // Scroll animations with dirty reveal
+        function checkFadeElements() {
+            const fadeElements = document.querySelectorAll('.fade-in, .glitch-in');
+            
+            fadeElements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementBottom = element.getBoundingClientRect().bottom;
+                
+                if (elementTop < window.innerHeight - 100 && elementBottom > 0) {
+                    element.classList.add('active');
+                }
+            });
+        }
+        
+        // Check fade elements on load and scroll
+        window.addEventListener('load', checkFadeElements);
+        window.addEventListener('scroll', checkFadeElements);
+        
+        // Random glitch effect for entire page
+        function pageGlitch() {
+            const randomGlitch = document.getElementById('random-glitch');
+            
+            setInterval(() => {
+                if (Math.random() > 0.99) {
+                    randomGlitch.style.opacity = 0.2;
+                    document.body.style.filter = 'hue-rotate(90deg)';
+                    
+                    setTimeout(() => {
+                        randomGlitch.style.opacity = 0;
+                        document.body.style.filter = 'none';
+                    }, 100);
+                }
+            }, 2000);
+            
+            // Smaller glitches more frequently
+            setInterval(() => {
+                if (Math.random() > 0.8) {
+                    const randomElement = document.querySelectorAll('h3, .product-name, .section-title')[Math.floor(Math.random() * document.querySelectorAll('h3, .product-name, .section-title').length)];
+                    
+                    if (randomElement) {
+                        const originalTransform = randomElement.style.transform;
+                        randomElement.style.transform = 'skew(' + (Math.random() * 20 - 10) + 'deg)';
+                        randomElement.style.color = 'var(--accent)';
+                        
+                        setTimeout(() => {
+                            randomElement.style.transform = originalTransform;
+                            randomElement.style.color = '';
+                        }, 100);
+                    }
+                }
+            }, 1000);
+        }
+        
+        // Video player functionality
+        const playButtons = document.querySelectorAll('.play-button');
+        
+        playButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const videoWrapper = button.closest('.video-wrapper');
+                const videoTitle = videoWrapper.querySelector('.video-info h3').textContent;
+                
+                // Add a simple video click simulation
+                const videoPlaceholder = button.closest('.video-placeholder');
+                videoPlaceholder.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#000000;"><p style="color:#ff0000; font-family:monospace; text-align:center;">PLAYING: ' + videoTitle + '<br><br>LOADING VIDEO...</p></div>';
+                
+                // Simulated video loading message
+                setTimeout(() => {
+                    videoPlaceholder.innerHTML = '<div style="width:100%; height:100%; display:flex; align-items:center; justify-content:center; background:#000000;"><p style="color:#ff0000; font-family:monospace; text-align:center;">VIDEO WOULD PLAY HERE<br><br>This is a mockup.<br>In a real implementation, video content would appear.</p></div>';
+                }, 2000);
+            });
+        });
+        
+        // Add hover effects to product cards for better interaction
+        const productCards = document.querySelectorAll('.product-card');
+        
+        productCards.forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                // Add extra glitch on hover
+                const image = card.querySelector('.distorted-image');
+                if (image) {
+                    image.style.animation = 'none';
+                    image.offsetHeight; // Trigger reflow
+                    image.style.animation = 'imageDistort 4s infinite alternate';
+                    image.style.filter = 'brightness(1.3) contrast(1.5)';
+                }
+            });
+            
+            card.addEventListener('mouseleave', () => {
+                // Reset to normal glitch on mouse leave
+                const image = card.querySelector('.distorted-image');
+                if (image) {
+                    image.style.animation = '';
+                    image.style.filter = '';
+                }
+            });
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            pageGlitch();
+            
+            // Start visualizer animation
+            animateVisualizer();
+            
+            // Setup random circuit diagram glitches
+            setInterval(() => {
+                if (Math.random() > 0.7) {
+                    const diagram = document.querySelector('.circuit-diagram');
+                    if (diagram) {
+                        diagram.style.filter = 'hue-rotate(' + (Math.random() * 360) + 'deg)';
+                        setTimeout(() => {
+                            diagram.style.filter = '';
+                        }, 200);
+                    }
+                }
+            }, 3000);
+            
+            // Simulate a "digital error" on page load
+            setTimeout(() => {
+                document.body.style.filter = 'invert(100%)';
+                setTimeout(() => {
+                    document.body.style.filter = '';
+                }, 150);
+            }, 1500);
+        });
+    </script>
+</body>
+</html>
