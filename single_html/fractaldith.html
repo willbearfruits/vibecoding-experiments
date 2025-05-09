@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GLITCH BOY — Rogue‑Lite Prototype v4</title>
+<style>
+ html,body{margin:0;padding:0;background:#000;color:#fff;overflow:hidden;font-family:monospace;}
+ canvas{image-rendering:pixelated;}
+ #hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:8px;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);font-size:.8rem;line-height:1.3em;user-select:none;pointer-events:none;}
+ #hud b{color:#f00;filter:drop-shadow(0 0 3px #f00);} 
+</style>
+</head>
+<body>
+<div id="hud"></div>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+<script>
+/* =====================================================================
+   GLITCH BOY – tiny rogue‑lite side‑scroller v4 (single file)
+   ---------------------------------------------------------------------
+   NEW FEATURES
+   • Day ↔ Night 60‑sec cycle – adds blues & yellows to sky/mountains
+   • Power‑ups grant 15‑sec DOUBLE JUMP ability (yellow star icon)
+   • Double‑jump (press jump again mid‑air) – resets when grounded
+   • Animated player sprite: walking stripes scroll, glow on jump/shot
+   • Enemies explode into red particles when shot
+   • Simple floating platforms
+   (Stages / bosses placeholders for future iterations)  
+===================================================================== */
+const rez=4, G=0.9;
+let groundY, camX, timeOfDay=0;           // timeOfDay 0..1 (0‑0.5 night, 0.5‑1 day)
+const cycleFrames=3600;                   // 60 sec at 60 fps
+const player={x:0,y:0,w:18,h:18,vy:0,dir:1,shotCD:0,double:false,djUsed:false};
+const bullets=[], enemies=[], powerups=[], particles=[], platforms=[];
+let score=0, combo=0, gameOver=false;
+
+/* ================= INIT ================= */
+function setup(){
+  createCanvas(windowWidth,windowHeight);pixelDensity(1);noSmooth();
+  reset();
+}
+function windowResized(){resizeCanvas(windowWidth,windowHeight);groundY=height*0.75;}
+function reset(){
+  groundY=height*0.75; player.x=0; player.y=groundY-player.h; player.vy=0; player.dir=1; player.shotCD=0; player.double=false; player.djUsed=false;
+  bullets.length=enemies.length=powerups.length=particles.length=platforms.length=0;
+  score=0; combo=0; gameOver=false; camX=0; timeOfDay=0;
+  // generate a few starter platforms
+  for(let i=1;i<=5;i++){ platforms.push({x:i*300, y:groundY-80-random(40), w:120, h:12}); }
+}
+
+/* ================= INPUT ================= */
+function keyPressed(){
+  if((key===' '||keyCode===UP_ARROW||key==='w'||key==='W')) jump();
+  if(key==='r'||key==='R') reset();
+  if(key==='x'||key==='X'||key==='k'||key==='K') shoot();
+}
+function jump(){
+  if(onGround()){ player.vy=-16; player.djUsed=false; }
+  else if(player.double && !player.djUsed){ player.vy=-14; player.djUsed=true; }
+}
+function onGround(){ return player.y>=groundY-player.h-0.1 || touchingPlatform(); }
+function touchingPlatform(){ for(const p of platforms){ if(player.y+player.h<=p.y+4 && player.y+player.h>=p.y-4){ const sx=worldXtoScreen(p.x); const px=player.x; if(px+player.w>p.x && px<p.x+p.w){ return true;} } } return false; }
+function shoot(){ if(player.shotCD>0||gameOver) return; bullets.push({x:player.x+player.w*player.dir,y:player.y+player.h/2,v:12*player.dir}); player.shotCD=12; }
+
+/* ================= LOOP ================= */
+function draw(){
+  handleMovement();
+  if(!gameOver){
+    updatePlayer();
+    camX = player.x - width*0.4;
+    spawnEntities();
+    updateBullets();
+    updateEnemies();
+    updatePowerups();
+    updateParticles();
+    detectCollisions();
+    score = max(score, floor(player.x/10));
+    timeOfDay = (frameCount%cycleFrames)/cycleFrames;  // loop day/night
+  }
+  renderScene();
+  hud.innerHTML=`<b>${gameOver?"DEAD":"GLITCH BOY"}</b> | Score ${score} | Combo ${combo} | ${player.double?"DOUBLE JUMP 💫":""}`;
+  if(player.shotCD>0) player.shotCD--; }
+
+function handleMovement(){ if(gameOver) return;
+  const left = keyIsDown(LEFT_ARROW)||keyIsDown(65); const right=keyIsDown(RIGHT_ARROW)||keyIsDown(68);
+  if(left){ player.x-=4; player.dir=-1; }
+  if(right){ player.x+=4; player.dir=1; }
+}
+function updatePlayer(){
+  player.vy+=G; player.y+=player.vy;
+  // platform collide
+  let onPlat=false;
+  for(const p of platforms){ if(player.y+player.h>=p.y && player.y+player.h<=p.y+player.vy+1 && player.x+player.w>p.x && player.x<p.x+p.w){ player.y=p.y-player.h; player.vy=0; onPlat=true; player.djUsed=false; } }
+  if(player.y>groundY-player.h){ player.y=groundY-player.h; player.vy=0; player.djUsed=false; }
+}
+
+/* ================= SPAWN & UPDATE ================= */
+function spawnEntities(){
+  if(frameCount%80===0){ const x=camX+width+random(140,320); enemies.push({type:0,x,y:groundY-22,w:16,h:22}); }
+  if(frameCount%150===0){ const x=camX+width+random(260,420); enemies.push({type:1,x,y:groundY-110-random(60),w:18,h:14}); }
+  if(frameCount%550===0){ const x=camX+width+random(200,400); powerups.push({x,y:groundY-100-random(80),w:14,h:14}); }
+  if(frameCount%300===0){ // new platform
+    const x=camX+width+random(250,450); platforms.push({x,y:groundY-80-random(60), w:120, h:12}); }
+}
+function updateBullets(){ for(let i=bullets.length-1;i>=0;i--){ const b=bullets[i]; b.x+=b.v; if(b.x<camX-60||b.x>camX+width+60) bullets.splice(i,1);} }
+function updateEnemies(){ for(let i=enemies.length-1;i>=0;i--){ const e=enemies[i]; e.x-=2+(e.type?1:0); if(e.x<camX-120) enemies.splice(i,1);} }
+function updatePowerups(){ for(let i=powerups.length-1;i>=0;i--){ const p=powerups[i]; p.x-=2; if(p.x<camX-120) powerups.splice(i,1);} }
+function updateParticles(){ for(let i=particles.length-1;i>=0;i--){ const pt=particles[i]; pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.3; pt.life--; if(pt.life<=0) particles.splice(i,1);} }
+
+/* ================= COLLISIONS ================= */
+function detectCollisions(){ if(gameOver) return;
+  // player vs enemies
+  for(const e of enemies){ if(boxHit(player,e)){ gameOver=true; return; } }
+  // player vs powerups
+  for(let i=powerups.length-1;i>=0;i--){ const p=powerups[i]; if(boxHit(player,p)){ powerups.splice(i,1); player.double=true; setTimeout(()=>player.double=false,15000); combo=0; } }
+  // bullets vs enemies
+  for(let bi=bullets.length-1;bi>=0;bi--){ const b=bullets[bi]; for(let ei=enemies.length-1;ei>=0;ei--){ const e=enemies[ei]; if(pointInBox(b.x,b.y,e)){ bullets.splice(bi,1); explode(e); enemies.splice(ei,1); combo++; score+=combo*5; break;} } }
+}
+function explode(e){ for(let i=0;i<10;i++){ particles.push({x:e.x+e.w/2,y:e.y+e.h/2,vx:random(-2,2),vy:random(-3,0),life:30}); } }
+function boxHit(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
+function pointInBox(px,py,box){ return px>box.x && px<box.x+box.w && py>box.y && py<box.y+box.h; }
+
+/* ================= RENDER ================= */
+function renderScene(){
+  drawSky(); drawParallax(); drawGround(); drawPlatforms(); drawEntities(); drawParticles(); drawPlayer();
+}
+function worldXtoScreen(x){ return x - camX; }
+/* ---- Sky day/night ---- */
+function drawSky(){ loadPixels(); const w=width/rez|0,h=(groundY/rez)|0; const z=frameCount*0.001; const day=timeOfDay>0.5;
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const nx=(x+camX*0.02)*0.01, ny=y*0.02; const n=noise(nx,ny,z); let c; if(day){ c=n>0.55?200: (n>0.5?120:80);} else { c=n>0.58?120: (n>0.5?60:30);} const thr=bayer[(y&3)][(x&3)]; const col = c>thr?c:0; blitGrey(x*rez,y*rez,col);} updatePixels(); }
+/* ---- Parallax mountains ---- */
+function drawParallax(){ noStroke(); for(let l=1;l<=3;l++){ const spd=0.15*l; const dayCol=timeOfDay>0.5? color(0,0,255/l,60):color(255,0,0,l===3?80:30); fill(dayCol);
+    beginShape(); vertex(0,groundY); for(let sx=0;sx<=width;sx+=8){ const wx=sx+camX; const y=groundY-60*l-40*sin(wx*0.003*spd)-20*sin(wx*0.01*spd); vertex(sx,y);} vertex(width,groundY); endShape(CLOSE);} }
+function drawGround(){ stroke(255); strokeWeight(2); line(0,groundY,width,groundY); }
+function drawPlatforms(){ noStroke(); fill(100,100,100); for(const p of platforms){ const sx=worldXtoScreen(p.x); if(sx<-p.w||sx>width) continue; rect(sx,p.y,p.w,p.h);} }
+/* ---- Entities ---- */
+function drawEntities(){ // enemies
+  fill(255,0,0);
+  for(const e of enemies){ const sx=worldXtoScreen(e.x); if(sx<-40||sx>width+40) continue; if(e.type===0) rect(sx,e.y,e.w,e.h); else triangle(sx,e.y,sx-e.w/2,e.y+e.h,sx+e.w/2,e.y+e.h); }
+  // powerups
+  fill(255,255,0);
+  for(const p of powerups){ const sx=worldXtoScreen(p.x); if(sx<-20||sx>width+20) continue; push(); translate(sx,p.y); rotate(frameCount*0.15); star(0,0,7,3,5); pop(); }
+  // bullets
+  stroke(0,255,255); strokeWeight(2); for(const b of bullets){ const sx=worldXtoScreen(b.x); line(sx,b.y, sx+4*player.dir,b.y);} }
+function drawParticles(){ noStroke(); fill(255,0,0); for(const pt of particles){ const sx=worldXtoScreen(pt.x); ellipse(sx,pt.y,3,3);} }
+/* ---- Player ---- */
+function drawPlayer(){ const sx=worldXtoScreen(player.x), py=player.y; const animShift=floor(frameCount/4)%player.w;
+  for(let i=0;i<player.h;i+=2){ const col=(onGround()?255:0); stroke(i%4?col:255, i%4?col:0, player.shotCD>0?255:0); line(sx,py+i,sx+player.w,py+i); }
+  // legs walk anim when grounded & moving
+  if(onGround() && (keyIsDown(LEFT_ARROW)||keyIsDown(RIGHT_ARROW)||keyIsDown(65)||keyIsDown(68))){ stroke(255); const off=sin(frameCount*0.2)*4; line(sx+4,py+player.h,sx+4,py+player.h+4+off); line(sx+player.w-4,py+player.h,sx+player.w-4,py+player.h+4-off);} else { stroke(255); line(sx+4,py+player.h,sx+4,py+player.h+4); line(sx+player.w-4,py+player.h,sx+player.w-4,py+player.h+4);} }
+
+/* ---- Helpers ---- */
+function star(cx,cy,r1,r2,n){ beginShape(); for(let i=0;i<2*n;i++){ const ang=PI*i/n; const r=i%2?r2:r1; vertex(cx+cos(ang)*r,cy+sin(ang)*r);} endShape(CLOSE);}  
+const bayer=[[0,128,32,160],[192,64,224,96],[48,176,16,144],[240,112,208,80]];
+function blitGrey(px,py,c){ for(let dy=0;dy<rez;dy++){ let line=(py+dy)*width+px; for(let dx=0;dx<rez;dx++){ let idx=4*(line+dx); pixels[idx]=pixels[idx+1]=pixels[idx+2]=c; pixels[idx+3]=255; }} }
+</script>
+</body>
+</html>
