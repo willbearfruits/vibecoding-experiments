@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pulsating Organ Shape - Controllable</title>
+    <style>
+        /* Basic reset and full-screen canvas styling */
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a0000; /* Dark red background */
+            color: #eee; /* Light text color for controls */
+            font-family: 'Inter', sans-serif; /* Use Inter font */
+        }
+        canvas {
+            display: block;
+        }
+        /* Styling for the controls panel */
+        #controls {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background-color: rgba(0, 0, 0, 0.6); /* Semi-transparent black */
+            padding: 15px;
+            border-radius: 8px; /* Rounded corners */
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            max-width: 250px;
+        }
+        #controls label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        #controls input[type="range"] {
+            width: 100%;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        #controls span {
+            font-size: 0.8em;
+            color: #bbb;
+        }
+        /* Add Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap');
+    </style>
+</head>
+<body>
+    <canvas id="pulsatingCanvas"></canvas>
+
+    <div id="controls">
+        <div>
+            <label for="pulseSpeed">Pulse Speed</label>
+            <input type="range" id="pulseSpeed" name="pulseSpeed" min="0.1" max="5" step="0.1" value="1.5">
+            <span id="pulseSpeedValue">1.5</span>
+        </div>
+        <div>
+            <label for="wobbleSpeed">Wobble Speed</label>
+            <input type="range" id="wobbleSpeed" name="wobbleSpeed" min="0.0" max="1.0" step="0.01" value="0.15">
+             <span id="wobbleSpeedValue">0.15</span>
+        </div>
+        <div>
+            <label for="wobbleAmount">Wobble Amount / Bumpiness</label>
+            <input type="range" id="wobbleAmount" name="wobbleAmount" min="0.0" max="1.5" step="0.05" value="1.0">
+             <span id="wobbleAmountValue">1.0</span>
+        </div>
+        <div>
+            <label for="wetness">Wetness (Fresnel)</label>
+            <input type="range" id="wetness" name="wetness" min="1.0" max="8.0" step="0.1" value="4.5">
+             <span id="wetnessValue">4.5</span>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // === Shaders ===
+
+        // Vertex Shader: Deforms the sphere vertices over time
+        const vertexShader = `
+            // Uniforms controlled by JS/sliders
+            uniform float u_time;
+            uniform float u_pulse_speed;
+            uniform float u_wobble_speed;
+            uniform float u_wobble_amount;
+
+            // Varying variables passed to fragment shader
+            varying vec3 v_normal;
+            varying vec3 v_worldPosition;
+
+            // Function to create pseudo-random noise (for bumpiness/wobble)
+            float noise(vec3 pos, float time_offset) {
+                // Combine sine waves - adjusted frequency for bumpier look
+                float noiseVal = sin(pos.x * 3.0 + time_offset * 0.8) * 0.5 + 0.5; // Increased frequency (3.0)
+                noiseVal += cos(pos.y * 3.0 + time_offset * 1.0) * 0.5 + 0.5;
+                noiseVal += sin(pos.z * 3.0 + time_offset * 1.2) * 0.5 + 0.5;
+                return noiseVal / 3.0; // Average the components
+            }
+
+            void main() {
+                vec3 pos = position;
+
+                // Calculate time offsets based on speed controls
+                float pulse_time = u_time * u_pulse_speed;
+                float wobble_time = u_time * u_wobble_speed;
+
+                // Calculate displacement factors
+                // Slower default pulse speed, controlled by slider
+                float pulseFactor = sin(pulse_time) * 0.2 + 0.8;
+                // Slower default wobble speed, amount controlled by slider for bumpiness
+                float liquidWobble = noise(pos * 2.0, wobble_time) * u_wobble_amount; // Noise frequency adjusted slightly
+
+                // Combine pulse and wobble for final displacement
+                float displacement = pulseFactor * (1.0 + liquidWobble);
+
+                vec3 displacedPosition = pos * displacement;
+
+                // Standard calculations for position and normals
+                vec4 modelViewPosition = modelViewMatrix * vec4(displacedPosition, 1.0);
+                gl_Position = projectionMatrix * modelViewPosition;
+                v_normal = normalize(normalMatrix * normal); // Using original normal (approximation)
+                vec4 worldPosition = modelMatrix * vec4(displacedPosition, 1.0);
+                v_worldPosition = worldPosition.xyz;
+            }
+        `;
+
+        // Fragment Shader: Sets the color, incorporates wetness/Fresnel
+        const fragmentShader = `
+            // Uniforms
+            uniform vec3 u_color;
+            uniform vec3 u_lightDirection;
+            uniform float u_fresnel_exponent; // Controlled by slider for "wetness"
+            uniform vec3 cameraPosition; // Camera position needed for view direction
+
+            // Varying variables
+            varying vec3 v_normal;
+            varying vec3 v_worldPosition;
+
+            void main() {
+                vec3 normal = normalize(v_normal);
+
+                // Basic lighting
+                float lightIntensity = max(0.4, dot(normal, normalize(u_lightDirection)));
+
+                // Fresnel effect (wet look)
+                vec3 viewDirection = normalize(cameraPosition - v_worldPosition);
+                // Use uniform for exponent, controlled by slider
+                float fresnel = pow(1.0 - max(0.0, dot(normal, viewDirection)), u_fresnel_exponent);
+
+                // Final color calculation - increased Fresnel contribution for wetter look
+                vec3 fresnelColor = vec3(1.0, 0.9, 0.9); // Slightly pinkish-white highlight
+                vec3 finalColor = u_color * lightIntensity + fresnelColor * fresnel * 0.8; // Increased multiplier (0.8)
+
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+        // === Scene Setup ===
+
+        let scene, camera, renderer, material, mesh, clock;
+
+        // References to sliders and value displays
+        const pulseSpeedSlider = document.getElementById('pulseSpeed');
+        const wobbleSpeedSlider = document.getElementById('wobbleSpeed');
+        const wobbleAmountSlider = document.getElementById('wobbleAmount');
+        const wetnessSlider = document.getElementById('wetness');
+        const pulseSpeedValueSpan = document.getElementById('pulseSpeedValue');
+        const wobbleSpeedValueSpan = document.getElementById('wobbleSpeedValue');
+        const wobbleAmountValueSpan = document.getElementById('wobbleAmountValue');
+        const wetnessValueSpan = document.getElementById('wetnessValue');
+
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a0000); // Dark red
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 4.5;
+
+            const canvas = document.getElementById('pulsatingCanvas');
+            renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            clock = new THREE.Clock();
+
+            const ambientLight = new THREE.AmbientLight(0x606060);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.7);
+            directionalLight.position.set(1, 1, 1.5);
+            scene.add(directionalLight);
+
+            // === Geometry and Material ===
+            const geometry = new THREE.SphereGeometry(1.5, 64, 64);
+
+            // Initial uniform values from sliders
+            const initialUniforms = {
+                u_time: { value: 0.0 },
+                u_color: { value: new THREE.Color(0xff0000) }, // Red
+                u_lightDirection: { value: directionalLight.position },
+                cameraPosition: { value: camera.position },
+                // Controllable uniforms, initialized from slider defaults
+                u_pulse_speed: { value: parseFloat(pulseSpeedSlider.value) },
+                u_wobble_speed: { value: parseFloat(wobbleSpeedSlider.value) },
+                u_wobble_amount: { value: parseFloat(wobbleAmountSlider.value) },
+                u_fresnel_exponent: { value: parseFloat(wetnessSlider.value) }
+            };
+
+            material = new THREE.ShaderMaterial({
+                uniforms: initialUniforms,
+                vertexShader: vertexShader,
+                fragmentShader: fragmentShader,
+            });
+
+            mesh = new THREE.Mesh(geometry, material);
+            scene.add(mesh);
+
+            // === Event Listeners ===
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Slider event listeners to update uniforms and display values
+            pulseSpeedSlider.addEventListener('input', (event) => {
+                material.uniforms.u_pulse_speed.value = parseFloat(event.target.value);
+                pulseSpeedValueSpan.textContent = event.target.value;
+            });
+            wobbleSpeedSlider.addEventListener('input', (event) => {
+                material.uniforms.u_wobble_speed.value = parseFloat(event.target.value);
+                wobbleSpeedValueSpan.textContent = event.target.value;
+            });
+            wobbleAmountSlider.addEventListener('input', (event) => {
+                material.uniforms.u_wobble_amount.value = parseFloat(event.target.value);
+                 wobbleAmountValueSpan.textContent = event.target.value;
+            });
+            wetnessSlider.addEventListener('input', (event) => {
+                material.uniforms.u_fresnel_exponent.value = parseFloat(event.target.value);
+                wetnessValueSpan.textContent = event.target.value;
+            });
+
+            // Start animation
+            animate();
+        }
+
+        // === Animation Loop ===
+        function animate() {
+            requestAnimationFrame(animate);
+            const elapsedTime = clock.getElapsedTime();
+
+            // Update time uniform
+            material.uniforms.u_time.value = elapsedTime;
+            // Update camera position uniform (needed for Fresnel)
+            material.uniforms.cameraPosition.value.copy(camera.position);
+
+            // Slow rotation
+            mesh.rotation.x += 0.001;
+            mesh.rotation.y += 0.002;
+
+            renderer.render(scene, camera);
+        }
+
+        // === Resize Handler ===
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // === Initialization ===
+        window.onload = init;
+
+    </script>
+</body>
+</html>
