@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOS Pomodoro Timer</title>
+    <style>
+        @font-face {
+            font-family: 'Perfect DOS VGA';
+            src: url('https://cdnjs.cloudflare.com/ajax/libs/PerfectDOSVGA/1.0/PerfectDOSVGA.ttf') format('truetype');
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Perfect DOS VGA', monospace;
+        }
+        
+        body {
+            background-color: #000;
+            color: #aaa;
+            padding: 10px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .screen {
+            background-color: #000080;
+            color: #fff;
+            flex: 1;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 800px;
+            border: 2px solid #aaa;
+            padding: 2px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .title-bar {
+            background-color: #0000aa;
+            color: #fff;
+            padding: 5px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #fff;
+        }
+        
+        .menu-bar {
+            background-color: #aaa;
+            color: #000;
+            padding: 2px 10px;
+            display: flex;
+            gap: 20px;
+        }
+        
+        .menu-item {
+            display: inline-block;
+            padding: 0 5px;
+        }
+        
+        .menu-item:first-letter {
+            text-decoration: underline;
+        }
+        
+        .content {
+            flex: 1;
+            display: flex;
+            padding: 5px;
+        }
+        
+        .main-panel {
+            flex: 2;
+            padding: 10px;
+            border: 1px solid #fff;
+            margin-right: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .side-panel {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #fff;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .timer-display {
+            font-size: 48px;
+            text-align: center;
+            margin: 20px 0;
+            color: #fff;
+        }
+        
+        .mode-display {
+            text-align: center;
+            padding: 5px;
+            margin-bottom: 10px;
+            border: 1px solid #fff;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #000;
+            border: 1px solid #fff;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background-color: #aaa;
+            width: 0%;
+        }
+        
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: auto;
+        }
+        
+        .btn {
+            padding: 5px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #aaa;
+            color: #000;
+            border: 1px solid #fff;
+        }
+        
+        .btn:hover {
+            background-color: #fff;
+        }
+        
+        .mode-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            margin-bottom: 10px;
+        }
+        
+        .tab {
+            padding: 5px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #000080;
+            color: #fff;
+            border: 1px solid #fff;
+        }
+        
+        .tab.active {
+            background-color: #aaa;
+            color: #000;
+        }
+        
+        .panel-title {
+            background-color: #0000aa;
+            color: #fff;
+            padding: 2px 5px;
+            text-align: center;
+            border-bottom: 1px solid #fff;
+        }
+        
+        .task-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-top: 5px;
+        }
+        
+        .task {
+            padding: 2px 5px;
+            cursor: pointer;
+            display: flex;
+            border-bottom: 1px dotted #555;
+        }
+        
+        .task.active {
+            background-color: #aaa;
+            color: #000;
+        }
+        
+        .task.completed {
+            color: #555;
+        }
+        
+        .task-number {
+            width: 20px;
+        }
+        
+        .stats {
+            margin-top: 10px;
+            padding: 5px;
+            border: 1px solid #fff;
+        }
+        
+        .task-form {
+            margin-top: 5px;
+            display: flex;
+        }
+        
+        .task-input {
+            flex: 1;
+            padding: 2px 5px;
+            background-color: #000080;
+            color: #fff;
+            border: 1px solid #fff;
+        }
+        
+        .add-btn {
+            padding: 2px 5px;
+            background-color: #aaa;
+            color: #000;
+            border: 1px solid #fff;
+            cursor: pointer;
+        }
+        
+        .status-bar {
+            display: flex;
+            justify-content: space-between;
+            background-color: #aaa;
+            color: #000;
+            padding: 2px 10px;
+            margin-top: auto;
+        }
+        
+        .help-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+        
+        .help-key {
+            background-color: #aaa;
+            color: #000;
+            padding: 0 5px;
+            margin-right: 5px;
+        }
+        
+        .ascii-tomato {
+            text-align: center;
+            color: #ff0000;
+            white-space: pre;
+            margin: 10px 0;
+            font-size: 12px;
+            line-height: 1;
+        }
+        
+        .form-row {
+            display: flex;
+            margin-bottom: 2px;
+        }
+        
+        .form-label {
+            width: 40%;
+        }
+        
+        .form-value {
+            width: 60%;
+        }
+        
+        /* Blinking cursor */
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #fff;
+            animation: blink 1s infinite;
+        }
+        
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+        
+        /* Media queries for responsiveness */
+        @media (max-width: 768px) {
+            .content {
+                flex-direction: column;
+            }
+            
+            .main-panel {
+                margin-right: 0;
+                margin-bottom: 5px;
+            }
+            
+            .timer-display {
+                font-size: 32px;
+            }
+            
+            .mode-tabs, .controls {
+                grid-template-columns: 1fr 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="screen">
+        <div class="title-bar">
+            <div>POMODORO.EXE</div>
+            <div>v1.0</div>
+        </div>
+        
+        <div class="menu-bar">
+            <div class="menu-item">File</div>
+            <div class="menu-item">Settings</div>
+            <div class="menu-item">Help</div>
+        </div>
+        
+        <div class="content">
+            <div class="main-panel">
+                <div class="mode-tabs">
+                    <div class="tab active" id="tab-work">Work</div>
+                    <div class="tab" id="tab-short">Short Break</div>
+                    <div class="tab" id="tab-long">Long Break</div>
+                </div>
+                
+                <div class="mode-display" id="mode-display">WORK MODE</div>
+                
+                <div class="ascii-tomato">
+    .---.
+   /     \\
+  |       |
+   \\_____/
+                </div>
+                
+                <div class="timer-display" id="timer">25:00</div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress"></div>
+                </div>
+                
+                <div class="controls">
+                    <div class="btn" id="btn-start">START (F1)</div>
+                    <div class="btn" id="btn-stop">STOP (F2)</div>
+                    <div class="btn" id="btn-skip">SKIP (F3)</div>
+                    <div class="btn" id="btn-reset">RESET (F4)</div>
+                </div>
+            </div>
+            
+            <div class="side-panel">
+                <div class="panel-title">TASK MANAGER</div>
+                
+                <div class="task-form">
+                    <input type="text" class="task-input" id="task-input" placeholder="New task...">
+                    <button class="add-btn" id="add-task">Add</button>
+                </div>
+                
+                <div class="task-list" id="task-list">
+                    <!-- Tasks will be added here -->
+                </div>
+                
+                <div class="stats">
+                    <div class="form-row">
+                        <div class="form-label">Completed:</div>
+                        <div class="form-value" id="completed-count">0</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Current Task:</div>
+                        <div class="form-value" id="current-task">None</div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-label">Streak:</div>
+                        <div class="form-value" id="streak-count">0 days</div>
+                    </div>
+                </div>
+                
+                <div class="help-text">
+                    <div>
+                        <span class="help-key">TAB</span> Switch panels
+                    </div>
+                    <div>
+                        <span class="help-key">ESC</span> Quit
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div>Ready</div>
+            <div id="clock">00:00:00</div>
+        </div>
+    </div>
+    
+    <audio id="beep" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elements
+            const timerDisplay = document.getElementById('timer');
+            const modeDisplay = document.getElementById('mode-display');
+            const progressBar = document.getElementById('progress');
+            const startBtn = document.getElementById('btn-start');
+            const stopBtn = document.getElementById('btn-stop');
+            const skipBtn = document.getElementById('btn-skip');
+            const resetBtn = document.getElementById('btn-reset');
+            const workTab = document.getElementById('tab-work');
+            const shortTab = document.getElementById('tab-short');
+            const longTab = document.getElementById('tab-long');
+            const taskInput = document.getElementById('task-input');
+            const addTaskBtn = document.getElementById('add-task');
+            const taskList = document.getElementById('task-list');
+            const completedCount = document.getElementById('completed-count');
+            const currentTaskDisplay = document.getElementById('current-task');
+            const streakCount = document.getElementById('streak-count');
+            const clockDisplay = document.getElementById('clock');
+            const beepSound = document.getElementById('beep');
+            
+            // Timer settings
+            const workTime = 25 * 60; // 25 minutes
+            const shortBreakTime = 5 * 60; // 5 minutes
+            const longBreakTime = 15 * 60; // 15 minutes
+            
+            // Timer state
+            let currentTime = workTime;
+            let timerInterval = null;
+            let isRunning = false;
+            let mode = 'work';
+            let completedPomodoros = 0;
+            let tasks = [];
+            let currentTask = null;
+            let streak = { count: 0, lastDate: null };
+            
+            // Load from localStorage
+            function loadData() {
+                const savedTasks = localStorage.getItem('dos-tasks');
+                if (savedTasks) {
+                    tasks = JSON.parse(savedTasks);
+                }
+                
+                const savedPomodoros = localStorage.getItem('dos-pomodoros');
+                if (savedPomodoros) {
+                    completedPomodoros = parseInt(savedPomodoros);
+                }
+                
+                const savedStreak = localStorage.getItem('dos-streak');
+                if (savedStreak) {
+                    streak = JSON.parse(savedStreak);
+                }
+                
+                const savedCurrentTask = localStorage.getItem('dos-current-task');
+                if (savedCurrentTask !== null) {
+                    currentTask = parseInt(savedCurrentTask);
+                }
+                
+                updateTaskList();
+                updateStats();
+            }
+            
+            // Timer functions
+            function startTimer() {
+                if (isRunning) return;
+                
+                isRunning = true;
+                startBtn.textContent = 'PAUSE (F1)';
+                
+                timerInterval = setInterval(() => {
+                    if (currentTime > 0) {
+                        currentTime--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        beepSound.play();
+                        
+                        if (mode === 'work') {
+                            completedPomodoros++;
+                            localStorage.setItem('dos-pomodoros', completedPomodoros);
+                            updateStreak();
+                            
+                            if (currentTask !== null && tasks[currentTask]) {
+                                tasks[currentTask].completed = true;
+                                localStorage.setItem('dos-tasks', JSON.stringify(tasks));
+                                updateTaskList();
+                            }
+                            
+                            if (completedPomodoros % 4 === 0) {
+                                switchMode('long');
+                            } else {
+                                switchMode('short');
+                            }
+                        } else {
+                            switchMode('work');
+                        }
+                        
+                        updateStats();
+                        isRunning = false;
+                        startBtn.textContent = 'START (F1)';
+                    }
+                }, 1000);
+            }
+            
+            function stopTimer() {
+                if (!isRunning) return;
+                
+                clearInterval(timerInterval);
+                isRunning = false;
+                startBtn.textContent = 'START (F1)';
+            }
+            
+            function resetTimer() {
+                stopTimer();
+                
+                if (mode === 'work') {
+                    currentTime = workTime;
+                } else if (mode === 'short') {
+                    currentTime = shortBreakTime;
+                } else {
+                    currentTime = longBreakTime;
+                }
+                
+                updateTimerDisplay();
+            }
+            
+            function skipToNext() {
+                stopTimer();
+                
+                if (mode === 'work') {
+                    if (completedPomodoros % 4 === 3) {
+                        switchMode('long');
+                    } else {
+                        switchMode('short');
+                    }
+                } else {
+                    switchMode('work');
+                }
+            }
+            
+            function switchMode(newMode) {
+                mode = newMode;
+                stopTimer();
+                
+                // Update tabs
+                workTab.className = 'tab' + (mode === 'work' ? ' active' : '');
+                shortTab.className = 'tab' + (mode === 'short' ? ' active' : '');
+                longTab.className = 'tab' + (mode === 'long' ? ' active' : '');
+                
+                // Set time based on mode
+                if (mode === 'work') {
+                    currentTime = workTime;
+                    modeDisplay.textContent = 'WORK MODE';
+                } else if (mode === 'short') {
+                    currentTime = shortBreakTime;
+                    modeDisplay.textContent = 'SHORT BREAK MODE';
+                } else {
+                    currentTime = longBreakTime;
+                    modeDisplay.textContent = 'LONG BREAK MODE';
+                }
+                
+                updateTimerDisplay();
+            }
+            
+            function updateTimerDisplay() {
+                const minutes = Math.floor(currentTime / 60);
+                const seconds = currentTime % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                // Calculate progress percentage
+                let totalTime;
+                if (mode === 'work') {
+                    totalTime = workTime;
+                } else if (mode === 'short') {
+                    totalTime = shortBreakTime;
+                } else {
+                    totalTime = longBreakTime;
+                }
+                
+                const progress = ((totalTime - currentTime) / totalTime) * 100;
+                progress.style.width = `${progress}%`;
+                
+                // Update document title
+                document.title = `${timerDisplay.textContent} - DOS Timer`;
+            }
+            
+            // Task functions
+            function addTask() {
+                const taskName = taskInput.value.trim();
+                if (!taskName) return;
+                
+                tasks.push({
+                    id: Date.now(),
+                    name: taskName,
+                    completed: false
+                });
+                
+                localStorage.setItem('dos-tasks', JSON.stringify(tasks));
+                taskInput.value = '';
+                updateTaskList();
+            }
+            
+            function updateTaskList() {
+                taskList.innerHTML = '';
+                
+                if (tasks.length === 0) {
+                    const emptyMsg = document.createElement('div');
+                    emptyMsg.textContent = 'No tasks. Press Add to create.';
+                    emptyMsg.style.padding = '5px';
+                    taskList.appendChild(emptyMsg);
+                    return;
+                }
+                
+                tasks.forEach((task, index) => {
+                    const taskElement = document.createElement('div');
+                    taskElement.className = `task ${task.completed ? 'completed' : ''} ${currentTask === index ? 'active' : ''}`;
+                    
+                    const taskNumber = document.createElement('div');
+                    taskNumber.className = 'task-number';
+                    taskNumber.textContent = `${index + 1}.`;
+                    
+                    const taskName = document.createElement('div');
+                    taskName.textContent = task.name;
+                    
+                    taskElement.appendChild(taskNumber);
+                    taskElement.appendChild(taskName);
+                    
+                    taskElement.addEventListener('click', () => {
+                        if (!task.completed) {
+                            currentTask = index;
+                            localStorage.setItem('dos-current-task', currentTask);
+                            updateTaskList();
+                            updateStats();
+                        }
+                    });
+                    
+                    taskList.appendChild(taskElement);
+                });
+            }
+            
+            // Stats functions
+            function updateStats() {
+                completedCount.textContent = completedPomodoros;
+                streakCount.textContent = `${streak.count} days`;
+                
+                if (currentTask !== null && tasks[currentTask]) {
+                    currentTaskDisplay.textContent = tasks[currentTask].name;
+                } else {
+                    currentTaskDisplay.textContent = 'None';
+                }
+            }
+            
+            function updateStreak() {
+                const today = new Date().toDateString();
+                
+                if (streak.lastDate === today) {
+                    // Already updated today
+                    return;
+                }
+                
+                if (streak.lastDate) {
+                    const lastDate = new Date(streak.lastDate);
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    
+                    if (lastDate.toDateString() === yesterday.toDateString()) {
+                        // Streak continues
+                        streak.count++;
+                    } else {
+                        // Streak broken
+                        streak.count = 1;
+                    }
+                } else {
+                    // First day
+                    streak.count = 1;
+                }
+                
+                streak.lastDate = today;
+                localStorage.setItem('dos-streak', JSON.stringify(streak));
+                updateStats();
+            }
+            
+            // Update the clock display
+            function updateClock() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                clockDisplay.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+            
+            // Event listeners
+            startBtn.addEventListener('click', () => {
+                if (isRunning) {
+                    stopTimer();
+                } else {
+                    startTimer();
+                }
+            });
+            
+            stopBtn.addEventListener('click', stopTimer);
+            resetBtn.addEventListener('click', resetTimer);
+            skipBtn.addEventListener('click', skipToNext);
+            
+            workTab.addEventListener('click', () => switchMode('work'));
+            shortTab.addEventListener('click', () => switchMode('short'));
+            longTab.addEventListener('click', () => switchMode('long'));
+            
+            addTaskBtn.addEventListener('click', addTask);
+            taskInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') addTask();
+            });
+            
+            // Keyboard shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'F1') {
+                    if (isRunning) {
+                        stopTimer();
+                    } else {
+                        startTimer();
+                    }
+                } else if (e.key === 'F2') {
+                    stopTimer();
+                } else if (e.key === 'F3') {
+                    skipToNext();
+                } else if (e.key === 'F4') {
+                    resetTimer();
+                }
+            });
+            
+            // Initialize
+            loadData();
+            updateTimerDisplay();
+            switchMode('work');
+            
+            // Update clock every second
+            setInterval(updateClock, 1000);
+            updateClock();
+        });
+    </script>
+</body>
+</html>
