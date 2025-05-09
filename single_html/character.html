@@ -1,0 +1,611 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ character.name }} - Passover Seder</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header character-header {{ character.css_class }}-header">
+            <h1>Passover Seder with AI</h1>
+            <div class="character-info">
+                <div class="character-avatar {{ character.css_class }}">
+                    <object data="{{ url_for('static', filename='images/' + character_id + '-face.svg') }}" type="image/svg+xml" class="character-svg"></object>
+                </div>
+                <h2>{{ character.name }}</h2>
+            </div>
+        </div>
+        
+        <div class="seder-progress">
+            <div class="seder-progress-inner" id="seder-progress-bar" style="width: 0%"></div>
+        </div>
+        
+        <div class="seder-content">
+            <div class="haggadah-section">
+                <h3>Current Haggadah Section</h3>
+                <select id="section-selector" class="section-dropdown">
+                    <option value="">-- Select a Section --</option>
+                    {% for id, text in sections.items() %}
+                    <option value="{{ id }}">{{ id|capitalize }} - {{ text|truncate(30) }}</option>
+                    {% endfor %}
+                </select>
+                <div class="haggadah-text" id="haggadah-text">
+                    {{ state.haggadah_text }}
+                </div>
+            </div>
+            
+            <div class="response-section">
+                <h3>My Response</h3>
+                <div class="character-display character-entrance">
+                    <div class="character-face {{ character_id }}-face" id="response-face">
+                        <object data="{{ url_for('static', filename='images/' + character_id + '-face.svg') }}" type="image/svg+xml" id="character-svg-response"></object>
+                    </div>
+                    <div class="response-bubble {{ character.css_class }}-bubble" id="response-bubble">
+                        <p>I'm ready for the Passover Seder!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="voice-controls">
+                <button id="start-recording" class="control-button record-button">
+                    <span class="button-icon">🎤</span> Start Recording
+                </button>
+                <button id="stop-recording" class="control-button record-button" disabled>
+                    <span class="button-icon">⏹️</span> Stop Recording
+                </button>
+                <button id="play-response" class="control-button {{ character.css_class }}-button">
+                    <span class="button-icon">🔊</span> Speak My Response
+                </button>
+            </div>
+            
+            <div class="text-controls">
+                <textarea id="text-input" class="text-input" placeholder="Type Haggadah text or questions here..."></textarea>
+                <button id="send-text" class="control-button">Send</button>
+            </div>
+            
+            <div class="action-controls">
+                <button id="respond-button" class="control-button {{ character.css_class }}-button">
+                    Respond Now
+                </button>
+                <button id="sync-button" class="control-button">
+                    Sync with Seder
+                </button>
+                <button id="auto-conversation" class="control-button">
+                    <span class="button-icon">🔄</span> Auto Conversation: Off
+                </button>
+            </div>
+            
+            <div id="status" class="status-message">Ready</div>
+        </div>
+    </div>
+
+    <script>
+        // Store character information
+        const characterId = "{{ character_id }}";
+        const characterName = "{{ character.name }}";
+        const characterEmoji = "{{ character.emoji }}";
+        
+        // Initialize audio recording variables
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        
+        // Initialize voice synthesis
+        const synth = window.speechSynthesis;
+        let characterVoice = null;
+        
+        // Initialize socket connection
+        const socket = io();
+        let isConnected = false;
+        
+        // DOM elements
+        const startRecordingBtn = document.getElementById('start-recording');
+        const stopRecordingBtn = document.getElementById('stop-recording');
+        const playResponseBtn = document.getElementById('play-response');
+        const sectionSelector = document.getElementById('section-selector');
+        const haggadahText = document.getElementById('haggadah-text');
+        const responseBubble = document.getElementById('response-bubble');
+        const textInput = document.getElementById('text-input');
+        const sendTextBtn = document.getElementById('send-text');
+        const respondBtn = document.getElementById('respond-button');
+        const syncBtn = document.getElementById('sync-button');
+        const statusMsg = document.getElementById('status');
+        
+        // Set up speech synthesis
+        function setupVoices() {
+            // Wait for voices to be loaded
+            if (synth.getVoices().length === 0) {
+                window.speechSynthesis.addEventListener('voiceschanged', setupVoices);
+                return;
+            }
+            
+            // Get all available voices
+            const voices = synth.getVoices();
+            console.log("Available voices:", voices.map(v => v.name));
+            
+            // Define preferred voices for each character
+            const voicePreferences = {
+                'wise': ['Google UK English Male', 'Microsoft David', 'Male', 'en-GB'],
+                'wicked': ['Google UK English Male', 'Microsoft Mark', 'Male', 'en-US'],
+                'simple': ['Google US English', 'Microsoft Zira', 'Female', 'en-US']
+            };
+            
+            // Try to find a matching voice based on preferences
+            const prefs = voicePreferences[characterId] || [];
+            
+            // First try to match by exact name
+            for (const prefName of prefs) {
+                const matchedVoice = voices.find(v => v.name.includes(prefName));
+                if (matchedVoice) {
+                    characterVoice = matchedVoice;
+                    console.log(`Selected voice for ${characterId}:`, matchedVoice.name);
+                    break;
+                }
+            }
+            
+            // If no preferred voice found, try to find any English voice
+            if (!characterVoice) {
+                characterVoice = voices.find(v => v.lang.startsWith('en') || v.lang === 'en-US' || v.lang === 'en-GB');
+                console.log("Fallback voice:", characterVoice?.name);
+            }
+            
+            // Still no voice? Use the first one available
+            if (!characterVoice && voices.length > 0) {
+                characterVoice = voices[0];
+                console.log("Default voice:", characterVoice.name);
+            }
+        }
+        
+        // Initialize recording
+        async function initializeRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                mediaRecorder = new MediaRecorder(stream);
+                
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+                
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    processAudioRecording(audioBlob);
+                    audioChunks = [];
+                };
+                
+                statusMsg.textContent = "Microphone ready";
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                statusMsg.textContent = "Error accessing microphone";
+                startRecordingBtn.disabled = true;
+            }
+        }
+        
+        // Process the recorded audio
+        function processAudioRecording(audioBlob) {
+            const currentSection = sectionSelector.value;
+            
+            // Create form data for the API request
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'recording.wav');
+            formData.append('character', characterId);
+            formData.append('section', currentSection);
+            
+            // Update status
+            statusMsg.textContent = "Processing audio...";
+            
+            // Send to server
+            fetch('/api/audio', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusMsg.textContent = "Transcription: " + data.text;
+                    haggadahText.textContent = data.text;
+                } else {
+                    statusMsg.textContent = "Error: " + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error uploading audio:', error);
+                statusMsg.textContent = "Error processing audio";
+            });
+        }
+        
+        // Send text input
+        function sendTextInput() {
+            const text = textInput.value.trim();
+            if (!text) return;
+            
+            const currentSection = sectionSelector.value;
+            
+            // Update status
+            statusMsg.textContent = "Sending text...";
+            
+            // Send to server
+            fetch('/api/text', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    text: text,
+                    character: characterId,
+                    section: currentSection
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusMsg.textContent = "Text sent";
+                    haggadahText.textContent = text;
+                    textInput.value = '';
+                } else {
+                    statusMsg.textContent = "Error: " + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error sending text:', error);
+                statusMsg.textContent = "Error sending text";
+            });
+        }
+        
+        // Request AI response
+        function requestResponse() {
+            if (!isConnected) {
+                statusMsg.textContent = "Not connected to server";
+                return;
+            }
+            
+            const currentSection = sectionSelector.value;
+            if (!currentSection) {
+                statusMsg.textContent = "Please select a section first";
+                return;
+            }
+            
+            // Show thinking state
+            responseBubble.textContent = "I'm thinking...";
+            responseBubble.classList.add('thinking');
+            document.getElementById('response-face').classList.add('thinking');
+            statusMsg.textContent = "Generating response...";
+            
+            // Request a response from the server
+            socket.emit('request_response', {
+                character: characterId,
+                section: currentSection
+            });
+        }
+        
+        // Update section
+        function updateSection() {
+            const newSection = sectionSelector.value;
+            
+            // Send to server
+            fetch('/api/section', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    section: newSection
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusMsg.textContent = "Section updated";
+                } else {
+                    statusMsg.textContent = "Error: " + data.error;
+                }
+            })
+            .catch(error => {
+                console.error('Error updating section:', error);
+                statusMsg.textContent = "Error updating section";
+            });
+        }
+        
+        // Speak the response
+        function speakResponse() {
+            const responseText = responseBubble.textContent.trim();
+            if (!responseText || responseText === "I'm thinking..." || responseText.includes("is speaking")) {
+                return;
+            }
+            
+            if (synth.speaking) {
+                synth.cancel();
+                return;
+            }
+            
+            const utterance = new SpeechSynthesisUtterance(responseText);
+            
+            // Set the voice and customize parameters based on character
+            if (characterVoice) {
+                utterance.voice = characterVoice;
+                
+                // Customize voice parameters for each character
+                if (characterId === 'wise') {
+                    utterance.rate = 0.85;    // Slower, more deliberate
+                    utterance.pitch = 1.15;   // Slightly higher pitch
+                    utterance.volume = 0.9;   // Slight decrease in volume
+                } else if (characterId === 'wicked') {
+                    utterance.rate = 1.2;     // Faster, more aggressive
+                    utterance.pitch = 0.80;   // Much lower pitch
+                    utterance.volume = 1.0;   // Full volume
+                } else if (characterId === 'simple') {
+                    utterance.rate = 1.0;     // Normal rate
+                    utterance.pitch = 1.3;    // Higher pitch
+                    utterance.volume = 0.95;  // Medium volume
+                }
+            }
+            
+            utterance.onstart = () => {
+                statusMsg.textContent = "Speaking...";
+                document.getElementById('response-face').classList.add('speaking');
+                document.getElementById('response-bubble').classList.add('speaking');
+            };
+            
+            utterance.onend = () => {
+                statusMsg.textContent = "Ready";
+                document.getElementById('response-face').classList.remove('speaking');
+                document.getElementById('response-bubble').classList.remove('speaking');
+            };
+            
+            synth.speak(utterance);
+        }
+        
+        // Sync with server state
+        function syncWithState() {
+            statusMsg.textContent = "Syncing...";
+            
+            fetch('/api/state')
+                .then(response => response.json())
+                .then(state => {
+                    if (state.current_section) {
+                        sectionSelector.value = state.current_section;
+                    }
+                    
+                    if (state.haggadah_text) {
+                        haggadahText.textContent = state.haggadah_text;
+                    }
+                    
+                    if (state.previous_response && state.last_speaker === characterId) {
+                        responseBubble.textContent = state.previous_response;
+                    } else if (state.previous_response && state.last_speaker) {
+                        // Show what another character said
+                        responseBubble.textContent = `Listening to ${state.last_speaker}...`;
+                    }
+                    
+                    statusMsg.textContent = "Synced with Seder";
+                })
+                .catch(error => {
+                    console.error('Error syncing state:', error);
+                    statusMsg.textContent = "Error syncing";
+                });
+        }
+        
+        // Function to update the progress bar based on current section
+        function updateProgressBar() {
+            const sectionOptions = Array.from(sectionSelector.options).map(opt => opt.value).filter(val => val !== '');
+            const currentSection = sectionSelector.value;
+            
+            if (!currentSection) return;
+            
+            const sectionIndex = sectionOptions.indexOf(currentSection);
+            if (sectionIndex >= 0) {
+                const progressPercentage = ((sectionIndex + 1) / sectionOptions.length) * 100;
+                document.getElementById('seder-progress-bar').style.width = progressPercentage + '%';
+            }
+        }
+        
+        // Socket.io event handlers
+        socket.on('connect', () => {
+            isConnected = true;
+            statusMsg.textContent = "Connected to Seder";
+            
+            // Register this client with its character
+            socket.emit('register', {
+                character: characterId
+            });
+            
+            // Update progress bar based on current section
+            updateProgressBar();
+        });
+        
+        socket.on('disconnect', () => {
+            isConnected = false;
+            statusMsg.textContent = "Disconnected from Seder";
+        });
+        
+        socket.on('welcome', (data) => {
+            console.log(data.message);
+        });
+        
+        socket.on('registration_complete', (data) => {
+            console.log("Registered as", data.character);
+            syncWithState();
+        });
+        
+        socket.on('auto_conversation_update', (data) => {
+            console.log("Auto conversation update:", data);
+            
+            const isAuto = data.auto_conversation;
+            const autoBtn = document.getElementById('auto-conversation');
+            
+            autoBtn.innerHTML = `<span class="button-icon">🔄</span> Auto Conversation: ${isAuto ? 'On' : 'Off'}`;
+            autoBtn.classList.toggle('active-toggle', isAuto);
+            
+            if (data.message) {
+                statusMsg.textContent = data.message;
+            }
+        });
+        
+        socket.on('state_update', (data) => {
+            console.log("State update received", data);
+            
+            if (data.haggadah_text) {
+                haggadahText.textContent = data.haggadah_text;
+            }
+            
+            if (data.current_section) {
+                sectionSelector.value = data.current_section;
+                updateProgressBar();
+            }
+            
+            if (data.last_speaker === 'human') {
+                // Consider responding if human spoke
+                if (Math.random() < 0.33) {  // 1 in 3 chance this character responds
+                    setTimeout(() => {
+                        requestResponse();
+                    }, 1000 + Math.random() * 2000);  // Random delay 1-3 seconds
+                }
+            }
+        });
+        
+        socket.on('response_update', (data) => {
+            console.log("Response update received", data);
+            
+            if (data.character === characterId) {
+                // This is our character's response
+                responseBubble.textContent = data.response;
+                responseBubble.classList.remove('thinking');
+                document.getElementById('response-face').classList.remove('thinking');
+                statusMsg.textContent = "Response received";
+                
+                // If this is asking the human for input, add visual indicator
+                if (data.ask_human) {
+                    responseBubble.classList.add('asking-human');
+                    statusMsg.textContent = "Waiting for your response...";
+                }
+                
+                // Auto-speak our response
+                setTimeout(() => {
+                    speakResponse();
+                }, 500);
+            } else {
+                // Another character is speaking
+                const name = character_id_to_name(data.character);
+                responseBubble.textContent = `${name} is speaking...`;
+                statusMsg.textContent = `${name} is responding`;
+            }
+        });
+        
+        socket.on('response_ready', (data) => {
+            console.log("Response ready", data);
+            
+            responseBubble.textContent = data.response;
+            responseBubble.classList.remove('thinking');
+            document.getElementById('response-face').classList.remove('thinking');
+            statusMsg.textContent = "Response ready";
+            
+            // Auto-speak
+            setTimeout(() => {
+                speakResponse();
+            }, 500);
+        });
+        
+        socket.on('error', (data) => {
+            console.error("Socket error:", data.message);
+            statusMsg.textContent = "Error: " + data.message;
+        });
+        
+        // Helper function to convert character ID to name
+        function character_id_to_name(id) {
+            const names = {
+                'wise': 'Wise Son',
+                'wicked': 'Wicked Son',
+                'simple': 'Simple Son'
+            };
+            return names[id] || id;
+        }
+        
+        // Event listeners
+        startRecordingBtn.addEventListener('click', () => {
+            if (!mediaRecorder) return;
+            
+            audioChunks = [];
+            mediaRecorder.start();
+            isRecording = true;
+            
+            startRecordingBtn.disabled = true;
+            stopRecordingBtn.disabled = false;
+            statusMsg.textContent = "Recording...";
+        });
+        
+        stopRecordingBtn.addEventListener('click', () => {
+            if (!mediaRecorder || !isRecording) return;
+            
+            mediaRecorder.stop();
+            isRecording = false;
+            
+            startRecordingBtn.disabled = false;
+            stopRecordingBtn.disabled = true;
+            statusMsg.textContent = "Processing recording...";
+        });
+        
+        playResponseBtn.addEventListener('click', () => {
+            speakResponse();
+        });
+        
+        sectionSelector.addEventListener('change', () => {
+            updateSection();
+            updateProgressBar();
+        });
+        
+        sendTextBtn.addEventListener('click', () => {
+            sendTextInput();
+        });
+        
+        textInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendTextInput();
+            }
+        });
+        
+        respondBtn.addEventListener('click', () => {
+            requestResponse();
+        });
+        
+        syncBtn.addEventListener('click', () => {
+            syncWithState();
+        });
+        
+        // Auto conversation toggle
+        const autoConversationBtn = document.getElementById('auto-conversation');
+        autoConversationBtn.addEventListener('click', () => {
+            fetch('/api/toggle-auto', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                const isAuto = data.auto_conversation;
+                autoConversationBtn.innerHTML = `<span class="button-icon">🔄</span> Auto Conversation: ${isAuto ? 'On' : 'Off'}`;
+                autoConversationBtn.classList.toggle('active-toggle', isAuto);
+                statusMsg.textContent = `Auto conversation ${isAuto ? 'enabled' : 'disabled'}`;
+            })
+            .catch(error => {
+                console.error('Error toggling auto conversation:', error);
+                statusMsg.textContent = "Error toggling auto conversation";
+            });
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initializeRecording();
+            setupVoices();
+            syncWithState();
+        });
+    </script>
+</body>
+</html>
