@@ -1,0 +1,196 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Build Boss — Sprint Console + Docs</title>
+<style>
+:root{--bg:#0d0d0d;--fg:#e0e0e0;--accent:#ff5252;--accent2:#22d4ff;--spacing:8px;font-family:'Fira Mono',monospace;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);}
+header{display:flex;align-items:center;gap:var(--spacing);padding:var(--spacing);}
+h1{margin:0;font-size:1.4rem;flex:1}
+#boss{width:140px;height:140px}
+#mouth{transform-origin:center}
+.talking #mouth{animation:talk .35s infinite alternate}
+@keyframes talk{0%{transform:scaleY(1)}100%{transform:scaleY(.1)}}
+#boss-eyes circle{animation:blink 5s infinite}
+@keyframes blink{0%,92%{r:8px;}94%,96%{r:1px;}98%,100%{r:8px;}}
+#boss-speech{font-weight:bold;white-space:nowrap}
+main{padding:var(--spacing);display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:2rem}
+section{border:1px solid #333;padding:var(--spacing);border-radius:6px}
+section h2{margin:0 0 .5rem;color:var(--accent)}
+.phase-title{font-weight:bold;margin-top:6px;color:var(--accent2)}
+.task-item{display:flex;align-items:center;font-size:.9rem;margin:2px 0}
+.task-item input{margin-right:.5rem}
+button{background:var(--accent);color:#fff;border:none;padding:.4rem .9rem;margin:.2rem .4rem .2rem 0;cursor:pointer;border-radius:4px}
+button:hover{opacity:.8}
+input,select,textarea{background:#111;color:#e0e0e0;border:1px solid #444;font-family:inherit;font-size:.85rem;padding:4px;border-radius:4px}
+#timer-display{font-size:2rem;margin:.5rem 0}
+textarea{width:100%;resize:vertical}
+small{font-size:.7rem;color:#888}
+pre.preview{white-space:pre-wrap;background:#111;padding:6px;border:1px solid #333;border-radius:4px;font-size:.85rem}
+</style>
+</head>
+<body>
+<header>
+  <svg id="boss" class="talking" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="90" fill="#222"/>
+    <g id="boss-eyes">
+      <circle cx="65" cy="80" r="8" fill="#fff"/><circle cx="135" cy="80" r="8" fill="#fff"/>
+      <circle cx="65" cy="80" r="4" fill="#000"/><circle cx="135" cy="80" r="4" fill="#000"/>
+    </g>
+    <rect id="mouth" x="60" y="120" width="80" height="22" rx="10" fill="#f33"/>
+  </svg>
+  <h1>Build Boss</h1>
+  <div id="boss-speech">“Smoke test beats smoke break!”</div>
+</header>
+<main>
+  <!-- Project section -->
+  <section>
+    <h2>Project Sprint</h2>
+    <label>Project:
+      <select id="project" onchange="projectChanged()">
+        <option value="fuzz">Fuzz Pedal</option><option value="synth">Mini Synth</option>
+        <option value="headphone">Headphone Amp</option><option value="daisy">Daisy Sampler</option>
+        <option value="fade">Fade Pedal</option><option value="custom">Custom…</option>
+      </select>
+    </label>
+    <div id="tasks"></div>
+    <details style="margin-top:.6rem"><summary>➕ Quick‑add task</summary>
+      <input id="new-task" placeholder="e.g. Route power plane…"/><button onclick="addTask()">Add</button>
+    </details>
+  </section>
+
+  <!-- Pomodoro -->
+  <section>
+    <h2>Pomodoro</h2>
+    <div id="timer-display">25:00</div>
+    <button id="start">Start</button><button id="stop">Stop</button><button id="reset">Reset</button>
+    <small>25/5 cycle — long 15 min break every 4.</small>
+  </section>
+
+  <!-- Documentation -->
+  <section style="grid-column:1 / -1">
+    <h2>Documentation Notebook</h2>
+    <label>Project:
+      <select id="docProj"></select>
+    </label>
+    <textarea id="docText" rows="8" placeholder="# Title\nDescribe build, quirks, measurements…"></textarea>
+    <div>
+      <button onclick="saveDoc()">Save</button><button onclick="exportDoc()">Export .md</button><button onclick="previewDoc()">Preview</button>
+      <span id="docSaved" style="font-size:.8rem;color:var(--accent2)"></span>
+    </div>
+    <pre id="docPrev" class="preview" hidden></pre>
+  </section>
+
+  <!-- Ritual checklist -->
+  <section style="grid-column:1 / -1">
+    <h2>Daily Ritual Checklist</h2>
+    <textarea id="import" rows="3" placeholder="Paste tasks here – one per line → import"></textarea><br/>
+    <button onclick="bulkImport()">Import</button><button onclick="clearRitual()">Clear Done</button>
+    <div id="ritual"></div>
+  </section>
+
+  <!-- Outsourcing -->
+  <section>
+    <h2>Outsourcing Blocks</h2><div id="sessions"></div>
+  </section>
+
+  <!-- BPM -->
+  <section>
+    <h2>BPM Ticker</h2>
+    <div id="bpm" style="font-size:2rem">120</div>
+    <button onclick="bpmDown()">‑</button><button onclick="bpmUp()">+</button><small>Tap tempo with <kbd>Space</kbd></small>
+  </section>
+</main>
+
+<script>
+// ===== Boss quotes =====
+const quotes=["Boot up, solder monster!","Document or it didn't happen!","One checkbox at a time.",
+  "Smoke test beats smoke break.","Pixels don’t solder themselves.","Coffee first, then Gerbers.","DONE > perfect. Ship it!"];
+setInterval(()=>bossSpeech.textContent=quotes[Math.random()*quotes.length|0],12000);
+
+// ===== Task system =====
+const TASK_TPL=[{phase:"Ideation",items:["Sketch concept","BOM & cost","Feasibility check"]},
+  {phase:"PCB Design",items:["Schematic capture","Layout & DRC","Gerber export"]},
+  {phase:"Assembly",items:["Stencil/paste","Reflow or hand‑solder","Enclosure prep"]},
+  {phase:"Testing",items:["Smoke test","Functional demo","Record video","Push docs"]}];
+
+const projectSel=document.getElementById('project');const taskDiv=document.getElementById('tasks');
+function projectChanged(){loadTasks(projectSel.value);syncDocSelect();}
+function loadTasks(proj){
+  taskDiv.innerHTML="";const saved=JSON.parse(localStorage.getItem('t-'+proj)||"{}");
+  TASK_TPL.forEach((p,pi)=>{const t=document.createElement('div');t.className='phase-title';t.textContent=p.phase;taskDiv.appendChild(t);
+    p.items.forEach((it,ti)=>makeTaskRow(taskDiv,proj,`${pi}-${ti}`,it,saved));});
+  renderCustom(proj);
+}
+function makeTaskRow(parent,proj,id,label,saved){
+  const row=document.createElement('label');row.className='task-item';
+  const ck=document.createElement('input');ck.type='checkbox';ck.checked=saved[id]||false;
+  ck.onchange=()=>{saved[id]=ck.checked;localStorage.setItem('t-'+proj,JSON.stringify(saved));};
+  row.appendChild(ck);row.append(label);parent.appendChild(row);
+}
+// custom tasks
+function addTask(){
+  const txt=document.getElementById('new-task');if(!txt.value.trim())return;
+  const proj=projectSel.value;const arr=JSON.parse(localStorage.getItem('custom-'+proj)||"[]");
+  arr.push({label:txt.value,done:false});localStorage.setItem('custom-'+proj,JSON.stringify(arr));txt.value="";loadTasks(proj);
+}
+function renderCustom(proj){
+  const arr=JSON.parse(localStorage.getItem('custom-'+proj)||"[]");if(!arr.length)return;
+  const head=document.createElement('div');head.className='phase-title';head.textContent='Custom';taskDiv.appendChild(head);
+  arr.forEach((o,i)=>makeTaskRow(taskDiv,proj,'c'+i,o.label,arr));
+}
+loadTasks(projectSel.value);
+
+// ===== Pomodoro =====
+let pMin=25,pSec=0,interval=null,cycles=0;const disp=document.getElementById('timer-display');
+function updDisp(){disp.textContent=pMin.toString().padStart(2,'0')+':'+pSec.toString().padStart(2,'0');}
+function tick(){if(--pSec<0){pSec=59;--pMin;}if(pMin<0)finishPom();updDisp();}
+function finishPom(){clearInterval(interval);interval=null;beep();bossSpeech.textContent="Break time!";cycles++;pMin=cycles%4?5:15;pSec=0;updDisp();}
+document.getElementById('start').onclick=()=>{if(!interval)interval=setInterval(tick,1000);};
+document.getElementById('stop').onclick=()=>{clearInterval(interval);interval=null;};
+document.getElementById('reset').onclick=()=>{clearInterval(interval);interval=null;pMin=25;pSec=0;updDisp();};updDisp();
+function beep(){const ctx=new (AudioContext||webkitAudioContext)();const o=ctx.createOscillator();o.frequency.value=880;o.connect(ctx.destination);o.start();o.stop(ctx.currentTime+.15);}
+
+// ===== Outsourcing =====
+const sessionsDiv=document.getElementById('sessions'),days=["Mon","Wed","Fri"];
+function buildSessions(){sessionsDiv.innerHTML="";days.forEach(d=>{const l=document.createElement('label');l.className='task-item';
+  const ck=document.createElement('input');ck.type='checkbox';const id='outs-'+d;ck.checked=localStorage.getItem(id)==='1';
+  ck.onchange=()=>localStorage.setItem(id,ck.checked?'1':'0');l.appendChild(ck);l.append(d+" 4h block");sessionsDiv.appendChild(l);});}
+buildSessions();
+
+// ===== Ritual checklist =====
+const ritDiv=document.getElementById('ritual');
+let ritual=JSON.parse(localStorage.getItem('ritual')||"null")||["Breadboard sesh","Organize a bit","Shower","Dishes",
+"Food secure","Meditation 30 min","Print Amp","Print Daisy","Print Fuzz","Print Matrix‑knit","AK","Corridor","Garden",
+"Kitchen","Room clothes","Room music","Shave hair"].map(t=>({t,done:false}));
+function saveRit(){localStorage.setItem('ritual',JSON.stringify(ritual));}
+function renderRit(){ritDiv.innerHTML="";ritual.forEach((o,i)=>{const l=document.createElement('label');l.className='task-item';
+  const ck=document.createElement('input');ck.type='checkbox';ck.checked=o.done;ck.onchange=()=>{o.done=ck.checked;saveRit();};
+  l.appendChild(ck);l.append(o.t);ritDiv.appendChild(l);});}
+function bulkImport(){const txt=document.getElementById('import').value.trim();if(!txt)return;
+  txt.split(/\n+/).forEach(t=>ritual.push({t:t.trim(),done:false}));document.getElementById('import').value="";saveRit();renderRit();}
+function clearRitual(){ritual=ritual.filter(o=>!o.done);saveRit();renderRit();}renderRit();
+
+// ===== BPM =====
+let tapTimes=[];function tap(){const now=Date.now();tapTimes=tapTimes.filter(t=>now-t<1500);tapTimes.push(now);
+  if(tapTimes.length>1){const avg=tapTimes.slice(1).reduce((s,t,i)=>s+t-tapTimes[i],0)/(tapTimes.length-1);setBpm(Math.round(60000/avg));}}
+function setBpm(v){document.getElementById('bpm').textContent=v;}
+function bpmUp(){setBpm(+document.getElementById('bpm').textContent+1);}function bpmDown(){setBpm(+document.getElementById('bpm').textContent-1);}
+window.onkeydown=e=>{if(e.code==="Space"){tap();e.preventDefault();}};
+
+// ===== Documentation =====
+const docProjSel=document.getElementById('docProj');const docText=document.getElementById('docText');const docPrev=document.getElementById('docPrev');
+function syncDocSelect(){docProjSel.innerHTML=projectSel.innerHTML;docProjSel.value=projectSel.value;loadDoc();}
+function saveDoc(){localStorage.setItem('doc-'+docProjSel.value,docText.value);document.getElementById('docSaved').textContent="✓ saved";}
+function loadDoc(){docText.value=localStorage.getItem('doc-'+docProjSel.value)||"";document.getElementById('docSaved').textContent="";}
+function exportDoc(){const blob=new Blob([docText.value],{type:"text/markdown"});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=docProjSel.value+"_"+new Date().toISOString().slice(0,10)+".md";a.click();}
+function previewDoc(){docPrev.hidden=!docPrev.hidden;if(!docPrev.hidden){docPrev.textContent=docText.value;}}
+docProjSel.onchange=loadDoc;syncDocSelect();
+
+</script>
+</body>
+</html>
