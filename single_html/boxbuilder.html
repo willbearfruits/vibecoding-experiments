@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Enclosure Layout Organizer</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; display: flex; height: 100vh; }
+    #toolbar { width: 200px; background: #f4f4f4; padding: 10px; box-sizing: border-box; overflow-y: auto; border-right: 1px solid #ccc; }
+    #toolbar h2 { margin-top: 0; }
+    .tool { padding: 8px; margin-bottom: 8px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; text-align: center; }
+    .tool.selected { background: #ddd; }
+    #canvas-container { flex: 1; position: relative; background: #e0e0e0; display: flex; justify-content: center; align-items: center; }
+    #designCanvas { border: 1px solid #333; background: #fff; }
+  </style>
+</head>
+<body>
+  <div id="toolbar">
+    <h2>Components</h2>
+    <div class="tool" data-type="pot">Potentiometer<br><small>⌀16 mm</small></div>
+    <div class="tool" data-type="jack">¼" Jack<br><small>⌀7 mm</small></div>
+    <div class="tool" data-type="switch">Switch<br><small>12×12 mm</small></div>
+    <div class="tool" data-type="led">LED<br><small>⌀3 mm</small></div>
+    <div class="tool" data-type="screen">Screen<br><small>35×25 mm</small></div>
+    <hr>
+    <button id="clearBtn">Clear All</button>
+  </div>
+  <div id="canvas-container">
+    <canvas id="designCanvas" width="1000" height="600"></canvas>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/4.6.0/fabric.min.js"></script>
+  <script>
+    // Conversion: 1 mm = 5 px
+    const mmToPx = mm => mm * 5;
+
+    const canvas = new fabric.Canvas('designCanvas', { selection: true });
+    canvas.setBackgroundColor('#fff', canvas.renderAll.bind(canvas));
+    fabric.Object.prototype.originX = 'center';
+    fabric.Object.prototype.originY = 'center';
+
+    // Draw enclosure outline (125×95 mm pedal)
+    const enclosure = new fabric.Rect({
+      width: mmToPx(125),
+      height: mmToPx(95),
+      left: canvas.getWidth()/2,
+      top: canvas.getHeight()/2,
+      fill: 'rgba(250,250,250,0.7)',
+      stroke: '#333',
+      strokeWidth: 2,
+      selectable: false
+    });
+    canvas.add(enclosure);
+
+    let currentTool = null;
+    document.querySelectorAll('.tool').forEach(el => {
+      el.addEventListener('click', () => {
+        document.querySelectorAll('.tool').forEach(t => t.classList.remove('selected'));
+        el.classList.add('selected');
+        currentTool = el.getAttribute('data-type');
+      });
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+      canvas.getObjects().forEach(obj => {
+        if (obj !== enclosure) canvas.remove(obj);
+      });
+    });
+
+    canvas.on('mouse:down', opt => {
+      if (!currentTool) return;
+      const pointer = canvas.getPointer(opt.e);
+      let obj;
+      switch(currentTool) {
+        case 'pot':
+          obj = new fabric.Circle({ radius: mmToPx(16)/2, left: pointer.x, top: pointer.y, fill: '#ddd', stroke: '#333', strokeWidth: 2 });
+          break;
+        case 'jack':
+          obj = new fabric.Circle({ radius: mmToPx(7)/2, left: pointer.x, top: pointer.y, fill: '#aaa', stroke: '#333', strokeWidth: 2 });
+          break;
+        case 'switch':
+          obj = new fabric.Rect({ width: mmToPx(12), height: mmToPx(12), left: pointer.x, top: pointer.y, fill: '#ccc', stroke: '#333', strokeWidth: 2 });
+          break;
+        case 'led':
+          obj = new fabric.Circle({ radius: mmToPx(3)/2, left: pointer.x, top: pointer.y, fill: 'red', stroke: '#f00', strokeWidth: 1 });
+          break;
+        case 'screen':
+          obj = new fabric.Rect({ width: mmToPx(35), height: mmToPx(25), left: pointer.x, top: pointer.y, fill: '#000', stroke: '#555', strokeWidth: 2 });
+          break;
+      }
+      if (obj) {
+        obj.setControlsVisibility({ mtr: false });
+        canvas.add(obj);
+      }
+    });
+  </script>
+</body>
+</html>
