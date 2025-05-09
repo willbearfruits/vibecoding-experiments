@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>על היתרונות והחסרונות של לחיות ולמות עם לב שבור</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Amatic+SC:wght@400;700&family=Assistant:wght@200;300;400;600&family=Rubik:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --blood: #8b0000;
+            --ink: #111;
+            --paper: #f5f5dc;
+            --stain: rgba(139, 0, 0, 0.3);
+            --coffee: #704214;
+            --tear: rgba(0, 0, 100, 0.1);
+            --fold: rgba(0, 0, 0, 0.1);
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0a0a0a;
+            font-family: 'Rubik', 'Assistant', sans-serif;
+        }
+        
+        .upload-interface {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0a0a;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MCIgaGVpZ2h0PSI1MCIgdmlld0JveD0iMCAwIDUwIDUwIj48cGF0aCBmaWxsPSJub25lIiBzdHJva2U9IiMxYTFhMWEiIHN0cm9rZS13aWR0aD0iMC41IiBkPSJNMTAsMTBMMzksMzlNMzksMTBMMTAsMzkiLz48L3N2Zz4=');
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            font-family: 'Assistant', sans-serif;
+            padding: 2rem;
+            transition: opacity 1s ease, transform 1s ease;
+        }
+        
+        .upload-content {
+            position: relative;
+            max-width: 600px;
+            width: 100%;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(10, 10, 10, 0.8);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border-radius: 2px;
+            backdrop-filter: blur(10px);
+            text-align: center;
+        }
+        
+        .upload-title {
+            font-family: 'Amatic SC', cursive;
+            color: #fff;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            letter-spacing: 1px;
+            text-shadow: 0 0 10px rgba(139, 0, 0, 0.5);
+        }
+        
+        .upload-subtitle {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+        
+        .upload-area {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            border: 1px dashed rgba(255, 255, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-area:hover {
+            border-color: #8b0000;
+            background: rgba(139, 0, 0, 0.05);
+        }
+        
+        .upload-icon {
+            width: 50px;
+            height: 50px;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+        
+        .upload-text {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+        
+        .upload-input {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+        
+        .paste-container {
+            position: relative;
+            width: 100%;
+            margin-top: 1rem;
+        }
+        
+        .paste-text {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            text-align: right;
+        }
+        
+        .paste-area {
+            width: 100%;
+            height: 200px;
+            background: rgba(20, 20, 20, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 1rem;
+            resize: none;
+            font-family: 'Rubik', sans-serif;
+            font-size: 0.9rem;
+            direction: rtl;
+            letter-spacing: 0.5px;
+            line-height: 1.5;
+            transition: all 0.3s ease;
+        }
+        
+        .paste-area:focus {
+            outline: none;
+            border-color: #8b0000;
+        }
+        
+        .visualize-btn {
+            margin-top: 1.5rem;
+            padding: 0.7rem 2rem;
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            font-family: 'Assistant', sans-serif;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .visualize-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(139, 0, 0, 0.3), transparent);
+            transition: all 0.5s ease;
+        }
+        
+        .visualize-btn:hover:before {
+            left: 100%;
+        }
+        
+        .visualize-btn:hover {
+            background: rgba(139, 0, 0, 0.1);
+            border-color: #8b0000;
+        }
+        
+        /* Journal Experience */
+        .journal-experience {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95);
+            transition: opacity 1s ease, transform 1s ease;
+            overflow: hidden;
+        }
+        
+        .journal-experience.active {
+            opacity: 1;
+            pointer-events: all;
+            transform: scale(1);
+        }
+        
+        .paper-container {
+            position: absolute;
+            top: 10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 1000px;
+            height: 80vh;
+            overflow: hidden;
+            cursor: grab;
+        }
+        
+        .paper-background {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: var(--paper);
+            transform-origin: center;
+            transition: transform 0.1s ease;
+            box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+        }
+        
+        .paper-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            padding: 3rem;
+            cursor: text;
+        }
+        
+        /* Blood stains, coffee stains, etc. */
+        .stain {
+            position: absolute;
+            opacity: 0.3;
+            pointer-events: none;
+            filter: blur(5px);
+            transition: opacity 0.5s ease;
+        }
+        
+        .blood-stain {
+            background-color: var(--blood);
+            border-radius: 50% 20% 50% 40%;
+            transform: rotate(var(--rotation, 0deg));
+        }
+        
+        .coffee-stain {
+            background-color: var(--coffee);
+            border-radius: 50%;
+            transform: scale(var(--scale, 1)) rotate(var(--rotation, 0deg));
+        }
+        
+        .tear-stain {
+            background-color: var(--tear);
+            border-radius: 50% 50% 20% 20%;
+            transform: scaleY(2) rotate(var(--rotation, 0deg));
+            filter: blur(3px);
+        }
+        
+        .fold-line {
+            position: absolute;
+            background-color: var(--fold);
+            transform: rotate(var(--rotation, 0deg));
+            pointer-events: none;
+        }
+        
+        .fold-line.horizontal {
+            width: 100%;
+            height: 1px;
+        }
+        
+        .fold-line.vertical {
+            width: 1px;
+            height: 100%;
+        }
+        
+        .paper-title {
+            font-family: 'Amatic SC', cursive;
+            font-size: 3rem;
+            font-weight: 700;
+            color: var(--ink);
+            text-align: center;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+            position: relative;
+            transform: rotate(-1deg);
+        }
+        
+        .paper-author {
+            font-family: 'Rubik', sans-serif;
+            font-style: italic;
+            font-size: 1.2rem;
+            color: var(--ink);
+            opacity: 0.7;
+            text-align: center;
+            margin-bottom: 2rem;
+            transform: rotate(-1deg);
+        }
+        
+        .paper-dedication {
+            font-family: 'Assistant', sans-serif;
+            font-style: italic;
+            font-size: 1rem;
+            color: var(--ink);
+            opacity: 0.6;
+            text-align: center;
+            margin-bottom: 3rem;
+            transform: rotate(1deg);
+        }
+        
+        .paper-paragraph {
+            font-family: 'Rubik', sans-serif;
+            font-size: 1.1rem;
+            color: var(--ink);
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+            position: relative;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+            text-align: justify;
+            direction: rtl;
+            overflow: visible;
+            transform: rotate(var(--rotation, 0deg));
+            transition: transform 0.5s ease;
+        }
+        
+        .paper-paragraph:hover {
+            z-index: 5;
+        }
+        
+        .paper-paragraph.highlight {
+            background-color: rgba(255, 255, 0, 0.2);
+            padding: 0.5rem;
+            border-radius: 2px;
+        }
+        
+        .paper-paragraph.redacted {
+            background-color: #000;
+            color: transparent;
+            user-select: none;
+        }
+        
+        .paper-paragraph.redacted:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .paper-separator {
+            text-align: center;
+            margin: 2rem 0;
+            font-size: 1.5rem;
+            color: var(--ink);
+            opacity: 0.5;
+            position: relative;
+        }
+        
+        .paper-separator::before,
+        .paper-separator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 30%;
+            height: 1px;
+            background-color: var(--ink);
+            opacity: 0.3;
+        }
+        
+        .paper-separator::before {
+            right: 0;
+        }
+        
+        .paper-separator::after {
+            left: 0;
+        }
+        
+        /* Ink blot animations */
+        @keyframes inkSpread {
+            0% { transform: scale(0); opacity: 0; }
+            50% { opacity: 0.7; }
+            100% { transform: scale(1); opacity: 0.3; }
+        }
+        
+        .ink-blot {
+            position: absolute;
+            background-color: var(--ink);
+            border-radius: 50% 20% 50% 40%;
+            filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 2;
+            animation: inkSpread 2s forwards;
+        }
+        
+        /* Floating words */
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0.8; }
+            100% { transform: translateY(-100px) rotate(10deg); opacity: 0; }
+        }
+        
+        .floating-word {
+            position: absolute;
+            font-family: 'Amatic SC', cursive;
+            font-size: 2rem;
+            color: var(--blood);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 10;
+            animation: float 5s forwards;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Control elements */
+        .journal-controls {
+            position: fixed;
+            bottom: 2rem;
+            left: 2rem;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .control-button {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+            font-size: 1.2rem;
+        }
+        
+        .control-button:hover {
+            background: #8b0000;
+            transform: scale(1.1);
+        }
+        
+        /* Audio experience */
+        .audio-visualization {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 200px;
+            height: 40px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 20px;
+            overflow: hidden;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            padding: 0 0.5rem;
+        }
+        
+        .audio-bar {
+            width: 3px;
+            height: 3px;
+            background: white;
+            margin-right: 2px;
+            transition: height 0.1s ease;
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .upload-title {
+                font-size: 2.5rem;
+            }
+            
+            .paper-container {
+                width: 95%;
+            }
+            
+            .paper-content {
+                padding: 2rem 1.5rem;
+            }
+            
+            .paper-title {
+                font-size: 2.2rem;
+            }
+            
+            .paper-paragraph {
+                font-size: 1rem;
+            }
+        }
+        
+        /* Upload animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .loading-content {
+            text-align: center;
+        }
+        
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 2px solid transparent;
+            border-top-color: #8b0000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+        
+        .loading-text {
+            color: white;
+            font-family: 'Assistant', sans-serif;
+            font-size: 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Experimental Texture Overlay */
+        .texture-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGQAAABkCAYAAABw4pVUAAAMa0lEQVR4nO1dbVczNw69JCEvBJInEEIgEIb//6/6fbu73e77tt0P1o2vZQ3QPgk9nOtzThiPx5ZlWZJljQEynlBKkTEGAPJ9KaV5fTuOyfe1++JvbNc651q/9fvpeml/TikBwDf3Q/t8UkptXQDf7j3vOvcgPt+ej5RSM/e+1/uNMQ19sN8g2f3scigZKsZabw09UPM/0T8V0L7QhjxWjDHNRPTPdqBWeJLo3lUUBSqlhJQSiCiMMe8i1Pu0r18rpcA5h1IKnHMYY6CUglIKnHMYY6CUunGfNve11nDOveoPxbN83/d+dBvLCz/cpJQNkxWyiSilHhqGlFJgrX2o35zzxDGUUuC938yZtZZCj1IK3vspMAghhhYiCueclFKQUgpKKSilzG4vBqbYgiDoYQEAiQJGBE9EkFKKMQZCCJFSihACQgicopTK7J6H2JZS6or6TkoJKWV5q27N5zzG2JBSYpxzZc4JAAwAhJTyhaAxZmTgIYQXzazVTyJ5OYTaeUSElJLatna+9ngpJfUWjDE45yQDloioV0vJJF8GSfUbEYV+4ZyL0+sXUspgXA8RrXXbkbDQD0nW1re6mmgloa8j56b1pLX+rYzdM5rdSYzBTusoj1Jqd84JrfVtJ0NozczraJSZTaC1fhjIet/r58w80Pcz7bU++l6UUtK7X+rT7+G57JjNHpz8Q1rre0pp4WBa66W+v+NnZZesuazn5v6JYt5SLhyUlFK01k/OubnvP9USWusXpRRyzm/Dj7VWSynFWwflnfJNMUprvbJRZgWxnHM4nc2bz9HIS8a/ZE04bXzRbK79xKFtMcYgpVRyzn2vj+/7s3rHUma/p5SitV5qrfXvUz5yzmmt15zzyi5a673eF6UUK6VE27I0YFQF1FovjTE7IUQ0xkRr7ei9f4oz3lhTWinlqLV+McZ8GGM+OCt7rfV5jz2uy3HOna21pZRytNY+WWvPxphj03hrrbV2PcYYU0o5p5SeY4xPWusnrfULEX0g+tZHvBL0lSs7MMaYYowLb/vw3t8ppaCUOjnnyHt/570/OOdORKS01sUYo+M4ihCCcs7gzLxqrSkZQWPMwVr7UUpJMcYqpRR67x+ttU/W2gdrbXLOaWPMrLWeUkoL7/1Ja32w1j4S0SkqpWJKaeNQviulKOcc5rGd5JyL3vvnnPMypfScUjpYa8NbVyn60bHfUkolpRS89xtrbZVSChGttdZVSrkjoidjjIwxKmvtOaUUU0rrGOOhlLIupaxyzmtrbZpHuSE/GnJZXwohNs3Yu5TS75ZtU2OMIKJzzvkOGHI55H1gHHjvgYh+DJVSCimlMxEdnXOB2aY7TFrrLIQ4GmNCzmk7xnh0zj1Za9dExNbaE5s/cc5fG0R+stYG7/2aMfIv7z06o2SMSc65tdaaL75+9/1GUUoxewiOCnPOH5vBc8aYUzOfFEIoDnS1XUQUQwiglLrGgAbOud0wJLPGIaWkAEillGcY6wCMfkCkBQ6dzjmQMQaPIQgppcmTCcPUeYerDOmfE6LFG0VE4JyDMQaccwDwPXDNuQTO2ASV8r4G7wc45yZ/joFtMo7Xzw/XbfXkc8gO2QzL6RiW/sMYA2dImE2j3SsimufRB74I+5cQAinlVeA8p5fUHzF+jzGitWZahO21H7Igw8N/F3TA5WI2TGvXvN51pOM9/eba5a4F6xjJFqKRDh/RSSmlTin9MZlMtus7L30ccU6NEzrWkpVSF8HA38Lv8Tnc3r+0Zz8KPXi3tfanEIKHdIzvuxD2Pdy8MZzc5UPbN/cYv7dtnFvLiN7URr5R53POCSH4MxgCIroXQvwUQvwphPiXEII/hRB/OedCu0ZrI4/+iN0LIfZCiKdm7rsQ4iQX0s3a3PU9/U32QogDEVVjTGPbfjDGwFrL+c50CE9ElFJKbV8DQJ1zaAuLtm+igyZ6HwprrS7yXbLPMcYFEUVjjEopGeskKaVMxCQT0wYAvPcupeS01jWl5FNKlYiO1toVER3nfaSUqvd+l1JaVsaxlBKcc+yxEwCU9s32Wd8nrVQRzvcDI0V1RCkFpRQLxr0x5q9SyhMRea31loieUkrz/Lz3e611SSlxe3PONYf/lHM+lFLK27q/C1LK+vg3U3YLr/dO6V1EFGKMR2Zbcs7LGGOIMb7Qey0553PKxagtbbuHMFP7+t5DzrkSEeWcA7vtlNKitRDOuU8pLWkmKW9JhS+glLKIMUZjjOSFNTPSrIjY933MXHzMOc/FGwj14ODsnOvOlLQ/eR+AiPZEtCGilXNOeu+lMaZ1dFw4RynFEVGfTX33sjfvkM4Ya9twKkgIUZtTKaVtrKAxRqaUnmKMH6WUE8POtuCZzfwiS+8gQ9h7sdQEeOJSyidfEIKXmXfcEFPl+xhj3Cul9vSdE1UhhLtLKW1KCGGL98YppWfiAwshxDGE+3bRyWdYsv7fIOX3GHKDwziFEJBS0t05Nx7HkfvHnPsaHCKi3Zzxk9xXSpGllFmx8xTJ1JZsZ5GSGbz3P7rD55z7RD9prbNSimN2dqMuy30PicGyNIzZC2KaL1g+zHf5lMxprSnn3NIY8yGE+OtGv65+1hjzHzL8vUT0OUd/iZ7FsjEL5IkFzJw3qfGKALuN19ZI3iQvuOY0xlBKSRhjDvTd5T0tKbXGXXPOT0KIp3kr0paKP+a2u96L9/5RSvkxJ9Y13TPD4d9KKUcpJc0tHgB0U6uvBcglQlwmPuZszqyfg/d+0BQG9v61IYNPtXMu55y57X9SWzNpqynnfDTGlJTS/J5XWlhrF8aYJyJaE9E2pbQwxmiONVprwRZKRLlNqWil73ClnrpJ9XfZ4rF2EJGw1tY5jFBKuTfGJJqrrTLR665bjb/LkBhjBQA4juOvT2LJEXjv746jAIBHa+0NRo2I4L2PbVm/IOJDjPFojJn92r212ZJPbX/QH2mtq5TyqZRSc86clzukXoiIcvMsLOzGGLHWniPwz23GjN/knKskoseFiKKv5+fJOSfmnG903dw2ISLo8XJw3q9nPSil6JQSHcfx+U2WQEt9lVLMMwYAPOWci5RSzDuyO621Jue8n21YzrlKKT1xwZZS6pxzJqKn1t7ZlmnOGbO9llKOGzIqV7rfNyKCcw6tZRDRwRjzOZuDUuoihIi8f6y1T4z8tZ6u2jDnHOY8UCllt9vJnndX5/I9dqCyE9Z8QBdCQCk1pJQGrXUyxuic8zHnvCWiR9ZPYWw8cR6Ljb4Q4h+5F64r9ZR48cQYMzsvOOdoLSHnPLZlXn4jGm/B+2JSSitjzI6PNLRtNMawG20uJ22UUtrO+xFCJG76PvzZM52J1Qcf+23XsXuMtUNnG0LvVbNf0s6TKU7WLDVtSyklNnvVxjuHkn0Yxi4C/D5h0lpLdvFHIcQOqk9W5r/RUQ29S29Yyj+2eT3W79jQjCOuIaIRSdj7RQxh5a+Uou7TENZ89A7a/+t8QdYPaVcl//sKpNqnfkghPulTGfJe0bX3LQIu/WHWPkq9+Xsf+P11Sqn2EScZw+8b+g9h0FozHxaacf+Q3jyuYc0fL4Hnk24X/jkM+XO83+j+TJX84+B75Jg1jDwbpUmv1+6xkP/HjWtOCftx498DRAR1zjkcx/Ffzrl/1zr+LiAi9e9+o/vfBOfcaIzhM5F/M5hrC/8HIYbwTRQvZi3H/wnDBChk/wgIM0TBoPrx5gdgbD8JRLbMvSaiq7OL9onrk3p+5HX/nXB11tE557TWtZTyqZTa5OT/MTC67+DvDd77H/iQvhPGxoLcnDo/0mnIf6S9E9TcGR9N/6OY2E8i+tz+t86t0gWf3pFn+oQO91NKS/rBk/N/Cg35RIr+R0PP/ojWWjDGCMaY/MJj9ZOO9qfY3d+Jn7yReFecDnthJJzjsZHfQu3/9aP9nv96LffqJx3NWlvnoP//DKXdZ8H42Aup5a0h/08VLH7ygVCejm8s5L8Jxsd2LZlm+Sb1w69xOHxrJbY/+ejMD41Sw0iA/Qqk3rFD72GOsJ+7fRmjvZ5n9a/s53v9Wk7Ntcd+9XfvfVfRSffr7kG/tXvacvyevvqzlDKkmcJ+9x7pHU5PcozfeNnLJeD2/3nynDC+pfTPRPl47fcxxvmN76/bXqT06vrl/f8BksLqE5zTJDMAAAAASUVORK5CYII=');
+            mix-blend-mode: multiply;
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 101;
+        }
+        
+        /* Handwritten sections */
+        .handwritten {
+            font-family: 'Amatic SC', cursive;
+            font-size: 1.8rem;
+            color: var(--blood);
+            line-height: 1.3;
+            transform: rotate(-1deg);
+        }
+        
+        /* Torn edges */
+        .torn-edge {
+            position: absolute;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIyMCIgdmlld0JveD0iMCAwIDEwMCAyMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMCwwIEMxMCwxNSAyNSw1IDMwLDEwIEM0MCwxOCA0NSw0IDYwLDEwIEM3MCwxNSA4MCw1IDkwLDEwIEMxMDAsMTUgMTAwLDIwIDEwMCwyMCBMMCwyMCBaIiBmaWxsPSIjZjVmNWRjIi8+PC9zdmc+');
+            width: 100%;
+            height: 20px;
+            pointer-events: none;
+        }
+        
+        .torn-top {
+            top: 0;
+            left: 0;
+            transform: rotateX(180deg);
+        }
+        
+        .torn-bottom {
+            bottom: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+    <!-- Upload Interface -->
+    <div class="upload-interface" id="uploadInterface">
+        <div class="upload-content">
+            <h1 class="upload-title">יומן אבוד בתחנת רכבת</h1>
+            <p class="upload-subtitle">מצא את הטקסט הסודי הזה, גרור או הדבק את הטקסט שלך</p>
+            
+            <div class="upload-area">
+                <svg class="upload-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="17 8 12 3 7 8"></polyline>
+                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <p class="upload-text">גרור קובץ טקסט לכאן</p>
+                <input type="file" class="upload-input" id="fileInput" accept=".txt">
+            </div>
+            
+            <div class="paste-container">
+                <p class="paste-text">או הדבק את הטקסט שלך:</p>
+                <textarea class="paste-area" id="pasteArea" placeholder="הדבק את הטקסט שלך כאן..."></textarea>
+            </div>
+            
+            <button class="visualize-btn" id="visualizeBtn">צור חוויה</button>
+        </div>
+    </div>
+    
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <p class="loading-text">מגלה סודות...</p>
+        </div>
+    </div>
+    
+    <!-- Journal Experience -->
+    <div class="journal-experience" id="journalExperience">
+        <div class="paper-container" id="paperContainer">
+            <div class="paper-background" id="paperBackground">
+                <!-- Stains and fold lines will be added dynamically -->
+                
+                <div class="torn-edge torn-top"></div>
+                <div class="torn-edge torn-bottom"></div>
+                
+                <div class="paper-content" id="paperContent">
+                    <h1 class="paper-title" id="paperTitle">על היתרונות והחסרונות של לחיות ולמות עם לב שבור</h1>
+                    <p class="paper-author" id="paperAuthor">מאת יניב שיינפלד</p>
+                    <p class="paper-dedication" id="paperDedication">בשביל דפני בת פנאוס</p>
+                    
+                    <!-- Paper paragraphs will be added dynamically -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Controls -->
+        <div class="journal-controls">
+            <div class="control-button" id="backBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </div>
+            <div class="control-button" id="audioBtn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+            </div>
+        </div>
+        
+        <!-- Audio Visualization -->
+        <div class="audio-visualization" id="audioVisualization">
+            <!-- Audio bars will be added dynamically -->
+        </div>
+    </div>
+    
+    <div class="texture-overlay"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const uploadInterface = document.getElementById('uploadInterface');
+            const journalExperience = document.getElementById('journalExperience');
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            const fileInput = document.getElementById('fileInput');
+            const pasteArea = document.getElementById('pasteArea');
+            const visualizeBtn = document.getElementById('visualizeBtn');
+            const paperContainer = document.getElementById('paperContainer');
+            const paperBackground = document.getElementById('paperBackground');
+            const paperContent = document.getElementById('paperContent');
+            const paperTitle = document.getElementById('paperTitle');
+            const paperAuthor = document.getElementById('paperAuthor');
+            const paperDedication = document.getElementById('paperDedication');
+            const backBtn = document.getElementById('backBtn');
+            const audioBtn = document.getElementById('audioBtn');
+            const audioVisualization = document.getElementById('audioVisualization');
+            
+            // Create audio context
+            let audioContext = null;
+            let audioSource = null;
+            let audioAnalyzer = null;
+            let audioData = null;
+            let isPlaying = false;
+            
+            // Create audio bars
+            for (let i = 0; i < 30; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'audio-bar';
+                audioVisualization.appendChild(bar);
+            }
+            
+            // Keywords for floating effect
+            const emotionalKeywords = [
+                'אהבה', 'כאב', 'לב', 'מוות', 'חיים', 'שבור', 'געגוע', 'אבל', 'בכי', 'צחוק',
+                'זכרון', 'עצב', 'שמחה', 'כעס', 'פחד', 'חלום', 'דמעות', 'נשמה', 'תקווה', 'אבא',
+                'אמא', 'משפחה', 'בדידות', 'רכבת', 'יומן', 'שיכחה', 'אבן', 'לב'
+            ];
+            
+            // File upload handling
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        const text = e.target.result;
+                        processText(text);
+                    };
+                    
+                    reader.readAsText(file);
+                }
+            });
+            
+            // Paste handling
+            visualizeBtn.addEventListener('click', function() {
+                const text = pasteArea.value.trim();
+                if (text) {
+                    processText(text);
+                } else {
+                    alert('אנא הדבק את הטקסט שלך');
+                }
+            });
+            
+            // Process the text
+            function processText(text) {
+                // Show loading overlay
+                loadingOverlay.classList.add('active');
+                
+                // Process text after a short delay to show the loading animation
+                setTimeout(() => {
+                    // Clear previous content
+                    while (paperContent.children.length > 3) {
+                        paperContent.removeChild(paperContent.lastChild);
+                    }
+                    
+                    // Create stains and fold lines
+                    createStains();
+                    createFoldLines();
+                    
+                    // Split text into paragraphs
+                    const paragraphs = text.split(/\n\s*\n/);
+                    
+                    // Extract title and author if available
+                    if (paragraphs.length > 0 && paragraphs[0].trim()) {
+                        const firstLines = paragraphs[0].split('\n');
+                        if (firstLines.length > 0) {
+                            paperTitle.textContent = firstLines[0].trim();
+                        }
+                    }
+                    
+                    // Process paragraphs
+                    paragraphs.forEach((para, index) => {
+                        const paraLines = para.trim().split('\n');
+                        
+                        // Check if it's a separator
+                        if (paraLines.length === 1 && paraLines[0].match(/^-{3,}$/)) {
+                            const separator = document.createElement('div');
+                            separator.className = 'paper-separator';
+                            separator.textContent = '—————';
+                            paperContent.appendChild(separator);
+                            return;
+                        }
+                        
+                        // Create paragraph element
+                        if (paraLines.length > 0 && paraLines[0].trim()) {
+                            const paragraph = document.createElement('p');
+                            paragraph.className = 'paper-paragraph';
+                            
+                            // Randomly add variation
+                            if (Math.random() < 0.1) {
+                                paragraph.classList.add('highlight');
+                            } else if (Math.random() < 0.05) {
+                                paragraph.classList.add('handwritten');
+                            }
+                            
+                            // Random slight rotation
+                            paragraph.style.setProperty('--rotation', `${(Math.random() * 2 - 1)}deg`);
+                            
+                            // Apply emotional keywords highlighting
+                            const content = paraLines.join('<br>');
+                            paragraph.innerHTML = highlightEmotionalWords(content);
+                            
+                            // Add the paragraph
+                            paperContent.appendChild(paragraph);
+                            
+                            // Add click listeners for special effects
+                            paragraph.addEventListener('click', createInkBlot);
+                        }
+                    });
+                    
+                    // Hide upload interface and loading overlay, show journal experience
+                    uploadInterface.style.opacity = '0';
+                    uploadInterface.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        uploadInterface.style.display = 'none';
+                        journalExperience.classList.add('active');
+                        loadingOverlay.classList.remove('active');
+                    }, 500);
+                    
+                    // Initialize paper movement
+                    initPaperMovement();
+                    
+                    // Initialize audio
+                    initAudio();
+                    
+                    // Add listeners for floating words on scroll
+                    window.addEventListener('scroll', checkParagraphsInView);
+                }, 2000);
+            }
+            
+            // Highlight emotional words
+            function highlightEmotionalWords(text) {
+                let result = text;
+                emotionalKeywords.forEach(keyword => {
+                    // Only replace whole words, not parts of words
+                    const regex = new RegExp(`\\b${keyword}\\b`, 'g');
+                    result = result.replace(regex, `<span style="color: var(--blood); font-weight: bold;">${keyword}</span>`);
+                });
+                return result;
+            }
+            
+            // Create stains
+            function createStains() {
+                // Remove existing stains
+                document.querySelectorAll('.stain').forEach(stain => stain.remove());
+                
+                // Blood stains
+                for (let i = 0; i < 5; i++) {
+                    createStain('blood-stain', {
+                        width: 30 + Math.random() * 100,
+                        height: 20 + Math.random() * 80,
+                        left: Math.random() * 100,
+                        top: Math.random() * 100,
+                        rotation: Math.random() * 360
+                    });
+                }
+                
+                // Coffee stains
+                for (let i = 0; i < 3; i++) {
+                    createStain('coffee-stain', {
+                        width: 50 + Math.random() * 100,
+                        height: 50 + Math.random() * 100,
+                        left: Math.random() * 100,
+                        top: Math.random() * 100,
+                        scale: 0.7 + Math.random() * 0.6,
+                        rotation: Math.random() * 360
+                    });
+                }
+                
+                // Tear stains
+                for (let i = 0; i < 7; i++) {
+                    createStain('tear-stain', {
+                        width: 10 + Math.random() * 30,
+                        height: 20 + Math.random() * 40,
+                        left: Math.random() * 100,
+                        top: Math.random() * 100,
+                        rotation: Math.random() * 360
+                    });
+                }
+            }
+            
+            // Create a stain
+            function createStain(className, options) {
+                const stain = document.createElement('div');
+                stain.className = `stain ${className}`;
+                stain.style.width = `${options.width}px`;
+                stain.style.height = `${options.height}px`;
+                stain.style.left = `${options.left}%`;
+                stain.style.top = `${options.top}%`;
+                
+                if (options.rotation) {
+                    stain.style.setProperty('--rotation', `${options.rotation}deg`);
+                }
+                
+                if (options.scale) {
+                    stain.style.setProperty('--scale', options.scale);
+                }
+                
+                paperBackground.appendChild(stain);
+            }
+            
+            // Create fold lines
+            function createFoldLines() {
+                // Remove existing fold lines
+                document.querySelectorAll('.fold-line').forEach(line => line.remove());
+                
+                // Horizontal fold lines
+                for (let i = 0; i < 2; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'fold-line horizontal';
+                    line.style.top = `${25 + i * 50}%`;
+                    paperBackground.appendChild(line);
+                }
+                
+                // Vertical fold lines
+                for (let i = 0; i < 1; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'fold-line vertical';
+                    line.style.left = `50%`;
+                    paperBackground.appendChild(line);
+                }
+            }
+            
+            // Create ink blot effect on click
+            function createInkBlot(e) {
+                const rect = this.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const blot = document.createElement('div');
+                blot.className = 'ink-blot';
+                blot.style.left = `${x}px`;
+                blot.style.top = `${y}px`;
+                blot.style.width = `${30 + Math.random() * 20}px`;
+                blot.style.height = `${30 + Math.random() * 20}px`;
+                
+                this.appendChild(blot);
+                
+                // Create floating word
+                if (Math.random() < 0.5) {
+                    createFloatingWord(x, y, this);
+                }
+                
+                // Remove after animation completes
+                setTimeout(() => {
+                    blot.remove();
+                }, 2000);
+            }
+            
+            // Create floating word effect
+            function createFloatingWord(x, y, parent) {
+                const word = document.createElement('div');
+                word.className = 'floating-word';
+                word.textContent = emotionalKeywords[Math.floor(Math.random() * emotionalKeywords.length)];
+                word.style.left = `${x}px`;
+                word.style.top = `${y}px`;
+                
+                parent.appendChild(word);
+                
+                // Remove after animation completes
+                setTimeout(() => {
+                    word.remove();
+                }, 5000);
+            }
+            
+            // Initialize paper movement
+            function initPaperMovement() {
+                let isDragging = false;
+                let startX, startY, startScrollLeft, startScrollTop;
+                
+                paperContent.addEventListener('mousedown', e => {
+                    isDragging = true;
+                    paperContent.style.cursor = 'grabbing';
+                    startX = e.pageX - paperContainer.offsetLeft;
+                    startY = e.pageY - paperContainer.offsetTop;
+                    startScrollLeft = paperContent.scrollLeft;
+                    startScrollTop = paperContent.scrollTop;
+                });
+                
+                paperContent.addEventListener('mouseleave', () => {
+                    isDragging = false;
+                    paperContent.style.cursor = 'text';
+                });
+                
+                paperContent.addEventListener('mouseup', () => {
+                    isDragging = false;
+                    paperContent.style.cursor = 'text';
+                });
+                
+                paperContent.addEventListener('mousemove', e => {
+                    if (!isDragging) return;
+                    e.preventDefault();
+                    const x = e.pageX - paperContainer.offsetLeft;
+                    const y = e.pageY - paperContainer.offsetTop;
+                    const walkX = (x - startX) * 1.5;
+                    const walkY = (y - startY) * 1.5;
+                    paperContent.scrollLeft = startScrollLeft - walkX;
+                    paperContent.scrollTop = startScrollTop - walkY;
+                    
+                    // Subtle paper movement
+                    const moveX = (x - startX) / 50;
+                    const moveY = (y - startY) / 50;
+                    paperBackground.style.transform = `rotate(${moveX}deg) translateY(${moveY}px)`;
+                });
+            }
+            
+            // Check paragraphs in view for adding effects
+            function checkParagraphsInView() {
+                const paragraphs = document.querySelectorAll('.paper-paragraph');
+                paragraphs.forEach(para => {
+                    const rect = para.getBoundingClientRect();
+                    const isVisible = (
+                        rect.top >= 0 &&
+                        rect.left >= 0 &&
+                        rect.bottom <= window.innerHeight &&
+                        rect.right <= window.innerWidth
+                    );
+                    
+                    if (isVisible && Math.random() < 0.05) {
+                        const x = Math.random() * rect.width;
+                        const y = Math.random() * rect.height;
+                        createFloatingWord(x, y, para);
+                    }
+                });
+            }
+            
+            // Initialize audio
+            function initAudio() {
+                const audioBars = document.querySelectorAll('.audio-bar');
+                
+                // Create ambient audio
+                const audio = new Audio();
+                audio.loop = true;
+                audio.volume = 0.3;
+                audio.src = 'data:audio/mp3;base64,SUQzAwAAAAAAI1RJVDIAAAAZAAADSSBXcm90ZSBUaGlzIEZvciBZb3UAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+                
+                function toggleAudio() {
+                    if (isPlaying) {
+                        audio.pause();
+                        audioBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                            </svg>
+                        `;
+                        
+                        // Reset audio bars
+                        audioBars.forEach(bar => {
+                            bar.style.height = '3px';
+                        });
+                        
+                        if (audioContext) {
+                            if (audioContext.state !== 'closed') {
+                                audioContext.suspend();
+                            }
+                        }
+                    } else {
+                        audio.play();
+                        audioBtn.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <line x1="23" y1="9" x2="17" y2="15"></line>
+                                <line x1="17" y1="9" x2="23" y2="15"></line>
+                            </svg>
+                        `;
+                        
+                        // Initialize audio context if needed
+                        if (!audioContext) {
+                            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                            audioSource = audioContext.createMediaElementSource(audio);
+                            audioAnalyzer = audioContext.createAnalyser();
+                            
+                            audioSource.connect(audioAnalyzer);
+                            audioAnalyzer.connect(audioContext.destination);
+                            
+                            audioAnalyzer.fftSize = 64;
+                            audioData = new Uint8Array(audioAnalyzer.frequencyBinCount);
+                            
+                            // Start visualization
+                            visualizeAudio();
+                        } else {
+                            if (audioContext.state === 'suspended') {
+                                audioContext.resume();
+                            }
+                        }
+                    }
+                    
+                    isPlaying = !isPlaying;
+                }
+                
+                // Visualize audio
+                function visualizeAudio() {
+                    if (!audioAnalyzer) return;
+                    
+                    audioAnalyzer.getByteFrequencyData(audioData);
+                    
+                    audioBars.forEach((bar, index) => {
+                        if (index < audioData.length) {
+                            const height = audioData[index] / 255 * 30;
+                            bar.style.height = `${3 + height}px`;
+                        }
+                    });
+                    
+                    requestAnimationFrame(visualizeAudio);
+                }
+                
+                // Audio button click handler
+                audioBtn.addEventListener('click', toggleAudio);
+            }
+            
+            // Back button handler
+            backBtn.addEventListener('click', function() {
+                journalExperience.classList.remove('active');
+                uploadInterface.style.display = 'flex';
+                
+                setTimeout(() => {
+                    uploadInterface.style.opacity = '1';
+                    uploadInterface.style.transform = 'scale(1)';
+                }, 100);
+                
+                // Stop audio if playing
+                if (audioContext && audioContext.state === 'running') {
+                    audioContext.suspend();
+                }
+                
+                isPlaying = false;
+                audioBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                        <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                    </svg>
+                `;
+            });
+            
+            // Load the text from the text file if available
+            if (pasteArea.textContent.trim() === '') {
+                // Default text sample
+                pasteArea.value = `על היתרונות והחסרונות של לחיות ולמות עם לב שבור
+מאת יניב שיינפלד
+בשביל דפני בת פנאוס
+
+הספר הזה, או היומן הזה, מחברת שרבוטים שלי, פוסטים בפייסבוק ומחשבות אישיות פונה אליך הקורא, לקרוא אותו כאילו היה יומן שנמצא בתחנת רכבת בין 2 ערי בירה בעיירה קטנה עם ספסל בודד ב2023, כאילו האדם שכתב אותו שכח אותו לאחר שנים שכתב בו, והשיכחה הזאת, הרגע הזה שהיומן הזה נשאר שם, הורידה לאיש אבן מהלב ומהגב.
+
+—---------------------------------
+
+כשאמות,
+כלומר אחרי שאמות,
+בלויה שלי, ןאחרי, ולנצח נצחים,
+אני רוצה שתספרו את הסיפור שלי כמו שהוא,
+אני לא רוצה שתסתירו דבר,
+אם אתם יודעים אליי דברים שליליים,
+אם תפסתם אותי על שקר,
+אם פגעתי בכם,
+במקרים שהייתי בהם לא רגיש,
+על דברים שנכשלתי, על דברים שפנטזתי, על דברים שגרמתי לכשלונם,
+אם אתם מהאנשים שלא אהבו אותי,
+שראו באישיות שלי את כל הדברים שאתם לא אוהבים אצל בני אדם,
+אם חשבתם שאני צבוע,
+על הסטיות שלי שידעתם שלא דיברתי אליהן אם אף אחד חוץ ממכם,
+על כל אלה וגם הדברים הטובים, כמובן שגם הדברים הטובים אבל את זה אני מצפה שתזכרו ותדברו אליהם,
+אבל על כל הדברים הפחות טובים, האולי טאבואים, על כשלונות ועל תכונות אישיות שלא בהכרח היו טובות, על הדברים האלה אני רוצה שתדברו,
+כי אני לא בן אדם בלי הדברים האלה, והזמן המוגבל שלי, ושלנו, יש לו מחיר,
+והבני אדם שאנחנו, נמדדים על האיזון והחוסר איזון שבין מה שחשבנו שטוב ומה שלא ידענו שרע.
+
+—---------------------------
+
+אני כותב את זה כשזה עוד טרי,
+יש לי תחושה שארצה לקרוא את זה בעתיד,
+עוד לא עברו 24 שעות,
+זה לא קל לאבד הורה, בכיתי לפחות 12 פעמים היום וכל בכי היה מלווה או התחיל בצחוק, ממש רכבת הרים רגשית.
+אני קופץ מרציונל קר ומקבל, רגוע ומבין, לרגשיות ילדית, בכי מר, חם ומושך ודוחה ולא יודע מה הוא כי הוא רגש וזה כל הרעיון...`;
+            }
+        });
+    </script>
+</body>
+</html>
