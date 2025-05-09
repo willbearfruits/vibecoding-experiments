@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Artist Name - Interactive Portfolio</title>
+    <style>
+        /* --- Basic Reset & Body --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', Courier, monospace; /* Or a more glitchy font */
+            background-color: #1a1a1a; /* Dark background */
+            color: #e0e0e0;
+            overflow: hidden; /* Prevent scrolling */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column; /* Stack canvas and controls */
+        }
+
+        /* --- Canvas (Game Area) --- */
+        #gameCanvas {
+            display: block;
+            background-color: #2a2a2a; /* Slightly lighter game background */
+            /* Add noise/texture background image for 'dirty' feel */
+            /* background-image: url('your_noise_texture.png'); */
+            border: 2px solid #444;
+            /* --- Glitch/Aesthetic Placeholders --- */
+            /* box-shadow: 0 0 15px rgba(255, 0, 255, 0.5), 0 0 25px rgba(0, 255, 255, 0.5); */
+            /* filter: brightness(1.1) contrast(1.1); */
+            /* Consider ::before/::after pseudo-elements for scanlines or overlays */
+        }
+
+        /* --- Content Modal --- */
+        #contentModal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background-color: rgba(20, 20, 20, 0.95); /* Dark, semi-transparent */
+            border: 2px solid #ff00ff; /* Glitchy magenta border */
+            padding: 25px;
+            z-index: 1000;
+            color: #00ff00; /* Neon green text */
+            box-shadow: 0 0 20px #ff00ff;
+            /* --- More Glitch Effects --- */
+            /* animation: textFlicker 0.1s infinite alternate; */
+        }
+        #contentModal h2 {
+            margin-bottom: 15px;
+            border-bottom: 1px dashed #00ff00;
+            padding-bottom: 5px;
+            color: #ffff00; /* Yellow headings */
+        }
+        #contentModal img, #contentModal video {
+            max-width: 100%;
+            height: auto;
+            margin-top: 10px;
+            border: 1px solid #555;
+        }
+        #contentModal iframe {
+            width: 100%;
+            height: 400px; /* Adjust as needed */
+            border: 1px solid #555;
+            margin-top: 10px;
+        }
+        #closeModal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            color: #ff0000; /* Red close button */
+            cursor: pointer;
+            background: none;
+            border: none;
+            font-weight: bold;
+        }
+        #closeModal:hover { color: #ff6666; }
+
+        /* --- Editor Controls --- */
+        #editorControls {
+            margin-top: 10px;
+            background-color: #333;
+            padding: 10px;
+            border: 1px solid #555;
+            display: none; /* Hidden initially */
+            color: #ccc;
+        }
+        #editorControls.active { display: block; }
+        #editorControls button, #editorControls select {
+            margin: 0 5px;
+            padding: 5px 10px;
+            background-color: #555;
+            color: #e0e0e0;
+            border: 1px solid #777;
+            cursor: pointer;
+        }
+        #editorControls button:hover, #editorControls select:hover { background-color: #666; }
+        #editorInfo { font-size: 0.9em; margin-top: 5px; }
+
+        /* --- Glitchy Font/Text Effects (Example) --- */
+        @keyframes textFlicker {
+            0% { opacity: 1; }
+            49% { opacity: 1; }
+            50% { opacity: 0.6; }
+            99% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+        /* Apply selectively: .glitch-text { animation: textFlicker 0.1s infinite alternate; } */
+
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <!-- Content Display Modal -->
+    <div id="contentModal">
+        <button id="closeModal">X</button>
+        <h2 id="contentTitle"></h2>
+        <div id="contentBody">
+            <!-- Content will be injected here -->
+        </div>
+    </div>
+
+    <!-- Editor Controls -->
+    <div id="editorControls">
+        <button id="toggleEditorBtn">Toggle Editor (OFF)</button>
+        <span> | Place: </span>
+        <select id="placementType">
+            <option value="platform">Platform</option>
+            <option value="item">Content Item</option>
+        </select>
+        <span> | Right-Click to Delete | </span>
+        <button id="saveWorldBtn">Save World</button>
+        <button id="loadWorldBtn">Load World</button>
+        <button id="clearWorldBtn">Clear World</button>
+        <div id="editorInfo">Editor Mode Inactive. Click canvas to interact in Play mode.</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Game Configuration ---
+        const config = {
+            gravity: 0.5,
+            playerSpeed: 5,
+            jumpPower: 12,
+            friction: 0.8,
+            spriteSize: 32, // Base size for grid alignment
+            worldBoundsPadding: 100 // Extra space outside canvas edges
+        };
+
+        // --- Game State ---
+        let player = {
+            x: canvas.width / 2,
+            y: canvas.height - config.spriteSize * 3,
+            width: config.spriteSize,
+            height: config.spriteSize,
+            vx: 0,
+            vy: 0,
+            onGround: false,
+            color: '#00ff00', // Player sprite color (neon green)
+            sprite: null // Placeholder for Image object later
+            // Add sprite sheet properties here if using actual sprites
+        };
+
+        let platforms = [
+            // Initial ground platform
+            { x: 0, y: canvas.height - config.spriteSize, width: canvas.width, height: config.spriteSize, color: '#888' }
+        ];
+
+        let items = [
+            // Example content item
+            {
+                x: 100, y: canvas.height - config.spriteSize * 3, width: config.spriteSize, height: config.spriteSize, color: '#ff00ff', // Item sprite color (magenta)
+                type: 'art', // Matches your sections
+                content: {
+                    title: "Welcome / Art Section",
+                    text: "Welcome to my interactive portfolio! Use Arrow Keys to move, Up to jump. Touch items like this one to view content. This is the 'Art' section placeholder.",
+                    image: null, // URL: 'path/to/your/image.jpg'
+                    video: null, // URL: 'path/to/your/video.mp4'
+                    htmlEmbed: null // HTML string or URL for iframe: '<p>Some embedded HTML</p>' or 'external_page.html'
+                }
+            }
+        ];
+
+        let keys = {}; // Stores currently pressed keys
+        let camera = { x: 0, y: 0 };
+        let lastTime = 0;
+        let isModalOpen = false;
+
+        // --- Editor State ---
+        let editorMode = false;
+        let placementType = 'platform'; // Default placement
+        const editorControlsDiv = document.getElementById('editorControls');
+        const toggleEditorBtn = document.getElementById('toggleEditorBtn');
+        const placementTypeSelect = document.getElementById('placementType');
+        const saveWorldBtn = document.getElementById('saveWorldBtn');
+        const loadWorldBtn = document.getElementById('loadWorldBtn');
+        const clearWorldBtn = document.getElementById('clearWorldBtn');
+        const editorInfoDiv = document.getElementById('editorInfo');
+
+        // --- Content Modal Elements ---
+        const contentModal = document.getElementById('contentModal');
+        const contentTitle = document.getElementById('contentTitle');
+        const contentBody = document.getElementById('contentBody');
+        const closeModalBtn = document.getElementById('closeModal');
+
+        // --- Asset Loading (Basic) ---
+        // let playerSprite = new Image();
+        // playerSprite.src = 'path/to/player_sprite.png';
+        // player.sprite = playerSprite;
+        // Add similar loading for platform textures, item sprites, etc.
+        // Consider a proper asset loader for managing multiple assets.
+
+        // --- Utility Functions ---
+        function worldToScreen(worldX, worldY) {
+            return { x: worldX - camera.x, y: worldY - camera.y };
+        }
+
+        function screenToWorld(screenX, screenY) {
+            return { x: screenX + camera.x, y: screenY + camera.y };
+        }
+
+        function checkCollision(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function snapToGrid(value) {
+            return Math.round(value / config.spriteSize) * config.spriteSize;
+        }
+
+        // --- Content Display Logic ---
+        function showContent(item) {
+            if (isModalOpen) return; // Don't open if already open
+
+            contentTitle.textContent = item.content.title || "Content";
+            let html = '';
+            if (item.content.text) {
+                html += `<p>${item.content.text.replace(/\n/g, '<br>')}</p>`;
+            }
+            if (item.content.image) {
+                html += `<img src="${item.content.image}" alt="${item.content.title || 'Image'}">`;
+            }
+            if (item.content.video) {
+                html += `<video controls src="${item.content.video}"></video>`;
+            }
+            if (item.content.htmlEmbed) {
+                // Simple check if it's likely a URL vs raw HTML
+                if (item.content.htmlEmbed.trim().startsWith('<') && item.content.htmlEmbed.trim().endsWith('>')) {
+                     // It's raw HTML (USE WITH CAUTION - potential XSS if loading user content)
+                     // Basic sanitization might be needed in a real app
+                     html += `<div>${item.content.htmlEmbed}</div>`;
+                } else {
+                     // Assume it's a URL for an iframe
+                     // Add sandbox attribute for security if embedding external/untrusted content
+                     html += `<iframe src="${item.content.htmlEmbed}" sandbox="allow-scripts allow-same-origin" frameborder="0"></iframe>`;
+                }
+            }
+             if (item.content.pythonEmbed) { // Placeholder note
+                 html += `<p><strong>Python Embedding Note:</strong> Direct Python execution isn't feasible here. Embed content *generated* by Python (e.g., save a Matplotlib/Plotly chart as HTML and embed that using 'htmlEmbed', or display data fetched from a Python backend).</p>`;
+             }
+
+
+            contentBody.innerHTML = html;
+            contentModal.style.display = 'block';
+            isModalOpen = true;
+        }
+
+        function hideContent() {
+            contentModal.style.display = 'none';
+            isModalOpen = false;
+            // Maybe resume game loop if paused?
+        }
+
+        // --- Update Logic ---
+        function update(deltaTime) {
+            if (isModalOpen || editorMode) return; // Pause game logic if modal is open or in editor mode
+
+            // --- Player Movement ---
+            // Horizontal Movement
+            if (keys['ArrowLeft']) {
+                player.vx -= config.playerSpeed * 0.2; // Acceleration
+            }
+            if (keys['ArrowRight']) {
+                player.vx += config.playerSpeed * 0.2; // Acceleration
+            }
+
+            // Apply Friction
+            player.vx *= config.friction;
+            // Speed Limit
+            if (Math.abs(player.vx) > config.playerSpeed) {
+                 player.vx = Math.sign(player.vx) * config.playerSpeed;
+            }
+             // Small velocity threshold to stop completely
+            if (Math.abs(player.vx) < 0.1) {
+                 player.vx = 0;
+            }
+
+
+            // Vertical Movement (Gravity)
+            player.vy += config.gravity;
+            player.onGround = false;
+
+            // --- Collision Detection & Resolution ---
+            // Proposed next position
+            let nextX = player.x + player.vx;
+            let nextY = player.y + player.vy;
+
+            // Check horizontal collision
+            let playerXRect = { x: nextX, y: player.y, width: player.width, height: player.height };
+            for (const platform of platforms) {
+                if (checkCollision(playerXRect, platform)) {
+                    if (player.vx > 0) { // Moving right
+                        nextX = platform.x - player.width;
+                    } else if (player.vx < 0) { // Moving left
+                        nextX = platform.x + platform.width;
+                    }
+                    player.vx = 0; // Stop horizontal movement on collision
+                    break; // Assuming only one collision per axis per frame needed
+                }
+            }
+            player.x = nextX; // Update horizontal position
+
+            // Check vertical collision
+            let playerYRect = { x: player.x, y: nextY, width: player.width, height: player.height };
+             for (const platform of platforms) {
+                if (checkCollision(playerYRect, platform)) {
+                    if (player.vy > 0) { // Moving down
+                        nextY = platform.y - player.height;
+                        player.onGround = true;
+                        player.vy = 0; // Stop vertical movement
+                    } else if (player.vy < 0) { // Moving up
+                        nextY = platform.y + platform.height;
+                        player.vy = 0; // Stop upward movement (hit ceiling)
+                    }
+                    break;
+                }
+            }
+            player.y = nextY; // Update vertical position
+
+
+            // Jumping
+            if (keys['ArrowUp'] && player.onGround) {
+                player.vy = -config.jumpPower;
+                player.onGround = false;
+            }
+
+             // --- World Boundaries (Simple) ---
+             // Keep player roughly within view, adjust as needed
+             const minX = camera.x - config.worldBoundsPadding;
+             const maxX = camera.x + canvas.width + config.worldBoundsPadding - player.width;
+             const minY = camera.y - config.worldBoundsPadding; // Optional top boundary
+             const maxY = camera.y + canvas.height + config.worldBoundsPadding * 5 - player.height; // Fall death boundary
+
+             if (player.x < minX) player.x = minX;
+             if (player.x > maxX) player.x = maxX;
+            // if (player.y < minY) { player.y = minY; player.vy = 0; } // Optional ceiling
+
+             // Simple Respawn/Reset if player falls too far
+             if (player.y > maxY) {
+                 player.x = canvas.width / 2;
+                 player.y = canvas.height / 2;
+                 player.vx = 0;
+                 player.vy = 0;
+                 // Reset camera if needed
+                 // camera.x = player.x - canvas.width / 2;
+                 // camera.y = player.y - canvas.height / 2;
+             }
+
+            // --- Item Interaction ---
+            for (const item of items) {
+                if (checkCollision(player, item)) {
+                    showContent(item);
+                    // Optional: make item disappear or change state after interaction
+                    // item.collected = true;
+                }
+            }
+
+             // --- Camera Follow ---
+             // Simple lerp camera follow
+             const targetCamX = player.x - canvas.width / 2;
+             const targetCamY = player.y - canvas.height / 2;
+             camera.x += (targetCamX - camera.x) * 0.1; // Adjust 0.1 for smoother/stiffer camera
+             camera.y += (targetCamY - camera.y) * 0.1;
+
+             // Optional: Clamp camera to world bounds if you have defined edges
+             // camera.x = Math.max(minWorldX, Math.min(maxWorldX - canvas.width, camera.x));
+             // camera.y = Math.max(minWorldY, Math.min(maxWorldY - canvas.height, camera.y));
+
+        }
+
+        // --- Rendering Logic ---
+        function render() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // --- Apply Glitch/Aesthetic Background Effects ---
+            ctx.fillStyle = '#2a2a2a'; // Base background
+            // Example: Randomly shift background color slightly for a flicker
+            // if (Math.random() < 0.05) {
+            //     ctx.fillStyle = `rgb(${40 + Math.random()*10}, ${40 + Math.random()*10}, ${40 + Math.random()*10})`;
+            // }
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+             // Draw noise/texture background image here if loaded
+             // ctx.drawImage(noiseTexture, 0, 0, canvas.width, canvas.height);
+
+
+            // --- Draw Game Objects (relative to camera) ---
+            ctx.save(); // Save context state before translating for camera
+            ctx.translate(-camera.x, -camera.y);
+
+            // Draw Platforms
+            platforms.forEach(p => {
+                ctx.fillStyle = p.color || '#888'; // Default platform color
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+                // Add texture/sprite drawing here: ctx.drawImage(platformSprite, p.x, p.y, p.width, p.height);
+                // Add glitchy borders or effects per platform
+                 // ctx.strokeStyle = '#444';
+                 // ctx.lineWidth = 1;
+                 // ctx.strokeRect(p.x, p.y, p.width, p.height);
+            });
+
+            // Draw Items
+            items.forEach(item => {
+                // Optional: don't draw if collected
+                // if (item.collected) return;
+
+                ctx.fillStyle = item.color || '#ffff00'; // Default item color
+                ctx.fillRect(item.x, item.y, item.width, item.height);
+                // Add sprite drawing here: ctx.drawImage(itemSprite, item.x, item.y, item.width, item.height);
+
+                // Add visual cues for interactable items (e.g., pulsating glow)
+                // Example: simple pulse
+                 ctx.fillStyle = `rgba(255, 255, 0, ${0.5 + Math.sin(Date.now() * 0.005) * 0.2})`;
+                 ctx.fillRect(item.x - 2, item.y - 2, item.width + 4, item.height + 4);
+            });
+
+            // Draw Player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            // Add sprite drawing here: ctx.drawImage(player.sprite, player.x, player.y, player.width, player.height);
+            // Add player-specific visual effects (trail, after-image for glitch)
+
+            // --- Editor Mode Visuals ---
+            if (editorMode) {
+                // Draw Grid (optional, can be performance intensive)
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+                ctx.lineWidth = 0.5;
+                const startX = Math.floor(camera.x / config.spriteSize) * config.spriteSize;
+                const startY = Math.floor(camera.y / config.spriteSize) * config.spriteSize;
+                const endX = camera.x + canvas.width;
+                const endY = camera.y + canvas.height;
+                for (let x = startX; x < endX; x += config.spriteSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, startY - config.spriteSize); // Extend slightly offscreen
+                    ctx.lineTo(x, endY + config.spriteSize);
+                    ctx.stroke();
+                }
+                 for (let y = startY; y < endY; y += config.spriteSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(startX - config.spriteSize, y);
+                    ctx.lineTo(endX + config.spriteSize, y);
+                    ctx.stroke();
+                }
+
+                // Draw outline around objects for easier selection/deletion
+                ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)'; // Red outline for deletion indication
+                ctx.lineWidth = 1;
+                 platforms.forEach(p => ctx.strokeRect(p.x, p.y, p.width, p.height));
+                 items.forEach(i => ctx.strokeRect(i.x, i.y, i.width, i.height));
+            }
+
+
+            ctx.restore(); // Restore context state
+        }
+
+        // --- Game Loop ---
+        function gameLoop(timestamp) {
+            const deltaTime = (timestamp - lastTime) / 1000; // Time since last frame in seconds
+            lastTime = timestamp;
+
+            update(deltaTime || 0); // Pass 0 deltaTime on the first frame
+            render();
+
+            requestAnimationFrame(gameLoop); // Request next frame
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('keydown', (e) => {
+            if (!isModalOpen) { // Don't handle game keys if modal is open
+                 keys[e.code] = true;
+            }
+             // Allow Esc to close modal anytime
+             if (e.code === 'Escape' && isModalOpen) {
+                 hideContent();
+             }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+        });
+
+        closeModalBtn.addEventListener('click', hideContent);
+
+        // --- Editor Event Listeners ---
+        toggleEditorBtn.addEventListener('click', () => {
+            editorMode = !editorMode;
+            editorControlsDiv.classList.toggle('active');
+            toggleEditorBtn.textContent = `Toggle Editor (${editorMode ? 'ON' : 'OFF'})`;
+            if (editorMode) {
+                editorInfoDiv.textContent = `Editor ACTIVE. Left-Click to Place ${placementTypeSelect.value}. Right-Click to Delete.`;
+                // Maybe freeze player?
+            } else {
+                editorInfoDiv.textContent = `Editor Mode Inactive. Click canvas to interact in Play mode.`;
+                // Unfreeze player?
+            }
+        });
+
+        placementTypeSelect.addEventListener('change', (e) => {
+            placementType = e.target.value;
+             if (editorMode) {
+                 editorInfoDiv.textContent = `Editor ACTIVE. Left-Click to Place ${placementType}. Right-Click to Delete.`;
+             }
+        });
+
+        canvas.addEventListener('contextmenu', (e) => {
+             e.preventDefault(); // Prevent right-click menu
+             if (!editorMode) return;
+
+             const rect = canvas.getBoundingClientRect();
+             const screenX = e.clientX - rect.left;
+             const screenY = e.clientY - rect.top;
+             const worldPos = screenToWorld(screenX, screenY);
+
+             // Find object to delete (check items first, then platforms)
+             let deleted = false;
+             for (let i = items.length - 1; i >= 0; i--) {
+                 const item = items[i];
+                 if (worldPos.x >= item.x && worldPos.x <= item.x + item.width &&
+                     worldPos.y >= item.y && worldPos.y <= item.y + item.height) {
+                     items.splice(i, 1);
+                     deleted = true;
+                     break;
+                 }
+             }
+             if (!deleted) {
+                 for (let i = platforms.length - 1; i >= 0; i--) {
+                     // Don't delete the initial ground platform maybe? Or add a check.
+                     // if (platforms[i].isGround) continue;
+                     const platform = platforms[i];
+                      if (worldPos.x >= platform.x && worldPos.x <= platform.x + platform.width &&
+                          worldPos.y >= platform.y && worldPos.y <= platform.y + platform.height) {
+                          platforms.splice(i, 1);
+                          break;
+                      }
+                 }
+             }
+        });
+
+        canvas.addEventListener('click', (e) => {
+            if (!editorMode) return; // Only place in editor mode
+
+            const rect = canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const worldPos = screenToWorld(screenX, screenY);
+
+            const gridX = snapToGrid(worldPos.x);
+            const gridY = snapToGrid(worldPos.y);
+
+            if (placementType === 'platform') {
+                // Prevent overlapping platforms (basic check)
+                let overlap = platforms.some(p => p.x === gridX && p.y === gridY);
+                if (!overlap) {
+                    platforms.push({
+                        x: gridX,
+                        y: gridY,
+                        width: config.spriteSize, // Default to single block size
+                        height: config.spriteSize,
+                        color: '#777' // Editor placed platform color
+                        // Add options later to place wider/taller platforms
+                    });
+                }
+            } else if (placementType === 'item') {
+                // Prevent overlapping items (basic check)
+                let overlap = items.some(i => i.x === gridX && i.y === gridY);
+                 if (!overlap) {
+                    // --- Prompt for Item Content ---
+                    // THIS IS VERY BASIC - A real editor needs a proper UI
+                    const itemType = prompt("Enter item type (e.g., art, sound, visuals, engineering, instruments):", "art");
+                    const itemTitle = prompt("Enter content title:", "New Content");
+                    const itemText = prompt("Enter text content (optional):", "");
+                    const itemImage = prompt("Enter image URL (optional):", "");
+                    const itemVideo = prompt("Enter video URL (optional):", "");
+                    const itemEmbed = prompt("Enter HTML embed code or URL for iframe (optional):", "");
+
+                    if (itemType && itemTitle) { // Require at least type and title
+                         items.push({
+                             x: gridX,
+                             y: gridY,
+                             width: config.spriteSize,
+                             height: config.spriteSize,
+                             color: '#ffaa00', // Editor placed item color
+                             type: itemType,
+                             content: {
+                                 title: itemTitle,
+                                 text: itemText || null,
+                                 image: itemImage || null,
+                                 video: itemVideo || null,
+                                 htmlEmbed: itemEmbed || null
+                                 // pythonEmbed: null // Reminder: Handle via htmlEmbed
+                             }
+                         });
+                    }
+                 }
+            }
+        });
+
+        // --- Editor Save/Load/Clear ---
+        saveWorldBtn.addEventListener('click', () => {
+            if (!editorMode) return;
+            try {
+                const worldData = {
+                    platforms: platforms.filter(p => !(p.x === 0 && p.y === canvas.height - config.spriteSize && p.width === canvas.width)), // Don't save the default ground maybe? Or add an ID
+                    items: items
+                };
+                localStorage.setItem('platformerPortfolioWorld', JSON.stringify(worldData));
+                alert('World saved to local storage!');
+            } catch (error) {
+                console.error("Error saving world:", error);
+                alert('Failed to save world. Local storage might be full or disabled.');
+            }
+        });
+
+        loadWorldBtn.addEventListener('click', () => {
+             if (!editorMode) return;
+             if (confirm('Load world from local storage? This will overwrite the current editor state.')) {
+                 try {
+                     const savedData = localStorage.getItem('platformerPortfolioWorld');
+                     if (savedData) {
+                         const worldData = JSON.parse(savedData);
+                         // Reset to default ground + loaded data
+                         platforms = [
+                             { x: 0, y: canvas.height - config.spriteSize, width: canvas.width, height: config.spriteSize, color: '#888' },
+                             ...(worldData.platforms || [])
+                         ];
+                         items = worldData.items || [];
+                         alert('World loaded!');
+                     } else {
+                         alert('No saved world found in local storage.');
+                     }
+                 } catch (error) {
+                     console.error("Error loading world:", error);
+                     alert('Failed to load world. Saved data might be corrupted.');
+                 }
+             }
+        });
+
+        clearWorldBtn.addEventListener('click', () => {
+            if (!editorMode) return;
+             if (confirm('Clear the entire world (except ground) and remove saved data? This cannot be undone.')) {
+                 // Reset to only default ground
+                 platforms = [
+                     { x: 0, y: canvas.height - config.spriteSize, width: canvas.width, height: config.spriteSize, color: '#888' }
+                 ];
+                 items = [];
+                 localStorage.removeItem('platformerPortfolioWorld');
+                 alert('World cleared and saved data removed.');
+             }
+        });
+
+        // --- Initialization ---
+        function init() {
+            console.log("Initializing Interactive Portfolio...");
+             // Load world from local storage automatically on start? Optional.
+             try {
+                 const savedData = localStorage.getItem('platformerPortfolioWorld');
+                 if (savedData) {
+                     console.log("Found saved world data.");
+                     const worldData = JSON.parse(savedData);
+                     platforms = [
+                         { x: 0, y: canvas.height - config.spriteSize, width: canvas.width, height: config.spriteSize, color: '#888' },
+                         ...(worldData.platforms || [])
+                      ];
+                     items = worldData.items || [];
+                 } else {
+                    console.log("No saved world found, using default setup.");
+                 }
+             } catch (error) {
+                 console.error("Error loading initial world data:", error);
+                 // Proceed with default data if loading fails
+             }
+
+
+            editorControlsDiv.style.display = 'block'; // Show editor controls container (buttons still hidden until toggled)
+            requestAnimationFrame(gameLoop); // Start the game loop
+        }
+
+        // --- Start the application ---
+        init();
+
+    </script>
+
+</body>
+</html>
