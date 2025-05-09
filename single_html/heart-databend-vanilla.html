@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexadecimal Heart Databending</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: black;
+        }
+        
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 32px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background-color: rgba(40, 10, 10, 0.8);
+            color: white;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            border-radius: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            background-color: rgba(70, 20, 20, 0.8);
+            box-shadow: 0 4px 15px rgba(255, 50, 50, 0.3);
+        }
+        
+        .status {
+            position: absolute;
+            top: 32px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .status-box {
+            padding: 8px 16px;
+            background-color: rgba(30, 0, 0, 0.6);
+            color: white;
+            border-radius: 8px;
+            text-shadow: 0 0 8px rgba(255, 0, 0, 0.5);
+        }
+        
+        .image-upload {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .image-input {
+            background-color: rgba(30, 0, 0, 0.6);
+            color: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            border: 1px solid rgba(255, 50, 50, 0.3);
+        }
+        
+        .image-input::-webkit-file-upload-button {
+            background-color: rgba(70, 20, 20, 0.8);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="heartCanvas"></canvas>
+    </div>
+    
+    <div class="status">
+        <div class="status-box" id="status-text">Hexadecimal heart awaiting transformation...</div>
+    </div>
+    
+    <div class="image-upload">
+        <input type="file" id="image-input" class="image-input" accept="image/*">
+    </div>
+    
+    <div class="controls">
+        <button id="toggle-button">Begin Experience</button>
+    </div>
+
+    <script>
+        // Global variables
+        let isPlaying = false;
+        let animationFrameId = null;
+        let audioSetup = false;
+        let audioNodes = {};
+        let time = 0;
+        let intensity = 0;
+        let phase = 'calm';
+        let userImage = null;
+        let heartImage = null;
+        let showUserImage = false;
+        let lastImageToggle = 0;
+        
+        // Get DOM elements
+        const canvas = document.getElementById('heartCanvas');
+        const ctx = canvas.getContext('2d');
+        const toggleButton = document.getElementById('toggle-button');
+        const statusText = document.getElementById('status-text');
+        const imageInput = document.getElementById('image-input');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // Initialize
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Handle image upload
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    userImage = img;
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Create heart image on an offscreen canvas
+        function createHeartImage(size, color) {
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = size * 1.5;
+            offscreenCanvas.height = size * 1.5;
+            const offCtx = offscreenCanvas.getContext('2d');
+            
+            // Draw heart
+            const x = offscreenCanvas.width / 2;
+            const y = offscreenCanvas.height / 3;
+            
+            offCtx.beginPath();
+            offCtx.moveTo(x, y + size / 4);
+            offCtx.bezierCurveTo(
+                x, y, 
+                x - size / 2, y, 
+                x - size / 2, y + size / 4
+            );
+            offCtx.bezierCurveTo(
+                x - size / 2, y + size / 2, 
+                x, y + size * 3/4, 
+                x, y + size
+            );
+            offCtx.bezierCurveTo(
+                x, y + size * 3/4, 
+                x + size / 2, y + size / 2, 
+                x + size / 2, y + size / 4
+            );
+            offCtx.bezierCurveTo(
+                x + size / 2, y, 
+                x, y, 
+                x, y + size / 4
+            );
+            offCtx.fillStyle = color;
+            offCtx.fill();
+            offCtx.closePath();
+            
+            return offscreenCanvas;
+        }
+        
+        // Setup audio
+        async function setupAudio() {
+            if (audioSetup) return;
+            
+            await Tone.start();
+            Tone.Transport.bpm.value = 70;
+            
+            // Create oscillators with more detuning capabilities
+            const bassOsc = new Tone.FatOscillator({
+                frequency: "C2", 
+                type: "sine", 
+                count: 3,
+                spread: 20
+            }).start();
+            
+            // More complex synth with detuning capability
+            const midSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { 
+                    type: 'triangle8',
+                    detune: 0
+                },
+                envelope: { 
+                    attack: 0.5, 
+                    decay: 0.5, 
+                    sustain: 0.5, 
+                    release: 0.5 
+                }
+            });
+            
+            // Noisier synth for intense moments
+            const noiseSynth = new Tone.NoiseSynth({
+                noise: { type: 'pink' },
+                envelope: { 
+                    attack: 0.005, 
+                    decay: 0.1, 
+                    sustain: 0,
+                    release: 0.1
+                }
+            });
+            
+            // Add a pitch shift effect for detuning
+            const pitchShift = new Tone.PitchShift({
+                pitch: 0,
+                windowSize: 0.1,
+                delayTime: 0,
+                feedback: 0
+            });
+            
+            // More aggressive distortion
+            const distortion = new Tone.Distortion(0);
+            
+            // Bitcrusher for digital distortion during peaks
+            const bitcrusher = new Tone.BitCrusher({
+                bits: 8
+            });
+            
+            const reverb = new Tone.Reverb(5);
+            reverb.wet.value = 0.5;
+            
+            const delay = new Tone.PingPongDelay("8n", 0.2);
+            delay.wet.value = 0.2;
+            
+            const filter = new Tone.Filter(500, "lowpass");
+            const mainVolume = new Tone.Volume(-20);
+            
+            // Connect bass oscillator
+            bassOsc.connect(filter);
+            filter.connect(distortion);
+            distortion.connect(reverb);
+            
+            // Connect mid synth
+            midSynth.connect(pitchShift);
+            pitchShift.connect(distortion);
+            distortion.connect(delay);
+            delay.connect(reverb);
+            
+            // Connect noise synth to bitcrusher for extreme moments
+            noiseSynth.connect(bitcrusher);
+            bitcrusher.connect(distortion);
+            
+            // Connect everything to main output
+            reverb.connect(mainVolume);
+            mainVolume.toDestination();
+            
+            // Setup pattern for mid tones
+            const notes = ["C4", "E4", "G4", "B4", "D5", "A4"];
+            const midPattern = new Tone.Pattern((time, note) => {
+                // Add randomness for more chaotic feel during intense moments
+                if (Math.random() > 0.6) {
+                    // Randomly choose between single notes and chords
+                    if (intensity > 0.7 && Math.random() > 0.7) {
+                        // Play a dissonant chord during intense moments
+                        midSynth.triggerAttackRelease([note, Tone.Frequency(note).transpose(7)], "8n", time);
+                    } else {
+                        midSynth.triggerAttackRelease(note, "8n", time);
+                    }
+                }
+            }, notes);
+            midPattern.interval = "8n";
+            midPattern.start(0);
+            
+            // Setup noise pattern
+            const noisePattern = new Tone.Loop(time => {
+                // More noise during intense moments
+                if (Math.random() > (0.8 - intensity * 0.5)) {
+                    noiseSynth.triggerAttackRelease("16n", time);
+                }
+            }, "16n");
+            noisePattern.start(0);
+            
+            // Add a more aggressive bass pulse during peaks
+            const bassPulse = new Tone.Loop(time => {
+                if (intensity > 0.6 && Math.random() > 0.6) {
+                    bassOsc.frequency.rampTo(Tone.Frequency("G1").toFrequency(), 0.1);
+                    bassOsc.frequency.rampTo(Tone.Frequency("C2").toFrequency(), 0.3, "+0.1");
+                }
+            }, "2n");
+            bassPulse.start(0);
+            
+            // Store nodes for later parameter control
+            audioNodes = {
+                bassOsc,
+                midSynth,
+                noiseSynth,
+                pitchShift,
+                distortion,
+                bitcrusher,
+                reverb,
+                delay,
+                filter,
+                mainVolume
+            };
+            
+            Tone.Transport.start();
+            audioSetup = true;
+        }
+        
+        // Apply databending effects to the canvas
+        function applyDataBending(width, height, intensityLevel) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            
+            // Different databending techniques based on intensity
+            for (let i = 0; i < data.length; i += 4) {
+                // Pixel shifting - more aggressive with higher intensity
+                if (Math.random() < intensityLevel * 0.2) {
+                    const shiftAmount = Math.floor(intensityLevel * 40);
+                    const targetIdx = i + shiftAmount * 4;
+                    
+                    if (targetIdx < data.length) {
+                        data[targetIdx] = data[i];
+                        data[targetIdx + 1] = data[i + 1];
+                        data[targetIdx + 2] = data[i + 2];
+                    }
+                }
+                
+                // Color distortion - emphasize reds more
+                if (intensityLevel > 0.3) {
+                    // Enhance red for high intensity, more aggressively
+                    data[i] = Math.min(255, data[i] + intensityLevel * 100);
+                    
+                    // Reduce green and blue to make red stand out more
+                    if (intensityLevel > 0.6) {
+                        data[i+1] = Math.max(0, data[i+1] - intensityLevel * 50);
+                        data[i+2] = Math.max(0, data[i+2] - intensityLevel * 40);
+                    }
+                    
+                    // Bit manipulation (databending technique)
+                    if (intensityLevel > 0.7 && Math.random() < 0.3) {
+                        data[i] = data[i] ^ Math.floor(intensityLevel * 70);
+                        data[i+1] = data[i+1] ^ Math.floor(intensityLevel * 40);
+                        // For extra digital corruption feel
+                        if (intensityLevel > 0.9 && Math.random() < 0.2) {
+                            data[i] = 255 - data[i];
+                        }
+                    }
+                }
+                
+                // Scanlines effect for high intensity
+                if (intensityLevel > 0.6) {
+                    const y = Math.floor(i / 4 / width);
+                    if (y % (Math.floor(12 - intensityLevel * 10)) === 0) {
+                        data[i] = 255 - data[i]; // Invert colors
+                        data[i+1] = 255 - data[i+1];
+                        data[i+2] = 255 - data[i+2];
+                    }
+                }
+                
+                // Add random red pixels during peaks
+                if (intensityLevel > 0.8 && Math.random() < 0.05) {
+                    data[i] = 255;
+                    data[i+1] = 0;
+                    data[i+2] = 0;
+                }
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+        }
+        
+        // Update status text based on phase
+        function updateStatusText() {
+            switch(phase) {
+                case 'calm':
+                    statusText.textContent = 'Calm waters of binary sea...';
+                    break;
+                case 'building':
+                    statusText.textContent = 'Tension building in the circuit...';
+                    break;
+                case 'peak':
+                    statusText.textContent = 'HEART OVERFLOW 0x' + Math.random().toString(16).substring(2, 10).toUpperCase();
+                    break;
+                case 'release':
+                    statusText.textContent = 'Data cascade releasing...';
+                    break;
+                default:
+                    statusText.textContent = 'Hexadecimal heart awaiting transformation...';
+            }
+        }
+        
+        // Main animation loop
+        function animate() {
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Update time
+            time += 0.01;
+            
+            // Cycle through different phases
+            // Each complete cycle takes about 60-90 seconds
+            const cycleDuration = 80;
+            const normalizedTime = (time % cycleDuration) / cycleDuration;
+            
+            // Determine current phase and intensity
+            let newIntensity = 0;
+            let newPhase = 'calm';
+            
+            if (normalizedTime < 0.3) {
+                // Calm phase (30% of cycle)
+                newPhase = 'calm';
+                newIntensity = 0.05 + Math.sin(time * 2) * 0.05;
+            } else if (normalizedTime < 0.6) {
+                // Building phase (30% of cycle)
+                newPhase = 'building';
+                // Gradually increase intensity, with slight variations
+                const buildProgress = (normalizedTime - 0.3) / 0.3;
+                newIntensity = 0.1 + buildProgress * 0.6 + Math.sin(time * 3) * 0.1;
+            } else if (normalizedTime < 0.7) {
+                // Peak phase (10% of cycle)
+                newPhase = 'peak';
+                newIntensity = 0.7 + Math.sin(time * 10) * 0.3;
+            } else {
+                // Release phase (30% of cycle)
+                newPhase = 'release';
+                const releaseProgress = (normalizedTime - 0.7) / 0.3;
+                newIntensity = 0.7 - releaseProgress * 0.65 + Math.sin(time * 2) * 0.05;
+            }
+            
+            intensity = newIntensity;
+            
+            // Only update the text when phase changes to avoid too many DOM updates
+            if (phase !== newPhase) {
+                phase = newPhase;
+                updateStatusText();
+            }
+            
+            // Update audio parameters based on intensity
+            if (audioSetup) {
+                const { 
+                    bassOsc, midSynth, pitchShift, distortion, bitcrusher, 
+                    reverb, delay, filter, mainVolume 
+                } = audioNodes;
+                
+                // Update audio parameters
+                bassOsc.volume.value = -20 + newIntensity * 15;
+                
+                // Detuning - make it go increasingly out of tune with intensity
+                bassOsc.spread = 20 + newIntensity * 80;
+                
+                // Add detuning to the midSynth during intense moments
+                if (midSynth.options && midSynth.options.oscillator) {
+                    // Increase detune during intense phases
+                    const detuneAmount = Math.sin(time * 8) * newIntensity * 50;
+                    midSynth.set({
+                        oscillator: {
+                            detune: detuneAmount
+                        }
+                    });
+                }
+                
+                // PitchShift gets increasingly extreme with intensity
+                pitchShift.pitch = Math.sin(time * 3) * newIntensity * 2;
+                
+                // More distortion during peaks
+                distortion.distortion = newIntensity * 3;
+                
+                // Bitcrusher for more digital distortion during peaks
+                bitcrusher.bits = Math.max(1, 8 - Math.floor(newIntensity * 7));
+                
+                // Filter changes with intensity
+                filter.frequency.value = 200 + newIntensity * 10000;
+                
+                // More delay during calmer parts
+                delay.wet.value = 0.1 + (1 - newIntensity) * 0.4;
+                
+                // More reverb during calmer parts
+                reverb.wet.value = 0.2 + (1 - newIntensity) * 0.6;
+            }
+            
+            // Display background with color based on intensity/phase - more red influence
+            let bgColor;
+            switch(newPhase) {
+                case 'calm':
+                    bgColor = `rgb(${20 + newIntensity * 30}, ${10 + newIntensity * 20}, ${40 + newIntensity * 30})`;
+                    break;
+                case 'building':
+                    bgColor = `rgb(${40 + newIntensity * 60}, ${10 + newIntensity * 15}, ${30 - newIntensity * 20})`;
+                    break;
+                case 'peak':
+                    bgColor = `rgb(${100 + newIntensity * 155}, ${10 - newIntensity * 5}, ${20 - newIntensity * 15})`;
+                    break;
+                case 'release':
+                    bgColor = `rgb(${100 + newIntensity * 40}, ${20 + newIntensity * 30}, ${40 + newIntensity * 30})`;
+                    break;
+                default:
+                    bgColor = 'rgb(20, 5, 30)';
+            }
+            
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Generate digital noise for high intensity
+            if (newIntensity > 0.5) {
+                ctx.fillStyle = 'rgba(255, 30, 30, 0.03)';
+                for (let i = 0; i < newIntensity * 300; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const size = Math.random() * 4 + 1;
+                    ctx.fillRect(x, y, size, size);
+                }
+            }
+            
+            // Toggle between heart and user image
+            // Toggle more frequently during peak, less during calm
+            const toggleFrequency = newPhase === 'peak' ? 0.5 : (newPhase === 'building' ? 1.0 : 2.0);
+            
+            if (time - lastImageToggle > toggleFrequency) {
+                showUserImage = !showUserImage && userImage !== null;
+                lastImageToggle = time;
+            }
+            
+            // Handle drawing the appropriate image
+            if (showUserImage && userImage) {
+                // Draw user image
+                const imgWidth = Math.min(width * 0.8, userImage.width);
+                const imgHeight = (imgWidth / userImage.width) * userImage.height;
+                const imgX = (width - imgWidth) / 2;
+                const imgY = (height - imgHeight) / 2;
+                
+                ctx.drawImage(userImage, imgX, imgY, imgWidth, imgHeight);
+            } else {
+                // Draw heart
+                const heartSize = 180 + Math.sin(time) * 10;
+                const heartX = width / 2;
+                const heartY = height / 2 - 50;
+                
+                // Heart color based on phase - more red influence
+                let heartColor;
+                switch(newPhase) {
+                    case 'calm':
+                        heartColor = `rgb(220, ${100 + newIntensity * 50}, ${130 + newIntensity * 40})`;
+                        break;
+                    case 'building':
+                        heartColor = `rgb(240, ${80 - newIntensity * 50}, ${100 - newIntensity * 70})`;
+                        break;
+                    case 'peak':
+                        heartColor = `rgb(255, ${30 - newIntensity * 30}, ${30 - newIntensity * 30})`;
+                        break;
+                    case 'release':
+                        heartColor = `rgb(${240 + newIntensity * 15}, ${60 + newIntensity * 100}, ${80 + newIntensity * 80})`;
+                        break;
+                    default:
+                        heartColor = 'rgb(220, 80, 80)';
+                }
+                
+                // Create heart image if we don't have one or need to update it
+                if (!heartImage || newPhase !== phase) {
+                    heartImage = createHeartImage(heartSize, heartColor);
+                }
+                
+                // Draw the heart image
+                ctx.drawImage(
+                    heartImage, 
+                    heartX - heartImage.width/2, 
+                    heartY - heartImage.height/3,
+                    heartImage.width, 
+                    heartImage.height
+                );
+            }
+            
+            // Apply databending effects based on intensity
+            if (newIntensity > 0.1) {
+                applyDataBending(width, height, newIntensity);
+            }
+            
+            // Display hexadecimal code - more aggressive during peaks
+            if (newPhase === 'peak' || newIntensity > 0.6) {
+                ctx.font = `${Math.floor(12 + newIntensity * 12)}px monospace`;
+                ctx.fillStyle = 'rgba(255, 50, 50, 0.7)';
+                
+                // Generate hexadecimal strings
+                const numStrings = Math.floor(10 + newIntensity * 15);
+                for (let i = 0; i < numStrings; i++) {
+                    let hexString = '';
+                    for (let j = 0; j < 20; j++) {
+                        hexString += Math.floor(Math.random() * 16).toString(16);
+                    }
+                    
+                    const y = Math.random() * height;
+                    ctx.fillText(hexString, 20, y);
+                    
+                    if (newIntensity > 0.8) {
+                        // More intensive hex code display during peaks
+                        for (let j = 0; j < 5; j++) {
+                            const hexString = '0x' + Math.random().toString(16).substring(2, 10).toUpperCase();
+                            ctx.fillText(hexString, Math.random() * width, Math.random() * height);
+                        }
+                    }
+                }
+            }
+            
+            // Add flickering during peak intensity
+            if (newIntensity > 0.9 && Math.random() > 0.7) {
+                ctx.fillStyle = `rgba(255, 0, 0, ${Math.random() * 0.3})`;
+                ctx.fillRect(0, 0, width, height);
+            }
+            
+            // Continue animation loop
+            animationFrameId = requestAnimationFrame(animate);
+        }
+        
+        // Handle play/pause
+        async function togglePlay() {
+            if (!isPlaying) {
+                try {
+                    await setupAudio();
+                    animationFrameId = requestAnimationFrame(animate);
+                    isPlaying = true;
+                    toggleButton.textContent = 'Stop Experience';
+                } catch (error) {
+                    console.error('Error starting audio:', error);
+                    alert('There was an error starting the audio. Please try again or check your browser settings.');
+                }
+            } else {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                
+                if (audioSetup) {
+                    Tone.Transport.stop();
+                    Object.values(audioNodes).forEach(node => {
+                        if (node && typeof node.dispose === 'function') {
+                            node.dispose();
+                        }
+                    });
+                    audioSetup = false;
+                }
+                
+                isPlaying = false;
+                toggleButton.textContent = 'Begin Experience';
+                statusText.textContent = 'Hexadecimal heart awaiting transformation...';
+            }
+        }
+        
+        // Add button event listener
+        toggleButton.addEventListener('click', togglePlay);
+    </script>
+</body>
+</html>
