@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimized 3D Falling Text</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            z-index: 100;
+        }
+        button {
+            background: #444;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #666;
+        }
+        input {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            margin: 5px 0;
+            width: 180px;
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div>
+            <input type="text" id="textInput" value="STONE" placeholder="Enter text">
+        </div>
+        <div>
+            <button id="dropBtn">Drop Text</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+    
+    <div id="loading" class="loading">Loading 3D engine...</div>
+
+    <script type="module">
+        import * as THREE from 'https://cdn.skypack.dev/three@0.136.0';
+        import { FontLoader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/loaders/FontLoader.js';
+        import { TextGeometry } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/geometries/TextGeometry.js';
+
+        // Globals
+        let scene, camera, renderer, font;
+        let textMesh, fragmentGroup;
+        let fragments = [];
+        let isAnimating = false;
+        let loadingComplete = false;
+        
+        // Floor parameters
+        const floorY = -5;
+        
+        // Physics constants
+        const GRAVITY = 0.05;
+        const BOUNCE = 0.4;
+        const FRICTION = 0.98;
+        const DRAG = 0.98;
+        
+        // Initialize everything
+        init();
+        
+        async function init() {
+            // Create scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a1a);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 4, 20);
+            camera.lookAt(0, 0, 0);
+            
+            // Create renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+            
+            // Add lights
+            addLights();
+            
+            // Add floor
+            createFloor();
+            
+            // Load font
+            try {
+                font = await loadFont();
+                createText(document.getElementById("textInput").value);
+                loadingComplete = true;
+                document.getElementById("loading").style.display = "none";
+            } catch (error) {
+                console.error("Error loading font:", error);
+                document.getElementById("loading").innerHTML = "Error loading font. Please refresh.";
+            }
+            
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById("dropBtn").addEventListener('click', dropText);
+            document.getElementById("resetBtn").addEventListener('click', resetScene);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        function addLights() {
+            // Ambient light
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+            scene.add(ambientLight);
+            
+            // Main directional light (with shadows)
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1);
+            mainLight.position.set(10, 15, 10);
+            mainLight.castShadow = true;
+            
+            // Configure shadow parameters for better quality but more efficiency
+            mainLight.shadow.mapSize.width = 1024;
+            mainLight.shadow.mapSize.height = 1024;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 50;
+            mainLight.shadow.camera.left = -15;
+            mainLight.shadow.camera.right = 15;
+            mainLight.shadow.camera.top = 15;
+            mainLight.shadow.camera.bottom = -15;
+            
+            scene.add(mainLight);
+            
+            // Fill light
+            const fillLight = new THREE.DirectionalLight(0x8888ff, 0.4);
+            fillLight.position.set(-10, 5, -10);
+            scene.add(fillLight);
+            
+            // Add a subtle point light for realism
+            const pointLight = new THREE.PointLight(0xffaa00, 0.5, 30);
+            pointLight.position.set(0, 10, 5);
+            scene.add(pointLight);
+        }
+        
+        function createFloor() {
+            // Create floor geometry
+            const floorGeometry = new THREE.PlaneGeometry(50, 50);
+            
+            // Create stone-like material with texture
+            const floorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x444444,
+                roughness: 0.8,
+                metalness: 0.2,
+            });
+            
+            // Create mesh and position it
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = floorY;
+            floor.receiveShadow = true;
+            scene.add(floor);
+        }
+        
+        function loadFont() {
+            return new Promise((resolve, reject) => {
+                const loader = new FontLoader();
+                loader.load(
+                    'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
+                    // onLoad callback
+                    font => resolve(font),
+                    // onProgress callback
+                    undefined,
+                    // onError callback
+                    error => reject(error)
+                );
+            });
+        }
+        
+        function createText(text) {
+            // Remove old text if it exists
+            if (textMesh) scene.remove(textMesh);
+            if (fragmentGroup) scene.remove(fragmentGroup);
+            
+            // Clear fragments array
+            fragments = [];
+            
+            // Create text parameters
+            const textOptions = {
+                font: font,
+                size: 3,
+                height: 0.5,
+                curveSegments: 4,
+                bevelEnabled: true,
+                bevelThickness: 0.2,
+                bevelSize: 0.15,
+                bevelOffset: 0,
+                bevelSegments: 3
+            };
+            
+            // Create text geometry
+            const textGeometry = new TextGeometry(text, textOptions);
+            
+            // Center text geometry
+            textGeometry.computeBoundingBox();
+            const centerOffset = -0.5 * (textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x);
+            
+            // Create stone-like material
+            const stoneMaterial = new THREE.MeshStandardMaterial({
+                color: 0x888888,
+                roughness: 0.7,
+                metalness: 0.2
+            });
+            
+            // Create text mesh
+            textMesh = new THREE.Mesh(textGeometry, stoneMaterial);
+            textMesh.position.x = centerOffset;
+            textMesh.position.y = 10;
+            textMesh.position.z = 0;
+            textMesh.castShadow = true;
+            textMesh.receiveShadow = true;
+            textMesh.userData.text = text;
+            
+            scene.add(textMesh);
+            
+            // Create fragments container (initially invisible)
+            fragmentGroup = new THREE.Group();
+            fragmentGroup.visible = false;
+            scene.add(fragmentGroup);
+            
+            // Generate fragments in advance
+            generateFragments(textGeometry, stoneMaterial, centerOffset, text);
+        }
+        
+        function generateFragments(textGeometry, material, centerOffset, text) {
+            // Get geometry bounding box for calculations
+            const bbox = textGeometry.boundingBox;
+            
+            // Fragment settings - adjust these for performance vs. quality
+            const fragmentsX = Math.max(5, Math.ceil(text.length * 2));
+            const fragmentsY = 3;
+            const fragmentsZ = 2;
+            
+            // Fragment size
+            const cellWidth = (bbox.max.x - bbox.min.x) / fragmentsX;
+            const cellHeight = (bbox.max.y - bbox.min.y) / fragmentsY;
+            const cellDepth = (bbox.max.z - bbox.min.z) / fragmentsZ;
+            
+            // Create fragment meshes
+            for (let x = 0; x < fragmentsX; x++) {
+                for (let y = 0; y < fragmentsY; y++) {
+                    for (let z = 0; z < fragmentsZ; z++) {
+                        // Create a slightly irregular box geometry for more natural look
+                        const jitter = 0.05; // Slight randomization for more natural appearance
+                        const width = cellWidth * (0.8 + Math.random() * 0.2);
+                        const height = cellHeight * (0.8 + Math.random() * 0.2);
+                        const depth = cellDepth * (0.8 + Math.random() * 0.2);
+                        
+                        const fragGeometry = new THREE.BoxGeometry(width, height, depth);
+                        
+                        // Vary the material slightly for each fragment
+                        const fragMaterial = material.clone();
+                        fragMaterial.color.offsetHSL(0, 0, (Math.random() - 0.5) * 0.15);
+                        
+                        // Create mesh
+                        const fragMesh = new THREE.Mesh(fragGeometry, fragMaterial);
+                        
+                        // Position based on its cell position plus some randomization
+                        fragMesh.position.x = centerOffset + bbox.min.x + (x + 0.5) * cellWidth + (Math.random() - 0.5) * jitter;
+                        fragMesh.position.y = bbox.min.y + (y + 0.5) * cellHeight + (Math.random() - 0.5) * jitter;
+                        fragMesh.position.z = bbox.min.z + (z + 0.5) * cellDepth + (Math.random() - 0.5) * jitter;
+                        
+                        // Add fragment data for physics
+                        const fragment = {
+                            mesh: fragMesh,
+                            velocity: new THREE.Vector3(0, 0, 0),
+                            rotationVelocity: new THREE.Vector3(
+                                (Math.random() - 0.5) * 0.06,
+                                (Math.random() - 0.5) * 0.06,
+                                (Math.random() - 0.5) * 0.06
+                            ),
+                            collided: false
+                        };
+                        
+                        fragments.push(fragment);
+                        fragMesh.castShadow = true;
+                        fragMesh.receiveShadow = true;
+                        fragmentGroup.add(fragMesh);
+                    }
+                }
+            }
+        }
+        
+        function dropText() {
+            if (!loadingComplete || isAnimating) return;
+            
+            // Hide original text and show fragments
+            textMesh.visible = false;
+            fragmentGroup.visible = true;
+            fragmentGroup.position.copy(textMesh.position);
+            
+            // Reset fragment positions and velocities
+            fragments.forEach(fragment => {
+                fragment.velocity.set(
+                    (Math.random() - 0.5) * 0.3,  // X velocity
+                    0,                            // Y velocity (starts at 0, gravity will pull down)
+                    (Math.random() - 0.5) * 0.3   // Z velocity
+                );
+                fragment.collided = false;
+            });
+            
+            isAnimating = true;
+        }
+        
+        function resetScene() {
+            isAnimating = false;
+            
+            if (textMesh) {
+                textMesh.visible = true;
+            }
+            
+            if (fragmentGroup) {
+                fragmentGroup.visible = false;
+            }
+            
+            // Check if text input changed
+            const newText = document.getElementById("textInput").value;
+            if (textMesh && textMesh.userData.text !== newText) {
+                createText(newText);
+            }
+        }
+        
+        function updateFragments() {
+            if (!isAnimating) return;
+            
+            let activeFragments = 0;
+            
+            fragments.forEach(fragment => {
+                // Apply gravity
+                fragment.velocity.y -= GRAVITY;
+                
+                // Update position
+                fragment.mesh.position.x += fragment.velocity.x;
+                fragment.mesh.position.y += fragment.velocity.y;
+                fragment.mesh.position.z += fragment.velocity.z;
+                
+                // Update rotation
+                fragment.mesh.rotation.x += fragment.rotationVelocity.x;
+                fragment.mesh.rotation.y += fragment.rotationVelocity.y;
+                fragment.mesh.rotation.z += fragment.rotationVelocity.z;
+                
+                // Apply drag to rotation
+                fragment.rotationVelocity.multiplyScalar(DRAG);
+                
+                // Floor collision
+                if (fragment.mesh.position.y <= floorY + fragment.mesh.geometry.parameters.height / 2) {
+                    fragment.mesh.position.y = floorY + fragment.mesh.geometry.parameters.height / 2;
+                    
+                    if (!fragment.collided || Math.abs(fragment.velocity.y) > 0.1) {
+                        // First bounce is more energetic
+                        fragment.velocity.y = -fragment.velocity.y * BOUNCE;
+                        fragment.velocity.x *= FRICTION;
+                        fragment.velocity.z *= FRICTION;
+                        
+                        // Add some random rotation on impact
+                        if (Math.abs(fragment.velocity.y) > 0.2) {
+                            fragment.rotationVelocity.x += (Math.random() - 0.5) * 0.05;
+                            fragment.rotationVelocity.z += (Math.random() - 0.5) * 0.05;
+                        }
+                        
+                        fragment.collided = true;
+                    } else {
+                        // Stop vertical movement after bounce energy is lost
+                        fragment.velocity.y = 0;
+                        fragment.velocity.x *= FRICTION;
+                        fragment.velocity.z *= FRICTION;
+                    }
+                }
+                
+                // Wall boundaries (optional, to keep fragments from going too far)
+                const BOUND = 25;
+                if (Math.abs(fragment.mesh.position.x) > BOUND) {
+                    fragment.mesh.position.x = Math.sign(fragment.mesh.position.x) * BOUND;
+                    fragment.velocity.x *= -0.5; // Bounce off walls with energy loss
+                }
+                if (Math.abs(fragment.mesh.position.z) > BOUND) {
+                    fragment.mesh.position.z = Math.sign(fragment.mesh.position.z) * BOUND;
+                    fragment.velocity.z *= -0.5; // Bounce off walls with energy loss
+                }
+                
+                // Check if fragment is still active
+                const isMoving = (
+                    Math.abs(fragment.velocity.x) > 0.01 ||
+                    Math.abs(fragment.velocity.y) > 0.01 ||
+                    Math.abs(fragment.velocity.z) > 0.01 ||
+                    Math.abs(fragment.rotationVelocity.x) > 0.001 ||
+                    Math.abs(fragment.rotationVelocity.y) > 0.001 ||
+                    Math.abs(fragment.rotationVelocity.z) > 0.001
+                );
+                
+                if (isMoving) {
+                    activeFragments++;
+                }
+            });
+            
+            // If very few fragments are still moving, stop the animation
+            if (activeFragments < fragments.length * 0.05 && isAnimating) {
+                isAnimating = false;
+            }
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update fragments physics
+            updateFragments();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
