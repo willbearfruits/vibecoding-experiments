@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Raycaster Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        #gameCanvas {
+            border: 1px solid #333;
+            image-rendering: pixelated;
+        }
+        #gameContainer {
+            position: relative;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            color: white;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="640" height="480"></canvas>
+        <div id="controls">
+            Controls: WASD or Arrow Keys to move, Mouse to look
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const SCREEN_WIDTH = 640;
+        const SCREEN_HEIGHT = 480;
+        const FOV = Math.PI / 3; // 60 degrees field of view
+        const WALL_HEIGHT = 1.0;
+        
+        // World map (1 = wall, 0 = empty space)
+        const MAP = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [1, 0, 1, 1, 0, 0, 1, 0, 0, 1],
+            [1, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 1, 0, 1, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ];
+        
+        // Player state
+        const player = {
+            x: 1.5,
+            y: 1.5,
+            angle: 0,
+            speed: 0.05,
+            rotSpeed: 0.04,
+            moveForward: false,
+            moveBackward: false,
+            rotateLeft: false,
+            rotateRight: false,
+            strafeLeft: false,
+            strafeRight: false
+        };
+        
+        // Textures
+        const TEXTURES = [];
+        const NUM_TEXTURES = 3;
+        const TEXTURE_SIZE = 64;
+        
+        // Setup canvas
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Create image data for the screen
+        let screenBuffer = ctx.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
+        let screenData = screenBuffer.data;
+        
+        // Load textures
+        function generateTextures() {
+            // Generate brick texture (texture 0)
+            const brickTexture = new ImageData(TEXTURE_SIZE, TEXTURE_SIZE);
+            const brickData = brickTexture.data;
+            
+            for (let y = 0; y < TEXTURE_SIZE; y++) {
+                for (let x = 0; x < TEXTURE_SIZE; x++) {
+                    const idx = (y * TEXTURE_SIZE + x) * 4;
+                    
+                    // Create brick pattern
+                    const brickX = Math.floor(x / 8);
+                    const brickY = Math.floor(y / 8);
+                    const isBrick = (brickX + brickY) % 2 === 0;
+                    
+                    // Add some noise to the brick texture
+                    const noise = Math.random() * 30;
+                    
+                    if (isBrick) {
+                        brickData[idx] = 160 + noise; // R
+                        brickData[idx + 1] = 80 + noise; // G
+                        brickData[idx + 2] = 70 + noise; // B
+                    } else {
+                        brickData[idx] = 120 + noise; // R
+                        brickData[idx + 1] = 60 + noise; // G
+                        brickData[idx + 2] = 50 + noise; // B
+                    }
+                    
+                    // Add mortar lines
+                    const isHorizontalMortar = y % 8 === 0;
+                    const isVerticalMortar = x % 8 === 0;
+                    if (isHorizontalMortar || isVerticalMortar) {
+                        brickData[idx] = 100 + noise; // R
+                        brickData[idx + 1] = 100 + noise; // G
+                        brickData[idx + 2] = 100 + noise; // B
+                    }
+                    
+                    brickData[idx + 3] = 255; // A
+                }
+            }
+            
+            TEXTURES.push(brickTexture);
+            
+            // Generate stone texture (texture 1)
+            const stoneTexture = new ImageData(TEXTURE_SIZE, TEXTURE_SIZE);
+            const stoneData = stoneTexture.data;
+            
+            for (let y = 0; y < TEXTURE_SIZE; y++) {
+                for (let x = 0; x < TEXTURE_SIZE; x++) {
+                    const idx = (y * TEXTURE_SIZE + x) * 4;
+                    
+                    // Create stone pattern
+                    const noiseValue = Math.sin(x * 0.1) + Math.sin(y * 0.1) + Math.random() * 0.5;
+                    const stoneValue = 90 + noiseValue * 20;
+                    
+                    stoneData[idx] = stoneValue; // R
+                    stoneData[idx + 1] = stoneValue; // G
+                    stoneData[idx + 2] = stoneValue + 10; // B
+                    stoneData[idx + 3] = 255; // A
+                }
+            }
+            
+            TEXTURES.push(stoneTexture);
+            
+            // Generate wood texture (texture 2)
+            const woodTexture = new ImageData(TEXTURE_SIZE, TEXTURE_SIZE);
+            const woodData = woodTexture.data;
+            
+            for (let y = 0; y < TEXTURE_SIZE; y++) {
+                for (let x = 0; x < TEXTURE_SIZE; x++) {
+                    const idx = (y * TEXTURE_SIZE + x) * 4;
+                    
+                    // Create wood grain pattern
+                    const grainX = Math.sin(y * 0.1) * 2;
+                    const grainValue = Math.sin((x + grainX) * 0.2) * 20;
+                    const noise = Math.random() * 10;
+                    
+                    woodData[idx] = 130 + grainValue + noise; // R
+                    woodData[idx + 1] = 80 + grainValue / 2 + noise; // G
+                    woodData[idx + 2] = 30 + noise; // B
+                    woodData[idx + 3] = 255; // A
+                }
+            }
+            
+            TEXTURES.push(woodTexture);
+        }
+        
+        // Helper function to clear the screen
+        function clearScreen() {
+            // Fill with ceiling color (dark blue)
+            for (let y = 0; y < SCREEN_HEIGHT / 2; y++) {
+                for (let x = 0; x < SCREEN_WIDTH; x++) {
+                    const idx = (y * SCREEN_WIDTH + x) * 4;
+                    screenData[idx] = 50; // R
+                    screenData[idx + 1] = 50; // G
+                    screenData[idx + 2] = 80; // B
+                    screenData[idx + 3] = 255; // A
+                }
+            }
+            
+            // Fill with floor color (dark gray)
+            for (let y = SCREEN_HEIGHT / 2; y < SCREEN_HEIGHT; y++) {
+                for (let x = 0; x < SCREEN_WIDTH; x++) {
+                    const idx = (y * SCREEN_WIDTH + x) * 4;
+                    screenData[idx] = 40; // R
+                    screenData[idx + 1] = 40; // G
+                    screenData[idx + 2] = 40; // B
+                    screenData[idx + 3] = 255; // A
+                }
+            }
+        }
+        
+        // Cast a single ray and render the wall column
+        function castRay(rayAngle, stripIdx) {
+            // Normalize angle between 0 and 2π
+            rayAngle = normalizeAngle(rayAngle);
+            
+            // Ray direction
+            const rayDirX = Math.cos(rayAngle);
+            const rayDirY = Math.sin(rayAngle);
+            
+            // Current map position
+            let mapX = Math.floor(player.x);
+            let mapY = Math.floor(player.y);
+            
+            // Length of ray from current position to next x or y-side
+            let sideDistX;
+            let sideDistY;
+            
+            // Length of ray from one x or y-side to next x or y-side
+            const deltaDistX = Math.abs(1 / rayDirX);
+            const deltaDistY = Math.abs(1 / rayDirY);
+            
+            // What direction to step in x or y direction (either +1 or -1)
+            let stepX;
+            let stepY;
+            
+            // Was a wall hit?
+            let hit = false;
+            
+            // Was it a NS or EW wall?
+            let side;
+            
+            // Figure out the step direction and initial side distance
+            if (rayDirX < 0) {
+                stepX = -1;
+                sideDistX = (player.x - mapX) * deltaDistX;
+            } else {
+                stepX = 1;
+                sideDistX = (mapX + 1.0 - player.x) * deltaDistX;
+            }
+            
+            if (rayDirY < 0) {
+                stepY = -1;
+                sideDistY = (player.y - mapY) * deltaDistY;
+            } else {
+                stepY = 1;
+                sideDistY = (mapY + 1.0 - player.y) * deltaDistY;
+            }
+            
+            // Perform DDA (Digital Differential Analysis)
+            while (!hit) {
+                // Jump to next map square, either in x or y direction
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX;
+                    mapX += stepX;
+                    side = 0; // X-side hit
+                } else {
+                    sideDistY += deltaDistY;
+                    mapY += stepY;
+                    side = 1; // Y-side hit
+                }
+                
+                // Check if ray has hit a wall
+                if (mapY < 0 || mapY >= MAP.length || mapX < 0 || mapX >= MAP[0].length) {
+                    hit = true; // Out of bounds, treat as a wall
+                } else if (MAP[mapY][mapX] > 0) {
+                    hit = true;
+                }
+            }
+            
+            // Calculate distance projected on camera direction
+            let perpWallDist;
+            if (side === 0) {
+                perpWallDist = (mapX - player.x + (1 - stepX) / 2) / rayDirX;
+            } else {
+                perpWallDist = (mapY - player.y + (1 - stepY) / 2) / rayDirY;
+            }
+            
+            // Calculate height of line to draw on screen
+            const lineHeight = Math.floor(SCREEN_HEIGHT / perpWallDist);
+            
+            // Calculate lowest and highest pixel to fill in current strip
+            let drawStart = Math.floor(SCREEN_HEIGHT / 2 - lineHeight / 2);
+            if (drawStart < 0) drawStart = 0;
+            
+            let drawEnd = Math.floor(SCREEN_HEIGHT / 2 + lineHeight / 2);
+            if (drawEnd >= SCREEN_HEIGHT) drawEnd = SCREEN_HEIGHT - 1;
+            
+            // Choose which texture to use
+            let texNum = MAP[mapY][mapX] - 1;
+            if (texNum < 0) texNum = 0;
+            if (texNum >= NUM_TEXTURES) texNum = NUM_TEXTURES - 1;
+            
+            // Calculate where exactly the wall was hit
+            let wallX;
+            if (side === 0) {
+                wallX = player.y + perpWallDist * rayDirY;
+            } else {
+                wallX = player.x + perpWallDist * rayDirX;
+            }
+            wallX -= Math.floor(wallX);
+            
+            // X coordinate on the texture
+            let texX = Math.floor(wallX * TEXTURE_SIZE);
+            if (side === 0 && rayDirX > 0) texX = TEXTURE_SIZE - texX - 1;
+            if (side === 1 && rayDirY < 0) texX = TEXTURE_SIZE - texX - 1;
+            
+            // Draw the vertical stripe
+            const texData = TEXTURES[texNum].data;
+            
+            for (let y = drawStart; y < drawEnd; y++) {
+                // Y coordinate on the texture
+                const d = y * 256 - SCREEN_HEIGHT * 128 + lineHeight * 128;
+                let texY = Math.floor((d * TEXTURE_SIZE) / lineHeight / 256);
+                texY = Math.min(texY, TEXTURE_SIZE - 1);
+                
+                // Get color from the texture
+                const texIdx = (texY * TEXTURE_SIZE + texX) * 4;
+                let r = texData[texIdx];
+                let g = texData[texIdx + 1];
+                let b = texData[texIdx + 2];
+                
+                // Make sides darker
+                if (side === 1) {
+                    r = Math.floor(r * 0.7);
+                    g = Math.floor(g * 0.7);
+                    b = Math.floor(b * 0.7);
+                }
+                
+                // Draw pixel
+                const idx = (y * SCREEN_WIDTH + stripIdx) * 4;
+                screenData[idx] = r;
+                screenData[idx + 1] = g;
+                screenData[idx + 2] = b;
+                screenData[idx + 3] = 255;
+            }
+        }
+        
+        // Normalize angle to [0, 2π)
+        function normalizeAngle(angle) {
+            while (angle < 0) angle += 2 * Math.PI;
+            while (angle >= 2 * Math.PI) angle -= 2 * Math.PI;
+            return angle;
+        }
+        
+        // Handle keyboard and mouse input
+        function setupControls() {
+            window.addEventListener('keydown', (e) => {
+                switch (e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                        player.moveForward = true;
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                        player.moveBackward = true;
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                        player.strafeLeft = true;
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                        player.strafeRight = true;
+                        break;
+                    case 'q':
+                        player.rotateLeft = true;
+                        break;
+                    case 'e':
+                        player.rotateRight = true;
+                        break;
+                }
+            });
+            
+            window.addEventListener('keyup', (e) => {
+                switch (e.key) {
+                    case 'ArrowUp':
+                    case 'w':
+                        player.moveForward = false;
+                        break;
+                    case 'ArrowDown':
+                    case 's':
+                        player.moveBackward = false;
+                        break;
+                    case 'ArrowLeft':
+                    case 'a':
+                        player.strafeLeft = false;
+                        break;
+                    case 'ArrowRight':
+                    case 'd':
+                        player.strafeRight = false;
+                        break;
+                    case 'q':
+                        player.rotateLeft = false;
+                        break;
+                    case 'e':
+                        player.rotateRight = false;
+                        break;
+                }
+            });
+            
+            // Mouse look
+            let mouseX = 0;
+            canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+            document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+            
+            canvas.addEventListener('click', () => {
+                canvas.requestPointerLock();
+            });
+            
+            document.addEventListener('pointerlockchange', lockChangeAlert, false);
+            document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
+            
+            function lockChangeAlert() {
+                if (document.pointerLockElement === canvas || document.mozPointerLockElement === canvas) {
+                    document.addEventListener('mousemove', updateMouseLook, false);
+                } else {
+                    document.removeEventListener('mousemove', updateMouseLook, false);
+                }
+            }
+            
+            function updateMouseLook(e) {
+                mouseX = e.movementX || e.mozMovementX || 0;
+                player.angle += mouseX * 0.002;
+            }
+        }
+        
+        // Update player position based on controls
+        function updatePlayer() {
+            // Rotate player
+            if (player.rotateLeft) player.angle -= player.rotSpeed;
+            if (player.rotateRight) player.angle += player.rotSpeed;
+            
+            // Normalize angle
+            player.angle = normalizeAngle(player.angle);
+            
+            // Calculate direction vectors
+            const dirX = Math.cos(player.angle);
+            const dirY = Math.sin(player.angle);
+            
+            // Calculate perpendicular vector for strafing
+            const perpDirX = Math.cos(player.angle + Math.PI / 2);
+            const perpDirY = Math.sin(player.angle + Math.PI / 2);
+            
+            // Calculate new position
+            let newX = player.x;
+            let newY = player.y;
+            
+            if (player.moveForward) {
+                newX += dirX * player.speed;
+                newY += dirY * player.speed;
+            }
+            if (player.moveBackward) {
+                newX -= dirX * player.speed;
+                newY -= dirY * player.speed;
+            }
+            if (player.strafeLeft) {
+                newX -= perpDirX * player.speed;
+                newY -= perpDirY * player.speed;
+            }
+            if (player.strafeRight) {
+                newX += perpDirX * player.speed;
+                newY += perpDirY * player.speed;
+            }
+            
+            // Collision detection
+            const newMapX = Math.floor(newX);
+            const newMapY = Math.floor(newY);
+            const currentMapX = Math.floor(player.x);
+            const currentMapY = Math.floor(player.y);
+            
+            // Check X movement
+            if (newMapX < 0 || newMapX >= MAP[0].length || 
+                MAP[currentMapY][newMapX] > 0) {
+                // Collision in X direction
+                newX = player.x;
+            }
+            
+            // Check Y movement
+            if (newMapY < 0 || newMapY >= MAP.length || 
+                MAP[newMapY][currentMapX] > 0) {
+                // Collision in Y direction
+                newY = player.y;
+            }
+            
+            // Apply movement
+            player.x = newX;
+            player.y = newY;
+        }
+        
+        // Main render function
+        function render() {
+            clearScreen();
+            
+            // Cast rays for each vertical strip of the screen
+            const rayIncrement = FOV / SCREEN_WIDTH;
+            for (let x = 0; x < SCREEN_WIDTH; x++) {
+                const rayAngle = player.angle - (FOV / 2) + (x * rayIncrement);
+                castRay(rayAngle, x);
+            }
+            
+            // Put the image data on the canvas
+            ctx.putImageData(screenBuffer, 0, 0);
+            
+            // Draw a simple minimap
+            drawMinimap();
+        }
+        
+        // Draw a simple minimap to help with navigation
+        function drawMinimap() {
+            const mapSize = 100;
+            const tileSize = mapSize / MAP.length;
+            
+            // Draw map
+            for (let y = 0; y < MAP.length; y++) {
+                for (let x = 0; x < MAP[y].length; x++) {
+                    ctx.fillStyle = MAP[y][x] > 0 ? '#777' : '#222';
+                    ctx.fillRect(10 + x * tileSize, 10 + y * tileSize, tileSize, tileSize);
+                    ctx.strokeStyle = '#333';
+                    ctx.strokeRect(10 + x * tileSize, 10 + y * tileSize, tileSize, tileSize);
+                }
+            }
+            
+            // Draw player
+            ctx.fillStyle = '#ff0000';
+            ctx.beginPath();
+            ctx.arc(10 + player.x * tileSize, 10 + player.y * tileSize, tileSize / 2, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // Draw player direction
+            ctx.strokeStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.moveTo(10 + player.x * tileSize, 10 + player.y * tileSize);
+            ctx.lineTo(
+                10 + player.x * tileSize + Math.cos(player.angle) * tileSize,
+                10 + player.y * tileSize + Math.sin(player.angle) * tileSize
+            );
+            ctx.stroke();
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            updatePlayer();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize and start the game
+        function init() {
+            generateTextures();
+            setupControls();
+            gameLoop();
+        }
+        
+        // Start the game when the page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
