@@ -1,0 +1,3118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Enclosure Designer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls as a separate importable module -->
+    <script>
+        // Add OrbitControls implementation directly to ensure it's available
+        // This is the Three.js OrbitControls implementation
+        // Source: https://github.com/mrdoob/three.js/blob/dev/examples/jsm/controls/OrbitControls.js
+        // Modified for direct inclusion
+        
+        // This set of controls performs orbiting, dollying (zooming), and panning.
+        // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
+        THREE.OrbitControls = function ( object, domElement ) {
+
+            this.object = object;
+            this.domElement = ( domElement !== undefined ) ? domElement : document;
+
+            // Set to false to disable this control
+            this.enabled = true;
+
+            // "target" sets the location of focus, where the object orbits around
+            this.target = new THREE.Vector3();
+
+            // How far you can dolly in and out ( PerspectiveCamera only )
+            this.minDistance = 0;
+            this.maxDistance = Infinity;
+
+            // How far you can zoom in and out ( OrthographicCamera only )
+            this.minZoom = 0;
+            this.maxZoom = Infinity;
+
+            // How far you can orbit vertically, upper and lower limits.
+            // Range is 0 to Math.PI radians.
+            this.minPolarAngle = 0; // radians
+            this.maxPolarAngle = Math.PI; // radians
+
+            // How far you can orbit horizontally, upper and lower limits.
+            // If set, the interval [ min, max ] must be a sub-interval of [ - 2 PI, 2 PI ]
+            this.minAzimuthAngle = - Infinity; // radians
+            this.maxAzimuthAngle = Infinity; // radians
+
+            // Set to true to enable damping (inertia)
+            // If damping is enabled, you must call controls.update() in your animation loop
+            this.enableDamping = false;
+            this.dampingFactor = 0.05;
+
+            // This option actually enables dollying in and out; left as "zoom" for backwards compatibility.
+            // Set to false to disable zooming
+            this.enableZoom = true;
+            this.zoomSpeed = 1.0;
+
+            // Set to false to disable rotating
+            this.enableRotate = true;
+            this.rotateSpeed = 1.0;
+
+            // Set to false to disable panning
+            this.enablePan = true;
+            this.panSpeed = 1.0;
+            this.screenSpacePanning = true; // if false, pan orthogonal to world-space direction camera.up
+            this.keyPanSpeed = 7.0;	// pixels moved per arrow key push
+
+            // Set to true to automatically rotate around the target
+            // If auto-rotate is enabled, you must call controls.update() in your animation loop
+            this.autoRotate = false;
+            this.autoRotateSpeed = 2.0; // 30 seconds per orbit when fps is 60
+
+            // The four arrow keys
+            this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+
+            // Mouse buttons
+            this.mouseButtons = { LEFT: THREE.MOUSE.ROTATE, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.PAN };
+
+            // Touch fingers
+            this.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+            // for reset
+            this.target0 = this.target.clone();
+            this.position0 = this.object.position.clone();
+            this.zoom0 = this.object.zoom;
+
+            // the target DOM element for key events
+            this._domElementKeyEvents = null;
+
+            //
+            // public methods
+            //
+
+            this.getPolarAngle = function () {
+
+                return spherical.phi;
+
+            };
+
+            this.getAzimuthalAngle = function () {
+
+                return spherical.theta;
+
+            };
+
+            this.listenToKeyEvents = function ( domElement ) {
+
+                domElement.addEventListener( 'keydown', onKeyDown );
+                this._domElementKeyEvents = domElement;
+
+            };
+
+            this.saveState = function () {
+
+                scope.target0.copy( scope.target );
+                scope.position0.copy( scope.object.position );
+                scope.zoom0 = scope.object.zoom;
+
+            };
+
+            this.reset = function () {
+
+                scope.target.copy( scope.target0 );
+                scope.object.position.copy( scope.position0 );
+                scope.object.zoom = scope.zoom0;
+
+                scope.object.updateProjectionMatrix();
+                scope.dispatchEvent( changeEvent );
+
+                scope.update();
+
+                state = STATE.NONE;
+
+            };
+
+            // this method is exposed, but perhaps it would be better if we can make it private...
+            this.update = function () {
+
+                var offset = new THREE.Vector3();
+
+                // so camera.up is the orbit axis
+                var quat = new THREE.Quaternion().setFromUnitVectors( object.up, new THREE.Vector3( 0, 1, 0 ) );
+                var quatInverse = quat.clone().invert();
+
+                var lastPosition = new THREE.Vector3();
+                var lastQuaternion = new THREE.Quaternion();
+
+                var twoPI = 2 * Math.PI;
+
+                return function update() {
+
+                    var position = scope.object.position;
+
+                    offset.copy( position ).sub( scope.target );
+
+                    // rotate offset to "y-axis-is-up" space
+                    offset.applyQuaternion( quat );
+
+                    // angle from z-axis around y-axis
+                    spherical.setFromVector3( offset );
+
+                    if ( scope.autoRotate && state === STATE.NONE ) {
+
+                        rotateLeft( getAutoRotationAngle() );
+
+                    }
+
+                    if ( scope.enableDamping ) {
+
+                        spherical.theta += sphericalDelta.theta * scope.dampingFactor;
+                        spherical.phi += sphericalDelta.phi * scope.dampingFactor;
+
+                    } else {
+
+                        spherical.theta += sphericalDelta.theta;
+                        spherical.phi += sphericalDelta.phi;
+
+                    }
+
+                    // restrict theta to be between desired limits
+
+                    var min = scope.minAzimuthAngle;
+                    var max = scope.maxAzimuthAngle;
+
+                    if ( isFinite( min ) && isFinite( max ) ) {
+
+                        if ( min < - Math.PI ) min += twoPI; else if ( min > Math.PI ) min -= twoPI;
+
+                        if ( max < - Math.PI ) max += twoPI; else if ( max > Math.PI ) max -= twoPI;
+
+                        if ( min <= max ) {
+
+                            spherical.theta = Math.max( min, Math.min( max, spherical.theta ) );
+
+                        } else {
+
+                            spherical.theta = ( spherical.theta > ( min + max ) / 2 ) ?
+                                Math.max( min, spherical.theta ) :
+                                Math.min( max, spherical.theta );
+
+                        }
+
+                    }
+
+                    // restrict phi to be between desired limits
+                    spherical.phi = Math.max( scope.minPolarAngle, Math.min( scope.maxPolarAngle, spherical.phi ) );
+
+                    spherical.makeSafe();
+
+
+                    spherical.radius *= scale;
+
+                    // restrict radius to be between desired limits
+                    spherical.radius = Math.max( scope.minDistance, Math.min( scope.maxDistance, spherical.radius ) );
+
+                    // move target to panned location
+
+                    if ( scope.enableDamping === true ) {
+
+                        scope.target.addScaledVector( panOffset, scope.dampingFactor );
+
+                    } else {
+
+                        scope.target.add( panOffset );
+
+                    }
+
+                    offset.setFromSpherical( spherical );
+
+                    // rotate offset back to "camera-up-vector-is-up" space
+                    offset.applyQuaternion( quatInverse );
+
+                    position.copy( scope.target ).add( offset );
+
+                    scope.object.lookAt( scope.target );
+
+                    if ( scope.enableDamping === true ) {
+
+                        sphericalDelta.theta *= ( 1 - scope.dampingFactor );
+                        sphericalDelta.phi *= ( 1 - scope.dampingFactor );
+
+                        panOffset.multiplyScalar( 1 - scope.dampingFactor );
+
+                    } else {
+
+                        sphericalDelta.set( 0, 0, 0 );
+
+                        panOffset.set( 0, 0, 0 );
+
+                    }
+
+                    scale = 1;
+
+                    // update condition is:
+                    // min(camera displacement, camera rotation in radians)^2 > EPS
+                    // using small-angle approximation cos(x/2) = 1 - x^2 / 8
+
+                    if ( zoomChanged ||
+                        lastPosition.distanceToSquared( scope.object.position ) > EPS ||
+                        8 * ( 1 - lastQuaternion.dot( scope.object.quaternion ) ) > EPS ) {
+
+                        scope.dispatchEvent( changeEvent );
+
+                        lastPosition.copy( scope.object.position );
+                        lastQuaternion.copy( scope.object.quaternion );
+                        zoomChanged = false;
+
+                        return true;
+
+                    }
+
+                    return false;
+
+                };
+
+            }();
+
+            this.dispose = function () {
+
+                scope.domElement.removeEventListener( 'contextmenu', onContextMenu );
+
+                scope.domElement.removeEventListener( 'pointerdown', onPointerDown );
+                scope.domElement.removeEventListener( 'wheel', onMouseWheel );
+
+                scope.domElement.removeEventListener( 'touchstart', onTouchStart );
+                scope.domElement.removeEventListener( 'touchend', onTouchEnd );
+                scope.domElement.removeEventListener( 'touchmove', onTouchMove );
+
+                scope.domElement.ownerDocument.removeEventListener( 'pointermove', onPointerMove );
+                scope.domElement.ownerDocument.removeEventListener( 'pointerup', onPointerUp );
+
+
+                if ( scope._domElementKeyEvents !== null ) {
+
+                    scope._domElementKeyEvents.removeEventListener( 'keydown', onKeyDown );
+
+                }
+
+                //scope.dispatchEvent( { type: 'dispose' } ); // should this be added here?
+
+            };
+
+            //
+            // internals
+            //
+
+            var scope = this;
+
+            var changeEvent = { type: 'change' };
+            var startEvent = { type: 'start' };
+            var endEvent = { type: 'end' };
+
+            var STATE = {
+                NONE: - 1,
+                ROTATE: 0,
+                DOLLY: 1,
+                PAN: 2,
+                TOUCH_ROTATE: 3,
+                TOUCH_PAN: 4,
+                TOUCH_DOLLY_PAN: 5,
+                TOUCH_DOLLY_ROTATE: 6
+            };
+
+            var state = STATE.NONE;
+
+            var EPS = 0.000001;
+
+            // current position in spherical coordinates
+            var spherical = new THREE.Spherical();
+            var sphericalDelta = new THREE.Spherical();
+
+            var scale = 1;
+            var panOffset = new THREE.Vector3();
+            var zoomChanged = false;
+
+            var rotateStart = new THREE.Vector2();
+            var rotateEnd = new THREE.Vector2();
+            var rotateDelta = new THREE.Vector2();
+
+            var panStart = new THREE.Vector2();
+            var panEnd = new THREE.Vector2();
+            var panDelta = new THREE.Vector2();
+
+            var dollyStart = new THREE.Vector2();
+            var dollyEnd = new THREE.Vector2();
+            var dollyDelta = new THREE.Vector2();
+
+            function getAutoRotationAngle() {
+
+                return 2 * Math.PI / 60 / 60 * scope.autoRotateSpeed;
+
+            }
+
+            function getZoomScale() {
+
+                return Math.pow( 0.95, scope.zoomSpeed );
+
+            }
+
+            function rotateLeft( angle ) {
+
+                sphericalDelta.theta -= angle;
+
+            }
+
+            function rotateUp( angle ) {
+
+                sphericalDelta.phi -= angle;
+
+            }
+
+            var panLeft = function () {
+
+                var v = new THREE.Vector3();
+
+                return function panLeft( distance, objectMatrix ) {
+
+                    v.setFromMatrixColumn( objectMatrix, 0 ); // get X column of objectMatrix
+                    v.multiplyScalar( - distance );
+
+                    panOffset.add( v );
+
+                };
+
+            }();
+
+            var panUp = function () {
+
+                var v = new THREE.Vector3();
+
+                return function panUp( distance, objectMatrix ) {
+
+                    if ( scope.screenSpacePanning === true ) {
+
+                        v.setFromMatrixColumn( objectMatrix, 1 );
+
+                    } else {
+
+                        v.setFromMatrixColumn( objectMatrix, 0 );
+                        v.crossVectors( scope.object.up, v );
+
+                    }
+
+                    v.multiplyScalar( distance );
+
+                    panOffset.add( v );
+
+                };
+
+            }();
+
+            // deltaX and deltaY are in pixels; right and down are positive
+            var pan = function () {
+
+                var offset = new THREE.Vector3();
+
+                return function pan( deltaX, deltaY ) {
+
+                    var element = scope.domElement;
+
+                    if ( scope.object.isPerspectiveCamera ) {
+
+                        // perspective
+                        var position = scope.object.position;
+                        offset.copy( position ).sub( scope.target );
+                        var targetDistance = offset.length();
+
+                        // half of the fov is center to top of screen
+                        targetDistance *= Math.tan( ( scope.object.fov / 2 ) * Math.PI / 180.0 );
+
+                        // we use only clientHeight here so aspect ratio does not distort speed
+                        panLeft( 2 * deltaX * targetDistance / element.clientHeight, scope.object.matrix );
+                        panUp( 2 * deltaY * targetDistance / element.clientHeight, scope.object.matrix );
+
+                    } else if ( scope.object.isOrthographicCamera ) {
+
+                        // orthographic
+                        panLeft( deltaX * ( scope.object.right - scope.object.left ) / scope.object.zoom / element.clientWidth, scope.object.matrix );
+                        panUp( deltaY * ( scope.object.top - scope.object.bottom ) / scope.object.zoom / element.clientHeight, scope.object.matrix );
+
+                    } else {
+
+                        // camera neither orthographic nor perspective
+                        console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - pan disabled.' );
+                        scope.enablePan = false;
+
+                    }
+
+                };
+
+            }();
+
+            function dollyOut( dollyScale ) {
+
+                if ( scope.object.isPerspectiveCamera ) {
+
+                    scale /= dollyScale;
+
+                } else if ( scope.object.isOrthographicCamera ) {
+
+                    scope.object.zoom = Math.max( scope.minZoom, Math.min( scope.maxZoom, scope.object.zoom * dollyScale ) );
+                    scope.object.updateProjectionMatrix();
+                    zoomChanged = true;
+
+                } else {
+
+                    console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.' );
+                    scope.enableZoom = false;
+
+                }
+
+            }
+
+            function dollyIn( dollyScale ) {
+
+                if ( scope.object.isPerspectiveCamera ) {
+
+                    scale *= dollyScale;
+
+                } else if ( scope.object.isOrthographicCamera ) {
+
+                    scope.object.zoom = Math.max( scope.minZoom, Math.min( scope.maxZoom, scope.object.zoom / dollyScale ) );
+                    scope.object.updateProjectionMatrix();
+                    zoomChanged = true;
+
+                } else {
+
+                    console.warn( 'WARNING: OrbitControls.js encountered an unknown camera type - dolly/zoom disabled.' );
+                    scope.enableZoom = false;
+
+                }
+
+            }
+
+            //
+            // event callbacks - update the object state
+            //
+
+            function handleMouseDownRotate( event ) {
+
+                rotateStart.set( event.clientX, event.clientY );
+
+            }
+
+            function handleMouseDownDolly( event ) {
+
+                dollyStart.set( event.clientX, event.clientY );
+
+            }
+
+            function handleMouseDownPan( event ) {
+
+                panStart.set( event.clientX, event.clientY );
+
+            }
+
+            function handleMouseMoveRotate( event ) {
+
+                rotateEnd.set( event.clientX, event.clientY );
+
+                rotateDelta.subVectors( rotateEnd, rotateStart ).multiplyScalar( scope.rotateSpeed );
+
+                var element = scope.domElement;
+
+                rotateLeft( 2 * Math.PI * rotateDelta.x / element.clientHeight ); // yes, height
+
+                rotateUp( 2 * Math.PI * rotateDelta.y / element.clientHeight );
+
+                rotateStart.copy( rotateEnd );
+
+                scope.update();
+
+            }
+
+            function handleMouseMoveDolly( event ) {
+
+                dollyEnd.set( event.clientX, event.clientY );
+
+                dollyDelta.subVectors( dollyEnd, dollyStart );
+
+                if ( dollyDelta.y > 0 ) {
+
+                    dollyOut( getZoomScale() );
+
+                } else if ( dollyDelta.y < 0 ) {
+
+                    dollyIn( getZoomScale() );
+
+                }
+
+                dollyStart.copy( dollyEnd );
+
+                scope.update();
+
+            }
+
+            function handleMouseMovePan( event ) {
+
+                panEnd.set( event.clientX, event.clientY );
+
+                panDelta.subVectors( panEnd, panStart ).multiplyScalar( scope.panSpeed );
+
+                pan( panDelta.x, panDelta.y );
+
+                panStart.copy( panEnd );
+
+                scope.update();
+
+            }
+
+            function handleMouseUp( /*event*/ ) {
+
+                // no-op
+
+            }
+
+            function handleMouseWheel( event ) {
+
+                if ( event.deltaY < 0 ) {
+
+                    dollyIn( getZoomScale() );
+
+                } else if ( event.deltaY > 0 ) {
+
+                    dollyOut( getZoomScale() );
+
+                }
+
+                scope.update();
+
+            }
+
+            function handleKeyDown( event ) {
+
+                var needsUpdate = false;
+
+                switch ( event.keyCode ) {
+
+                    case scope.keys.UP:
+                        pan( 0, scope.keyPanSpeed );
+                        needsUpdate = true;
+                        break;
+
+                    case scope.keys.BOTTOM:
+                        pan( 0, - scope.keyPanSpeed );
+                        needsUpdate = true;
+                        break;
+
+                    case scope.keys.LEFT:
+                        pan( scope.keyPanSpeed, 0 );
+                        needsUpdate = true;
+                        break;
+
+                    case scope.keys.RIGHT:
+                        pan( - scope.keyPanSpeed, 0 );
+                        needsUpdate = true;
+                        break;
+
+                }
+
+                if ( needsUpdate ) {
+
+                    // prevent the browser from scrolling on cursor keys
+                    event.preventDefault();
+
+                    scope.update();
+
+                }
+
+
+            }
+
+            function handleTouchStartRotate( event ) {
+
+                if ( event.touches.length == 1 ) {
+
+                    rotateStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+                } else {
+
+                    var x = 0.5 * ( event.touches[ 0 ].pageX + event.touches[ 1 ].pageX );
+                    var y = 0.5 * ( event.touches[ 0 ].pageY + event.touches[ 1 ].pageY );
+
+                    rotateStart.set( x, y );
+
+                }
+
+            }
+
+            function handleTouchStartPan( event ) {
+
+                if ( event.touches.length == 1 ) {
+
+                    panStart.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+                } else {
+
+                    var x = 0.5 * ( event.touches[ 0 ].pageX + event.touches[ 1 ].pageX );
+                    var y = 0.5 * ( event.touches[ 0 ].pageY + event.touches[ 1 ].pageY );
+
+                    panStart.set( x, y );
+
+                }
+
+            }
+
+            function handleTouchStartDolly( event ) {
+
+                var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
+                var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
+
+                var distance = Math.sqrt( dx * dx + dy * dy );
+
+                dollyStart.set( 0, distance );
+
+            }
+
+            function handleTouchStartDollyPan( event ) {
+
+                if ( scope.enableZoom ) handleTouchStartDolly( event );
+
+                if ( scope.enablePan ) handleTouchStartPan( event );
+
+            }
+
+            function handleTouchStartDollyRotate( event ) {
+
+                if ( scope.enableZoom ) handleTouchStartDolly( event );
+
+                if ( scope.enableRotate ) handleTouchStartRotate( event );
+
+            }
+
+            function handleTouchMoveRotate( event ) {
+
+                if ( event.touches.length == 1 ) {
+
+                    rotateEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+                } else {
+
+                    var x = 0.5 * ( event.touches[ 0 ].pageX + event.touches[ 1 ].pageX );
+                    var y = 0.5 * ( event.touches[ 0 ].pageY + event.touches[ 1 ].pageY );
+
+                    rotateEnd.set( x, y );
+
+                }
+
+                rotateDelta.subVectors( rotateEnd, rotateStart ).multiplyScalar( scope.rotateSpeed );
+
+                var element = scope.domElement;
+
+                rotateLeft( 2 * Math.PI * rotateDelta.x / element.clientHeight ); // yes, height
+
+                rotateUp( 2 * Math.PI * rotateDelta.y / element.clientHeight );
+
+                rotateStart.copy( rotateEnd );
+
+            }
+
+            function handleTouchMovePan( event ) {
+
+                if ( event.touches.length == 1 ) {
+
+                    panEnd.set( event.touches[ 0 ].pageX, event.touches[ 0 ].pageY );
+
+                } else {
+
+                    var x = 0.5 * ( event.touches[ 0 ].pageX + event.touches[ 1 ].pageX );
+                    var y = 0.5 * ( event.touches[ 0 ].pageY + event.touches[ 1 ].pageY );
+
+                    panEnd.set( x, y );
+
+                }
+
+                panDelta.subVectors( panEnd, panStart ).multiplyScalar( scope.panSpeed );
+
+                pan( panDelta.x, panDelta.y );
+
+                panStart.copy( panEnd );
+
+            }
+
+            function handleTouchMoveDolly( event ) {
+
+                var dx = event.touches[ 0 ].pageX - event.touches[ 1 ].pageX;
+                var dy = event.touches[ 0 ].pageY - event.touches[ 1 ].pageY;
+
+                var distance = Math.sqrt( dx * dx + dy * dy );
+
+                dollyEnd.set( 0, distance );
+
+                dollyDelta.set( 0, Math.pow( dollyEnd.y / dollyStart.y, scope.zoomSpeed ) );
+
+                dollyOut( dollyDelta.y );
+
+                dollyStart.copy( dollyEnd );
+
+            }
+
+            function handleTouchMoveDollyPan( event ) {
+
+                if ( scope.enableZoom ) handleTouchMoveDolly( event );
+
+                if ( scope.enablePan ) handleTouchMovePan( event );
+
+            }
+
+            function handleTouchMoveDollyRotate( event ) {
+
+                if ( scope.enableZoom ) handleTouchMoveDolly( event );
+
+                if ( scope.enableRotate ) handleTouchMoveRotate( event );
+
+            }
+
+            function handleTouchEnd( /*event*/ ) {
+
+                // no-op
+
+            }
+
+            //
+            // event handlers - FSM: listen for events and reset state
+            //
+
+            function onPointerDown( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                switch ( event.pointerType ) {
+
+                    case 'mouse':
+                    case 'pen':
+                        onMouseDown( event );
+                        break;
+
+                    // TODO touch
+
+                }
+
+            }
+
+            function onPointerMove( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                switch ( event.pointerType ) {
+
+                    case 'mouse':
+                    case 'pen':
+                        onMouseMove( event );
+                        break;
+
+                    // TODO touch
+
+                }
+
+            }
+
+            function onPointerUp( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                switch ( event.pointerType ) {
+
+                    case 'mouse':
+                    case 'pen':
+                        onMouseUp( event );
+                        break;
+
+                    // TODO touch
+
+                }
+
+            }
+
+            function onMouseDown( event ) {
+
+                // Prevent the browser from scrolling.
+                event.preventDefault();
+
+                // Manually set the focus since calling preventDefault above
+                // prevents the browser from setting it automatically.
+
+                scope.domElement.focus ? scope.domElement.focus() : window.focus();
+
+                var mouseAction;
+
+                switch ( event.button ) {
+
+                    case 0:
+
+                        mouseAction = scope.mouseButtons.LEFT;
+                        break;
+
+                    case 1:
+
+                        mouseAction = scope.mouseButtons.MIDDLE;
+                        break;
+
+                    case 2:
+
+                        mouseAction = scope.mouseButtons.RIGHT;
+                        break;
+
+                    default:
+
+                        mouseAction = - 1;
+
+                }
+
+                switch ( mouseAction ) {
+
+                    case THREE.MOUSE.DOLLY:
+
+                        if ( scope.enableZoom === false ) return;
+
+                        handleMouseDownDolly( event );
+
+                        state = STATE.DOLLY;
+
+                        break;
+
+                    case THREE.MOUSE.ROTATE:
+
+                        if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+
+                            if ( scope.enablePan === false ) return;
+
+                            handleMouseDownPan( event );
+
+                            state = STATE.PAN;
+
+                        } else {
+
+                            if ( scope.enableRotate === false ) return;
+
+                            handleMouseDownRotate( event );
+
+                            state = STATE.ROTATE;
+
+                        }
+
+                        break;
+
+                    case THREE.MOUSE.PAN:
+
+                        if ( event.ctrlKey || event.metaKey || event.shiftKey ) {
+
+                            if ( scope.enableRotate === false ) return;
+
+                            handleMouseDownRotate( event );
+
+                            state = STATE.ROTATE;
+
+                        } else {
+
+                            if ( scope.enablePan === false ) return;
+
+                            handleMouseDownPan( event );
+
+                            state = STATE.PAN;
+
+                        }
+
+                        break;
+
+                    default:
+
+                        state = STATE.NONE;
+
+                }
+
+                if ( state !== STATE.NONE ) {
+
+                    scope.domElement.ownerDocument.addEventListener( 'pointermove', onPointerMove );
+                    scope.domElement.ownerDocument.addEventListener( 'pointerup', onPointerUp );
+
+                    scope.dispatchEvent( startEvent );
+
+                }
+
+            }
+
+            function onMouseMove( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                event.preventDefault();
+
+                switch ( state ) {
+
+                    case STATE.ROTATE:
+
+                        if ( scope.enableRotate === false ) return;
+
+                        handleMouseMoveRotate( event );
+
+                        break;
+
+                    case STATE.DOLLY:
+
+                        if ( scope.enableZoom === false ) return;
+
+                        handleMouseMoveDolly( event );
+
+                        break;
+
+                    case STATE.PAN:
+
+                        if ( scope.enablePan === false ) return;
+
+                        handleMouseMovePan( event );
+
+                        break;
+
+                }
+
+            }
+
+            function onMouseUp( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                handleMouseUp( event );
+
+                scope.domElement.ownerDocument.removeEventListener( 'pointermove', onPointerMove );
+                scope.domElement.ownerDocument.removeEventListener( 'pointerup', onPointerUp );
+
+                scope.dispatchEvent( endEvent );
+
+                state = STATE.NONE;
+
+            }
+
+            function onMouseWheel( event ) {
+
+                if ( scope.enabled === false || scope.enableZoom === false || ( state !== STATE.NONE && state !== STATE.ROTATE ) ) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+
+                scope.dispatchEvent( startEvent );
+
+                handleMouseWheel( event );
+
+                scope.dispatchEvent( endEvent );
+
+            }
+
+            function onKeyDown( event ) {
+
+                if ( scope.enabled === false || scope.enablePan === false ) return;
+
+                handleKeyDown( event );
+
+            }
+
+            function onTouchStart( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                event.preventDefault(); // prevent scrolling
+
+                switch ( event.touches.length ) {
+
+                    case 1:
+
+                        switch ( scope.touches.ONE ) {
+
+                            case THREE.TOUCH.ROTATE:
+
+                                if ( scope.enableRotate === false ) return;
+
+                                handleTouchStartRotate( event );
+
+                                state = STATE.TOUCH_ROTATE;
+
+                                break;
+
+                            case THREE.TOUCH.PAN:
+
+                                if ( scope.enablePan === false ) return;
+
+                                handleTouchStartPan( event );
+
+                                state = STATE.TOUCH_PAN;
+
+                                break;
+
+                            default:
+
+                                state = STATE.NONE;
+
+                        }
+
+                        break;
+
+                    case 2:
+
+                        switch ( scope.touches.TWO ) {
+
+                            case THREE.TOUCH.DOLLY_PAN:
+
+                                if ( scope.enableZoom === false && scope.enablePan === false ) return;
+
+                                handleTouchStartDollyPan( event );
+
+                                state = STATE.TOUCH_DOLLY_PAN;
+
+                                break;
+
+                            case THREE.TOUCH.DOLLY_ROTATE:
+
+                                if ( scope.enableZoom === false && scope.enableRotate === false ) return;
+
+                                handleTouchStartDollyRotate( event );
+
+                                state = STATE.TOUCH_DOLLY_ROTATE;
+
+                                break;
+
+                            default:
+
+                                state = STATE.NONE;
+
+                        }
+
+                        break;
+
+                    default:
+
+                        state = STATE.NONE;
+
+                }
+
+                if ( state !== STATE.NONE ) {
+
+                    scope.dispatchEvent( startEvent );
+
+                }
+
+            }
+
+            function onTouchMove( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                event.preventDefault(); // prevent scrolling
+                event.stopPropagation();
+
+                switch ( state ) {
+
+                    case STATE.TOUCH_ROTATE:
+
+                        if ( scope.enableRotate === false ) return;
+
+                        handleTouchMoveRotate( event );
+
+                        scope.update();
+
+                        break;
+
+                    case STATE.TOUCH_PAN:
+
+                        if ( scope.enablePan === false ) return;
+
+                        handleTouchMovePan( event );
+
+                        scope.update();
+
+                        break;
+
+                    case STATE.TOUCH_DOLLY_PAN:
+
+                        if ( scope.enableZoom === false && scope.enablePan === false ) return;
+
+                        handleTouchMoveDollyPan( event );
+
+                        scope.update();
+
+                        break;
+
+                    case STATE.TOUCH_DOLLY_ROTATE:
+
+                        if ( scope.enableZoom === false && scope.enableRotate === false ) return;
+
+                        handleTouchMoveDollyRotate( event );
+
+                        scope.update();
+
+                        break;
+
+                    default:
+
+                        state = STATE.NONE;
+
+                }
+
+            }
+
+            function onTouchEnd( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                handleTouchEnd( event );
+
+                scope.dispatchEvent( endEvent );
+
+                state = STATE.NONE;
+
+            }
+
+            function onContextMenu( event ) {
+
+                if ( scope.enabled === false ) return;
+
+                event.preventDefault();
+
+            }
+
+            //
+
+            scope.domElement.addEventListener( 'contextmenu', onContextMenu );
+
+            scope.domElement.addEventListener( 'pointerdown', onPointerDown );
+            scope.domElement.addEventListener( 'wheel', onMouseWheel, { passive: false } );
+
+            scope.domElement.addEventListener( 'touchstart', onTouchStart, { passive: false } );
+            scope.domElement.addEventListener( 'touchend', onTouchEnd );
+            scope.domElement.addEventListener( 'touchmove', onTouchMove, { passive: false } );
+
+            // force an update at start
+
+            this.update();
+
+        };
+
+        THREE.OrbitControls.prototype = Object.create( THREE.EventDispatcher.prototype );
+        THREE.OrbitControls.prototype.constructor = THREE.OrbitControls;
+
+
+        // This set of controls performs orbiting, dollying (zooming), and panning.
+        // Unlike TrackballControls, it maintains the "up" direction object.up (+Y by default).
+        // This is very similar to OrbitControls, another set of touch behavior
+        //
+        //    Orbit - right mouse, or left mouse + ctrl/meta/shiftKey / touch: two-finger rotate
+        //    Zoom - middle mouse, or mousewheel / touch: two-finger spread or squish
+        //    Pan - left mouse, or arrow keys / touch: one-finger move
+
+        THREE.MapControls = function ( object, domElement ) {
+
+            THREE.OrbitControls.call( this, object, domElement );
+
+            this.screenSpacePanning = false; // pan orthogonal to world-space direction camera.up
+
+            this.mouseButtons.LEFT = THREE.MOUSE.PAN;
+            this.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+
+            this.touches.ONE = THREE.TOUCH.PAN;
+            this.touches.TWO = THREE.TOUCH.DOLLY_ROTATE;
+
+        };
+
+        THREE.MapControls.prototype = Object.create( THREE.EventDispatcher.prototype );
+        THREE.MapControls.prototype.constructor = THREE.MapControls;
+        
+        // Add MOUSE and TOUCH constants if not defined
+        if (!THREE.MOUSE) {
+            THREE.MOUSE = { LEFT: 0, MIDDLE: 1, RIGHT: 2 };
+        }
+        
+        if (!THREE.TOUCH) {
+            THREE.TOUCH = { ROTATE: 0, PAN: 1, DOLLY_PAN: 2, DOLLY_ROTATE: 3 };
+        }
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f0f0f0;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        header {
+            background-color: #222;
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .view-toggle {
+            display: flex;
+            gap: 10px;
+        }
+
+        .view-toggle button {
+            padding: 6px 12px;
+            background: #555;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .view-toggle button.active {
+            background: #0066cc;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 50px);
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #fff;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 15px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .sidebar h2 {
+            margin-bottom: 15px;
+            font-size: 18px;
+            color: #333;
+        }
+
+        .component-category {
+            margin-bottom: 20px;
+        }
+
+        .category-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #444;
+            font-size: 16px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+        .component-item {
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: grab;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .component-item:hover {
+            background-color: #e9e9e9;
+            transform: translateY(-2px);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .component-icon {
+            margin-right: 10px;
+            font-size: 16px;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            background: #eee;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .toolbar {
+            background-color: #e0e0e0;
+            padding: 10px;
+            border-bottom: 1px solid #ccc;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        select, input, button {
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            background-color: #0052a3;
+        }
+
+        button.secondary {
+            background-color: #666;
+        }
+
+        button.secondary:hover {
+            background-color: #555;
+        }
+
+        button.danger {
+            background-color: #cc3300;
+        }
+
+        button.danger:hover {
+            background-color: #aa2200;
+        }
+
+        .design-area-container {
+            flex: 1;
+            padding: 20px;
+            background-color: #dedede;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            position: relative;
+        }
+
+        .design-area {
+            position: relative;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            border: 2px solid #999;
+            transition: all 0.3s ease;
+        }
+
+        .canvas-3d {
+            display: none;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Enhanced component styling */
+        .component {
+            position: absolute;
+            transform-origin: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: move;
+            user-select: none;
+            z-index: 1;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+            font-size: 12px;
+            color: rgba(0,0,0,0.7);
+            transition: transform 0.1s;
+        }
+
+        .component:hover {
+            z-index: 10;
+        }
+
+        .component.selected {
+            z-index: 2;
+            box-shadow: 0 0 0 2px #0066cc, 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .component-label {
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            white-space: nowrap;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        /* Component-specific styles */
+        .potentiometer {
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #f0f0f0, #888);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .potentiometer::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40%;
+            height: 5%;
+            background: #333;
+            transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+        }
+        
+        .jack {
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #ddd, #444);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 0 3px rgba(255,255,255,0.3);
+            border: 1px solid #333;
+        }
+        
+        .jack::after {
+            content: '';
+            position: absolute;
+            width: 40%;
+            height: 40%;
+            border-radius: 50%;
+            background: #222;
+            box-shadow: inset 0 0 2px rgba(255,255,255,0.3);
+        }
+        
+        .switch {
+            background: linear-gradient(to bottom, #666, #333);
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+            border: 1px solid #222;
+            overflow: hidden;
+        }
+        
+        .switch.toggle::after {
+            content: '';
+            position: absolute;
+            top: 20%;
+            left: 50%;
+            width: 15%;
+            height: 60%;
+            background: #ddd;
+            transform: translateX(-50%);
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        
+        .switch.footswitch {
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #555, #222);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+        }
+        
+        .led {
+            border-radius: 50%;
+            box-shadow: 0 0 5px var(--color), 0 0 10px var(--color);
+            background: radial-gradient(circle at 40% 40%, var(--color), #000);
+            border: 1px solid rgba(0,0,0,0.2);
+        }
+        
+        .screen {
+            background: #000;
+            border: 1px solid #444;
+            box-shadow: inset 0 0 5px rgba(0,255,255,0.2), 0 1px 3px rgba(0,0,0,0.3);
+            overflow: hidden;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 8px;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2px;
+        }
+        
+        .button {
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #999, #555);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+        }
+        
+        .encoder {
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 40%, #aaa, #666);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            border: 1px solid #444;
+        }
+        
+        .encoder::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40%;
+            height: 10%;
+            background: #333;
+            transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+        }
+
+        .properties-panel {
+            height: 180px;
+            background-color: #f9f9f9;
+            border-top: 1px solid #ddd;
+            padding: 15px;
+            overflow-y: auto;
+        }
+
+        .properties-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #444;
+        }
+
+        .properties-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .property-group {
+            margin-bottom: 5px;
+        }
+
+        .property-label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+
+        .property-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .property-input {
+            width: 100%;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .property-actions {
+            grid-column: span 2;
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .modal-title {
+            font-size: 18px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        /* Custom icons for the component library */
+        .icon-pot {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #888;
+            border-radius: 50%;
+            position: relative;
+        }
+        .icon-pot::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60%;
+            height: 10%;
+            background: #333;
+            transform: translate(-50%, -50%);
+        }
+        
+        .icon-jack {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #555;
+            border-radius: 50%;
+            position: relative;
+        }
+        .icon-jack::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 40%;
+            height: 40%;
+            background: #222;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .icon-switch {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #444;
+            position: relative;
+        }
+        .icon-switch::after {
+            content: '';
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            width: 20%;
+            height: 50%;
+            background: #ddd;
+            transform: translateX(-50%);
+        }
+        
+        .icon-led {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #f00;
+            border-radius: 50%;
+            box-shadow: 0 0 5px #f00;
+        }
+        
+        .icon-screen {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            background: #000;
+            border: 1px solid #444;
+        }
+
+        .dimensions-label {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 12px;
+            color: rgba(0,0,0,0.6);
+            background: rgba(255,255,255,0.7);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Audio Enclosure Designer</h1>
+        <div class="view-toggle">
+            <button id="view2d" class="active">2D View</button>
+            <button id="view3d">3D View</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Component Library Sidebar -->
+        <div class="sidebar">
+            <h2>Component Library</h2>
+            <div class="components-list">
+                <!-- Component categories will be generated here -->
+            </div>
+        </div>
+
+        <!-- Main Design Area -->
+        <div class="main">
+            <!-- Toolbar -->
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <select id="enclosure-type">
+                        <option value="1590A">1590A</option>
+                        <option value="1590B" selected>1590B</option>
+                        <option value="1590BB">1590BB</option>
+                        <option value="125B">125B</option>
+                        <option value="Eurorack 4HP">Eurorack 4HP</option>
+                        <option value="Eurorack 8HP">Eurorack 8HP</option>
+                        <option value="Eurorack 16HP">Eurorack 16HP</option>
+                        <option value="Custom">Custom</option>
+                    </select>
+                    
+                    <label>
+                        <input type="checkbox" id="grid-toggle" checked>
+                        Grid
+                    </label>
+                    
+                    <label>
+                        <input type="checkbox" id="snap-toggle" checked>
+                        Snap
+                    </label>
+                    
+                    <select id="snap-value">
+                        <option value="1">1mm</option>
+                        <option value="2">2mm</option>
+                        <option value="5" selected>5mm</option>
+                        <option value="10">10mm</option>
+                    </select>
+                </div>
+                
+                <div class="toolbar-group">
+                    <button id="save-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                            <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                            <polyline points="7 3 7 8 15 8"></polyline>
+                        </svg>
+                        Save
+                    </button>
+                    <button id="export-btn" class="secondary">Export</button>
+                </div>
+            </div>
+
+            <!-- Design Area -->
+            <div class="design-area-container">
+                <div class="design-area" id="design-area">
+                    <!-- Components will be placed here -->
+                    <div class="dimensions-label"></div>
+                </div>
+                <canvas id="canvas-3d" class="canvas-3d"></canvas>
+            </div>
+
+            <!-- Properties Panel -->
+            <div class="properties-panel">
+                <div class="properties-title">Properties</div>
+                <div id="properties-content">
+                    <p>Select a component to edit its properties or drag components from the library to add to your design.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Modal -->
+    <div id="save-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-title">Save Design</div>
+            <div class="modal-body">
+                <input type="text" id="design-name" class="property-input" placeholder="Design Name" value="Untitled Design">
+            </div>
+            <div class="modal-footer">
+                <button class="secondary" id="cancel-save">Cancel</button>
+                <button id="confirm-save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="export-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-title">Export Design</div>
+            <div class="modal-body">
+                <p style="margin-bottom: 15px; font-size: 14px; color: #666;">
+                    Your design will be exported as a JSON file that you can later import back into this tool.
+                </p>
+                <input type="text" id="export-name" class="property-input" placeholder="File Name" value="Untitled Design">
+            </div>
+            <div class="modal-footer">
+                <button class="secondary" id="cancel-export">Cancel</button>
+                <button id="confirm-export">Export JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Define enclosure dimensions in mm
+            const enclosureDimensions = {
+                '1590A': { width: 93, height: 39, depth: 31 },
+                '1590B': { width: 112, height: 61, depth: 31 },
+                '1590BB': { width: 119, height: 94, depth: 34 },
+                '125B': { width: 125, height: 73, depth: 28 },
+                'Eurorack 4HP': { width: 20, height: 128.5, depth: 40 },
+                'Eurorack 8HP': { width: 40, height: 128.5, depth: 40 },
+                'Eurorack 16HP': { width: 80, height: 128.5, depth: 40 },
+                'Custom': { width: 150, height: 100, depth: 40 },
+            };
+
+            // Component library with accurate dimensions and enhanced visuals
+            const componentLibrary = [
+                {
+                    type: 'Potentiometer',
+                    subtype: 'Alpha 16mm',
+                    diameter: 16,
+                    shaftDiameter: 6,
+                    height: 15,
+                    color: '#888888',
+                    className: 'potentiometer',
+                    icon: '<div class="icon-pot"></div>',
+                    threeDColor: 0x888888,
+                    description: 'Standard 16mm pot for guitar pedals'
+                },
+                {
+                    type: 'Potentiometer',
+                    subtype: 'Alpha 9mm',
+                    diameter: 9,
+                    shaftDiameter: 4,
+                    height: 10,
+                    color: '#888888',
+                    className: 'potentiometer',
+                    icon: '<div class="icon-pot"></div>',
+                    threeDColor: 0x888888,
+                    description: 'Mini 9mm pot for tight spaces'
+                },
+                {
+                    type: 'Potentiometer',
+                    subtype: 'Alpha 24mm',
+                    diameter: 24,
+                    shaftDiameter: 6,
+                    height: 20,
+                    color: '#888888',
+                    className: 'potentiometer',
+                    icon: '<div class="icon-pot"></div>',
+                    threeDColor: 0x888888,
+                    description: 'Large 24mm pot for precise control'
+                },
+                {
+                    type: 'Jack',
+                    subtype: '1/4" Mono',
+                    diameter: 10,
+                    height: 20,
+                    color: '#444444',
+                    className: 'jack',
+                    icon: '<div class="icon-jack"></div>',
+                    threeDColor: 0x444444,
+                    description: 'Standard 1/4" mono guitar jack'
+                },
+                {
+                    type: 'Jack',
+                    subtype: '1/4" Stereo',
+                    diameter: 10,
+                    height: 20,
+                    color: '#444444',
+                    className: 'jack',
+                    icon: '<div class="icon-jack"></div>',
+                    threeDColor: 0x444444,
+                    description: 'TRS 1/4" stereo jack'
+                },
+                {
+                    type: 'Jack',
+                    subtype: '3.5mm (1/8")',
+                    diameter: 6,
+                    height: 12,
+                    color: '#444444',
+                    className: 'jack',
+                    icon: '<div class="icon-jack"></div>',
+                    threeDColor: 0x444444,
+                    description: 'Eurorack compatible 3.5mm jack'
+                },
+                {
+                    type: 'Switch',
+                    subtype: 'Toggle SPDT',
+                    width: 13,
+                    height: 8,
+                    depth: 20,
+                    color: '#222222',
+                    className: 'switch toggle',
+                    icon: '<div class="icon-switch"></div>',
+                    threeDColor: 0x222222,
+                    description: 'Single pole double throw toggle switch'
+                },
+                {
+                    type: 'Switch',
+                    subtype: 'Footswitch',
+                    diameter: 12,
+                    height: 15,
+                    color: '#222222',
+                    className: 'switch footswitch',
+                    icon: '<div class="icon-switch"></div>',
+                    threeDColor: 0x222222,
+                    description: 'Standard latching footswitch'
+                },
+                {
+                    type: 'LED',
+                    subtype: '3mm Red',
+                    diameter: 3,
+                    height: 5,
+                    color: '#ff0000',
+                    className: 'led',
+                    icon: '<div class="icon-led" style="background-color: #ff0000; box-shadow: 0 0 5px #ff0000;"></div>',
+                    threeDColor: 0xff0000,
+                    description: '3mm red indicator LED'
+                },
+                {
+                    type: 'LED',
+                    subtype: '3mm Green',
+                    diameter: 3,
+                    height: 5,
+                    color: '#00ff00',
+                    className: 'led',
+                    icon: '<div class="icon-led" style="background-color: #00ff00; box-shadow: 0 0 5px #00ff00;"></div>',
+                    threeDColor: 0x00ff00,
+                    description: '3mm green indicator LED'
+                },
+                {
+                    type: 'LED',
+                    subtype: '3mm Blue',
+                    diameter: 3,
+                    height: 5,
+                    color: '#0000ff',
+                    className: 'led',
+                    icon: '<div class="icon-led" style="background-color: #0000ff; box-shadow: 0 0 5px #0000ff;"></div>',
+                    threeDColor: 0x0000ff,
+                    description: '3mm blue indicator LED'
+                },
+                {
+                    type: 'LED',
+                    subtype: '5mm Red',
+                    diameter: 5,
+                    height: 8,
+                    color: '#ff0000',
+                    className: 'led',
+                    icon: '<div class="icon-led" style="background-color: #ff0000; box-shadow: 0 0 5px #ff0000;"></div>',
+                    threeDColor: 0xff0000,
+                    description: '5mm red indicator LED'
+                },
+                {
+                    type: 'LED',
+                    subtype: '5mm Green',
+                    diameter: 5,
+                    height: 8,
+                    color: '#00ff00',
+                    className: 'led',
+                    icon: '<div class="icon-led" style="background-color: #00ff00; box-shadow: 0 0 5px #00ff00;"></div>',
+                    threeDColor: 0x00ff00,
+                    description: '5mm green indicator LED'
+                },
+                {
+                    type: 'LED',
+                    subtype: '5mm Blue',
+                    diameter: 5,
+                    height: 8,
+                    color: '#0000ff',
+                    className: 'led',
+                    icon: '<div class="icon-led" style="background-color: #0000ff; box-shadow: 0 0 5px #0000ff;"></div>',
+                    threeDColor: 0x0000ff,
+                    description: '5mm blue indicator LED'
+                },
+                {
+                    type: 'Screen',
+                    subtype: 'OLED 128x64',
+                    width: 26.7,
+                    height: 19.26,
+                    depth: 2.5,
+                    color: '#000000',
+                    textContent: 'OLED',
+                    className: 'screen',
+                    icon: '<div class="icon-screen"></div>',
+                    threeDColor: 0x000033,
+                    description: '128x64 pixel OLED display'
+                },
+                {
+                    type: 'Screen',
+                    subtype: 'LCD 16x2',
+                    width: 80,
+                    height: 36,
+                    depth: 10,
+                    color: '#000055',
+                    textContent: 'LCD 16x2',
+                    className: 'screen',
+                    icon: '<div class="icon-screen"></div>',
+                    threeDColor: 0x000055,
+                    description: 'Standard 16x2 character LCD'
+                },
+                {
+                    type: 'Button',
+                    subtype: 'Momentary',
+                    diameter: 12,
+                    height: 10,
+                    color: '#555555',
+                    className: 'button',
+                    icon: '🔘',
+                    threeDColor: 0x555555,
+                    description: 'Momentary push button'
+                },
+                {
+                    type: 'Encoder',
+                    subtype: 'Rotary with switch',
+                    diameter: 12,
+                    shaftDiameter: 6,
+                    height: 20,
+                    color: '#666666',
+                    className: 'encoder',
+                    icon: '🎛️',
+                    threeDColor: 0x666666,
+                    description: 'Rotary encoder with pushbutton'
+                },
+            ];
+
+            // App state
+            let state = {
+                enclosureType: '1590B',
+                grid: true,
+                snap: true,
+                snapValue: 5,
+                viewMode: '2d',
+                components: [],
+                selectedComponentId: null,
+                currentDesignName: 'Untitled Design',
+                savedDesigns: []
+            };
+
+            // DOM elements
+            const designArea = document.getElementById('design-area');
+            const dimensionsLabel = document.querySelector('.dimensions-label');
+            const canvas3D = document.getElementById('canvas-3d');
+            const view2dBtn = document.getElementById('view2d');
+            const view3dBtn = document.getElementById('view3d');
+            const enclosureTypeSelect = document.getElementById('enclosure-type');
+            const gridToggle = document.getElementById('grid-toggle');
+            const snapToggle = document.getElementById('snap-toggle');
+            const snapValueSelect = document.getElementById('snap-value');
+            const saveBtn = document.getElementById('save-btn');
+            const exportBtn = document.getElementById('export-btn');
+            const saveModal = document.getElementById('save-modal');
+            const exportModal = document.getElementById('export-modal');
+            const designNameInput = document.getElementById('design-name');
+            const exportNameInput = document.getElementById('export-name');
+            const confirmSaveBtn = document.getElementById('confirm-save');
+            const cancelSaveBtn = document.getElementById('cancel-save');
+            const confirmExportBtn = document.getElementById('confirm-export');
+            const cancelExportBtn = document.getElementById('cancel-export');
+            const propertiesContent = document.getElementById('properties-content');
+            const componentsList = document.querySelector('.components-list');
+
+            // Initialize the app
+            initializeApp();
+
+            // 3D Setup
+            let scene, camera, renderer, controls;
+            let threeJsObjects = [];
+            let threeInitialized = false;
+
+            function initializeApp() {
+                // Set up design area dimensions
+                updateDesignAreaSize();
+                
+                // Set up the component library UI
+                renderComponentLibrary();
+                
+                // Set up event listeners
+                setupEventListeners();
+            }
+
+            function renderComponentLibrary() {
+                // Group components by type
+                const groupedComponents = componentLibrary.reduce((acc, component) => {
+                    if (!acc[component.type]) {
+                        acc[component.type] = [];
+                    }
+                    acc[component.type].push(component);
+                    return acc;
+                }, {});
+
+                // Create the HTML for the component library
+                let html = '';
+                for (const type in groupedComponents) {
+                    html += `
+                        <div class="component-category">
+                            <div class="category-title">${type}s</div>
+                            <div class="category-items">
+                    `;
+                    
+                    groupedComponents[type].forEach(component => {
+                        html += `
+                            <div class="component-item" draggable="true" data-component-type="${type}" data-component-subtype="${component.subtype}">
+                                <span class="component-icon">${component.icon}</span>
+                                <span>${component.subtype}</span>
+                            </div>
+                        `;
+                    });
+                    
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                componentsList.innerHTML = html;
+                
+                // Add drag event listeners to component items
+                document.querySelectorAll('.component-item').forEach(item => {
+                    item.addEventListener('dragstart', handleDragStart);
+                });
+            }
+
+            function setupEventListeners() {
+                // Enclosure type change
+                enclosureTypeSelect.addEventListener('change', e => {
+                    state.enclosureType = e.target.value;
+                    updateDesignAreaSize();
+                    renderComponents();
+                    if (state.viewMode === '3d') {
+                        update3DView();
+                    }
+                });
+                
+                // Grid toggle
+                gridToggle.addEventListener('change', e => {
+                    state.grid = e.target.checked;
+                    updateDesignAreaGrid();
+                });
+                
+                // Snap toggle
+                snapToggle.addEventListener('change', e => {
+                    state.snap = e.target.checked;
+                    snapValueSelect.disabled = !state.snap;
+                });
+                
+                // Snap value change
+                snapValueSelect.addEventListener('change', e => {
+                    state.snapValue = parseInt(e.target.value);
+                });
+                
+                // View mode toggle
+                view2dBtn.addEventListener('click', () => switchViewMode('2d'));
+                view3dBtn.addEventListener('click', () => switchViewMode('3d'));
+                
+                // Design area events
+                designArea.addEventListener('click', handleDesignAreaClick);
+                designArea.addEventListener('dragover', handleDragOver);
+                designArea.addEventListener('drop', handleDrop);
+                
+                // Save and Export buttons
+                saveBtn.addEventListener('click', () => {
+                    designNameInput.value = state.currentDesignName;
+                    saveModal.style.display = 'flex';
+                });
+                
+                exportBtn.addEventListener('click', () => {
+                    exportNameInput.value = state.currentDesignName;
+                    exportModal.style.display = 'flex';
+                });
+                
+                // Modal buttons
+                confirmSaveBtn.addEventListener('click', saveDesign);
+                cancelSaveBtn.addEventListener('click', () => saveModal.style.display = 'none');
+                confirmExportBtn.addEventListener('click', exportDesign);
+                cancelExportBtn.addEventListener('click', () => exportModal.style.display = 'none');
+                
+                // Keyboard events
+                document.addEventListener('keydown', handleKeyDown);
+            }
+
+            function handleDragStart(e) {
+                const type = e.target.dataset.componentType;
+                const subtype = e.target.dataset.componentSubtype;
+                
+                // Find the component in the library
+                const component = componentLibrary.find(
+                    comp => comp.type === type && comp.subtype === subtype
+                );
+                
+                if (component) {
+                    // Create a simplified version for drag operation to avoid circular references
+                    const dragData = {
+                        type: component.type,
+                        subtype: component.subtype,
+                        diameter: component.diameter,
+                        width: component.width,
+                        height: component.height,
+                        depth: component.depth,
+                        shaftDiameter: component.shaftDiameter,
+                        color: component.color,
+                        className: component.className,
+                        icon: component.icon,
+                        threeDColor: component.threeDColor,
+                        description: component.description,
+                        textContent: component.textContent
+                    };
+                    
+                    e.dataTransfer.setData('text/plain', JSON.stringify(dragData));
+                    e.dataTransfer.effectAllowed = 'copy';
+                }
+            }
+
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                
+                try {
+                    const componentData = JSON.parse(e.dataTransfer.getData('text/plain'));
+                    
+                    // Calculate position within design area
+                    const rect = designArea.getBoundingClientRect();
+                    let x = e.clientX - rect.left;
+                    let y = e.clientY - rect.top;
+                    
+                    // Convert from pixels to mm
+                    const scaleFactorX = enclosureDimensions[state.enclosureType].width / designArea.offsetWidth;
+                    const scaleFactorY = enclosureDimensions[state.enclosureType].height / designArea.offsetHeight;
+                    
+                    x = x * scaleFactorX;
+                    y = y * scaleFactorY;
+                    
+                    // Apply snap if enabled
+                    if (state.snap) {
+                        x = Math.round(x / state.snapValue) * state.snapValue;
+                        y = Math.round(y / state.snapValue) * state.snapValue;
+                    }
+                    
+                    addComponent(componentData, x, y);
+                } catch (error) {
+                    console.error('Error handling drop:', error);
+                }
+            }
+
+            function addComponent(componentData, x, y) {
+                const id = generateId();
+                const component = {
+                    ...componentData,
+                    id,
+                    x,
+                    y,
+                    rotation: 0
+                };
+                
+                state.components.push(component);
+                state.selectedComponentId = id;
+                
+                renderComponents();
+                renderProperties();
+                
+                if (state.viewMode === '3d') {
+                    update3DView();
+                }
+            }
+
+            function renderComponents() {
+                // Clear existing components
+                const existingComponents = designArea.querySelectorAll('.component');
+                existingComponents.forEach(el => el.remove());
+                
+                // Render each component
+                state.components.forEach(component => {
+                    const el = document.createElement('div');
+                    el.className = `component ${component.className || ''}`;
+                    el.id = `component-${component.id}`;
+                    el.setAttribute('data-id', component.id);
+                    
+                    if (component.id === state.selectedComponentId) {
+                        el.classList.add('selected');
+                    }
+                    
+                    // Set position and dimensions
+                    if (component.diameter) {
+                        // Round component
+                        const diameterPx = (component.diameter / enclosureDimensions[state.enclosureType].width) * designArea.offsetWidth;
+                        el.style.width = `${diameterPx}px`;
+                        el.style.height = `${diameterPx}px`;
+                    } else {
+                        // Rectangular component
+                        const widthPx = (component.width / enclosureDimensions[state.enclosureType].width) * designArea.offsetWidth;
+                        const heightPx = (component.height / enclosureDimensions[state.enclosureType].height) * designArea.offsetHeight;
+                        el.style.width = `${widthPx}px`;
+                        el.style.height = `${heightPx}px`;
+                    }
+                    
+                    // Set position (accounting for transform center)
+                    const xPx = (component.x / enclosureDimensions[state.enclosureType].width) * designArea.offsetWidth;
+                    const yPx = (component.y / enclosureDimensions[state.enclosureType].height) * designArea.offsetHeight;
+                    el.style.left = `${xPx}px`;
+                    el.style.top = `${yPx}px`;
+                    el.style.transform = `translate(-50%, -50%) rotate(${component.rotation}deg)`;
+                    
+                    // Set appearance
+                    el.style.setProperty('--color', component.color);
+                    el.style.setProperty('--rotation', `${component.rotation}deg`);
+                    
+                    // Add text content if applicable (for screens)
+                    if (component.textContent) {
+                        el.textContent = component.textContent;
+                    }
+                    
+                    // Add label if selected
+                    if (component.id === state.selectedComponentId) {
+                        const label = document.createElement('div');
+                        label.className = 'component-label';
+                        label.textContent = component.subtype;
+                        el.appendChild(label);
+                    }
+                    
+                    // Add event listeners
+                    el.addEventListener('click', e => {
+                        e.stopPropagation();
+                        selectComponent(component.id);
+                    });
+                    
+                    el.addEventListener('mousedown', handleComponentMouseDown);
+                    
+                    designArea.appendChild(el);
+                });
+                
+                // Update dimensions label
+                dimensionsLabel.textContent = `${enclosureDimensions[state.enclosureType].width} × ${enclosureDimensions[state.enclosureType].height} mm`;
+            }
+
+            function handleComponentMouseDown(e) {
+                if (e.button !== 0) return; // Only left click
+                
+                e.stopPropagation();
+                const id = e.target.getAttribute('data-id');
+                if (!id) return;
+                
+                selectComponent(id);
+                
+                // Calculate offsets
+                const component = document.getElementById(`component-${id}`);
+                const startX = e.clientX;
+                const startY = e.clientY;
+                const initialLeft = parseInt(component.style.left);
+                const initialTop = parseInt(component.style.top);
+                
+                // Handle mousemove
+                function handleMouseMove(e) {
+                    // Calculate new position
+                    let newLeft = initialLeft + (e.clientX - startX);
+                    let newTop = initialTop + (e.clientY - startY);
+                    
+                    // Convert back to mm coordinates
+                    const scaleFactorX = enclosureDimensions[state.enclosureType].width / designArea.offsetWidth;
+                    const scaleFactorY = enclosureDimensions[state.enclosureType].height / designArea.offsetHeight;
+                    
+                    let newX = newLeft * scaleFactorX;
+                    let newY = newTop * scaleFactorY;
+                    
+                    // Apply snap if enabled
+                    if (state.snap) {
+                        newX = Math.round(newX / state.snapValue) * state.snapValue;
+                        newY = Math.round(newY / state.snapValue) * state.snapValue;
+                        
+                        // Convert back to pixels
+                        newLeft = newX / scaleFactorX;
+                        newTop = newY / scaleFactorY;
+                    }
+                    
+                    // Update component position visually during drag
+                    component.style.left = `${newLeft}px`;
+                    component.style.top = `${newTop}px`;
+                }
+                
+                // Handle mouseup
+                function handleMouseUp(e) {
+                    // Calculate final position
+                    let newLeft = initialLeft + (e.clientX - startX);
+                    let newTop = initialTop + (e.clientY - startY);
+                    
+                    // Convert to mm
+                    const scaleFactorX = enclosureDimensions[state.enclosureType].width / designArea.offsetWidth;
+                    const scaleFactorY = enclosureDimensions[state.enclosureType].height / designArea.offsetHeight;
+                    
+                    let newX = newLeft * scaleFactorX;
+                    let newY = newTop * scaleFactorY;
+                    
+                    // Apply snap
+                    if (state.snap) {
+                        newX = Math.round(newX / state.snapValue) * state.snapValue;
+                        newY = Math.round(newY / state.snapValue) * state.snapValue;
+                    }
+                    
+                    // Update component in state
+                    updateComponentPosition(id, newX, newY);
+                    
+                    // Remove event listeners
+                    document.removeEventListener('mousemove', handleMouseMove);
+                    document.removeEventListener('mouseup', handleMouseUp);
+                }
+                
+                // Add temporary event listeners for drag
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            }
+
+            function updateComponentPosition(id, x, y) {
+                // Ensure x and y are within bounds
+                x = Math.max(0, Math.min(x, enclosureDimensions[state.enclosureType].width));
+                y = Math.max(0, Math.min(y, enclosureDimensions[state.enclosureType].height));
+                
+                // Update state
+                state.components = state.components.map(comp => 
+                    comp.id === id ? { ...comp, x, y } : comp
+                );
+                
+                // Re-render
+                renderComponents();
+                renderProperties();
+                
+                // Update 3D view if active
+                if (state.viewMode === '3d') {
+                    update3DView();
+                }
+            }
+
+            function selectComponent(id) {
+                state.selectedComponentId = id;
+                renderComponents();
+                renderProperties();
+            }
+
+            function handleDesignAreaClick(e) {
+                if (e.target === designArea) {
+                    state.selectedComponentId = null;
+                    renderComponents();
+                    renderProperties();
+                }
+            }
+
+            function renderProperties() {
+                if (!state.selectedComponentId) {
+                    propertiesContent.innerHTML = `
+                        <p>Select a component to edit its properties or drag components from the library to add to your design.</p>
+                    `;
+                    return;
+                }
+                
+                const component = state.components.find(c => c.id === state.selectedComponentId);
+                if (!component) return;
+                
+                let html = `
+                    <div class="properties-grid">
+                        <div class="property-group">
+                            <label class="property-label">Type</label>
+                            <div class="property-value">${component.type}</div>
+                        </div>
+                        
+                        <div class="property-group">
+                            <label class="property-label">Subtype</label>
+                            <div class="property-value">${component.subtype}</div>
+                        </div>
+                        
+                        <div class="property-group">
+                            <label class="property-label">Position X (mm)</label>
+                            <input type="number" class="property-input" id="pos-x" value="${component.x}" step="${state.snap ? state.snapValue : 1}">
+                        </div>
+                        
+                        <div class="property-group">
+                            <label class="property-label">Position Y (mm)</label>
+                            <input type="number" class="property-input" id="pos-y" value="${component.y}" step="${state.snap ? state.snapValue : 1}">
+                        </div>
+                        
+                        <div class="property-group">
+                            <label class="property-label">Rotation (°)</label>
+                            <input type="number" class="property-input" id="rotation" value="${component.rotation}" step="15">
+                        </div>
+                `;
+                
+                if (component.diameter) {
+                    html += `
+                        <div class="property-group">
+                            <label class="property-label">Diameter (mm)</label>
+                            <div class="property-value">${component.diameter}</div>
+                        </div>
+                    `;
+                    
+                    if (component.shaftDiameter) {
+                        html += `
+                            <div class="property-group">
+                                <label class="property-label">Shaft Diameter (mm)</label>
+                                <div class="property-value">${component.shaftDiameter}</div>
+                            </div>
+                        `;
+                    }
+                } else {
+                    html += `
+                        <div class="property-group">
+                            <label class="property-label">Width (mm)</label>
+                            <div class="property-value">${component.width}</div>
+                        </div>
+                        
+                        <div class="property-group">
+                            <label class="property-label">Height (mm)</label>
+                            <div class="property-value">${component.height}</div>
+                        </div>
+                    `;
+                }
+                
+                if (component.description) {
+                    html += `
+                        <div class="property-group" style="grid-column: span 2;">
+                            <label class="property-label">Description</label>
+                            <div class="property-value" style="font-size: 12px; color: #666;">${component.description}</div>
+                        </div>
+                    `;
+                }
+                
+                html += `
+                    <div class="property-actions">
+                        <button class="danger" id="delete-component">Delete Component</button>
+                        <button id="rotate-component">Rotate 90°</button>
+                    </div>
+                    </div>
+                `;
+                
+                propertiesContent.innerHTML = html;
+                
+                // Add event listeners for property inputs
+                document.getElementById('pos-x').addEventListener('change', e => {
+                    updateComponentPosition(component.id, parseFloat(e.target.value), component.y);
+                });
+                
+                document.getElementById('pos-y').addEventListener('change', e => {
+                    updateComponentPosition(component.id, component.x, parseFloat(e.target.value));
+                });
+                
+                document.getElementById('rotation').addEventListener('change', e => {
+                    rotateComponent(component.id, parseFloat(e.target.value));
+                });
+                
+                document.getElementById('delete-component').addEventListener('click', () => {
+                    deleteComponent(component.id);
+                });
+                
+                document.getElementById('rotate-component').addEventListener('click', () => {
+                    rotateComponent(component.id, component.rotation + 90);
+                });
+            }
+
+            function rotateComponent(id, angle) {
+                // Normalize angle to 0-359
+                while (angle >= 360) angle -= 360;
+                while (angle < 0) angle += 360;
+                
+                state.components = state.components.map(comp => 
+                    comp.id === id ? { ...comp, rotation: angle } : comp
+                );
+                
+                renderComponents();
+                renderProperties();
+                
+                if (state.viewMode === '3d') {
+                    update3DView();
+                }
+            }
+
+            function deleteComponent(id) {
+                state.components = state.components.filter(comp => comp.id !== id);
+                state.selectedComponentId = null;
+                
+                renderComponents();
+                renderProperties();
+                
+                if (state.viewMode === '3d') {
+                    update3DView();
+                }
+            }
+
+            function handleKeyDown(e) {
+                if (!state.selectedComponentId) return;
+                
+                const component = state.components.find(c => c.id === state.selectedComponentId);
+                if (!component) return;
+                
+                // Arrow keys to move component
+                if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                    e.preventDefault();
+                    
+                    const moveDistance = state.snap ? state.snapValue : 1;
+                    let newX = component.x;
+                    let newY = component.y;
+                    
+                    switch (e.key) {
+                        case 'ArrowUp': newY -= moveDistance; break;
+                        case 'ArrowDown': newY += moveDistance; break;
+                        case 'ArrowLeft': newX -= moveDistance; break;
+                        case 'ArrowRight': newX += moveDistance; break;
+                    }
+                    
+                    updateComponentPosition(component.id, newX, newY);
+                }
+                
+                // R to rotate
+                if (e.key.toLowerCase() === 'r') {
+                    e.preventDefault();
+                    rotateComponent(component.id, component.rotation + 90);
+                }
+                
+                // Delete or Backspace to delete
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    e.preventDefault();
+                    deleteComponent(component.id);
+                }
+            }
+
+            function saveDesign() {
+                state.currentDesignName = designNameInput.value;
+                
+                const design = {
+                    name: state.currentDesignName,
+                    enclosureType: state.enclosureType,
+                    components: state.components,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Save to local storage
+                try {
+                    const savedDesigns = JSON.parse(localStorage.getItem('audioEnclosureDesigns') || '[]');
+                    savedDesigns.push(design);
+                    localStorage.setItem('audioEnclosureDesigns', JSON.stringify(savedDesigns));
+                    alert(`Design "${design.name}" saved successfully!`);
+                } catch (error) {
+                    console.error('Error saving design:', error);
+                    alert('Failed to save design');
+                }
+                
+                saveModal.style.display = 'none';
+            }
+
+            function exportDesign() {
+                state.currentDesignName = exportNameInput.value;
+                
+                const design = {
+                    name: state.currentDesignName,
+                    enclosureType: state.enclosureType,
+                    dimensions: enclosureDimensions[state.enclosureType],
+                    components: state.components,
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Create a download link
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(design, null, 2));
+                const downloadAnchor = document.createElement('a');
+                downloadAnchor.setAttribute("href", dataStr);
+                downloadAnchor.setAttribute("download", `${state.currentDesignName}.json`);
+                document.body.appendChild(downloadAnchor);
+                downloadAnchor.click();
+                downloadAnchor.remove();
+                
+                exportModal.style.display = 'none';
+            }
+
+            function updateDesignAreaSize() {
+                const dimensions = enclosureDimensions[state.enclosureType];
+                
+                // Set a reasonable view scale
+                const maxWidth = 800;
+                const maxHeight = 500;
+                
+                // Maintain aspect ratio
+                const aspectRatio = dimensions.width / dimensions.height;
+                let width, height;
+                
+                if (aspectRatio > maxWidth / maxHeight) {
+                    width = maxWidth;
+                    height = width / aspectRatio;
+                } else {
+                    height = maxHeight;
+                    width = height * aspectRatio;
+                }
+                
+                designArea.style.width = `${width}px`;
+                designArea.style.height = `${height}px`;
+                
+                // Update the grid
+                updateDesignAreaGrid();
+                
+                // Update dimensions label
+                dimensionsLabel.textContent = `${dimensions.width} × ${dimensions.height} mm`;
+            }
+
+            function updateDesignAreaGrid() {
+                if (state.grid) {
+                    // Calculate grid size in pixels
+                    const gridSizePx = (state.snapValue / enclosureDimensions[state.enclosureType].width) * designArea.offsetWidth;
+                    
+                    designArea.style.backgroundSize = `${gridSizePx}px ${gridSizePx}px`;
+                    designArea.style.backgroundImage = 'linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)';
+                } else {
+                    designArea.style.backgroundImage = 'none';
+                }
+            }
+
+            function switchViewMode(mode) {
+                state.viewMode = mode;
+                
+                if (mode === '2d') {
+                    view2dBtn.classList.add('active');
+                    view3dBtn.classList.remove('active');
+                    designArea.style.display = 'block';
+                    canvas3D.style.display = 'none';
+                } else {
+                    view2dBtn.classList.remove('active');
+                    view3dBtn.classList.add('active');
+                    designArea.style.display = 'none';
+                    canvas3D.style.display = 'block';
+                    
+                    if (!threeInitialized) {
+                        init3DView();
+                        threeInitialized = true;
+                    } else {
+                        update3DView();
+                    }
+                }
+            }
+
+            function generateId() {
+                return Math.random().toString(36).substr(2, 9);
+            }
+
+            // 3D View Implementation
+            function init3DView() {
+                // Make sure we have a canvas to draw on
+                const container = document.querySelector('.design-area-container');
+                if (!canvas3D) {
+                    console.error("Canvas element not found");
+                    return;
+                }
+                
+                // Make the canvas fill its container
+                canvas3D.width = container.offsetWidth;
+                canvas3D.height = container.offsetHeight;
+                
+                // Create scene
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xf0f0f0);
+                
+                // Set up camera
+                const aspectRatio = canvas3D.width / canvas3D.height;
+                camera = new THREE.PerspectiveCamera(45, aspectRatio, 0.1, 1000);
+                camera.position.set(0, 0, 200);
+                
+                // Set up renderer
+                try {
+                    renderer = new THREE.WebGLRenderer({
+                        canvas: canvas3D,
+                        antialias: true
+                    });
+                    renderer.setSize(canvas3D.width, canvas3D.height);
+                } catch (e) {
+                    console.error("WebGL renderer creation failed:", e);
+                    return;
+                }
+                
+                // Add some lights
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 10, 10);
+                scene.add(directionalLight);
+                
+                // Add hemisphere light for better ambient lighting
+                const hemisphereLight = new THREE.HemisphereLight(0xffffbb, 0x080820, 0.5);
+                scene.add(hemisphereLight);
+                
+                try {
+                    // Add orbit controls
+                    controls = new THREE.OrbitControls(camera, renderer.domElement);
+                    controls.enableDamping = true;
+                    controls.dampingFactor = 0.1;
+                } catch (e) {
+                    console.error("OrbitControls creation failed:", e);
+                }
+                
+                // Initial update
+                update3DView();
+                animate();
+                
+                // Handle window resize
+                window.addEventListener('resize', handleResize);
+            }
+            
+            function handleResize() {
+                if (state.viewMode === '3d') {
+                    const width = canvas3D.clientWidth;
+                    const height = canvas3D.clientHeight;
+                    
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                    
+                    renderer.setSize(width, height);
+                }
+            }
+
+            function update3DView() {
+                if (!threeInitialized) return;
+                
+                // Clear existing objects
+                threeJsObjects.forEach(obj => scene.remove(obj));
+                threeJsObjects = [];
+                
+                // Create enclosure
+                const dimensions = enclosureDimensions[state.enclosureType];
+                const enclosureGeometry = new THREE.BoxGeometry(dimensions.width, dimensions.height, dimensions.depth);
+                
+                // Create materials for different sides
+                const materials = [
+                    new THREE.MeshStandardMaterial({ color: 0x888888 }), // right
+                    new THREE.MeshStandardMaterial({ color: 0x888888 }), // left
+                    new THREE.MeshStandardMaterial({ color: 0x666666 }), // top
+                    new THREE.MeshStandardMaterial({ color: 0xaaaaaa }), // bottom
+                    new THREE.MeshStandardMaterial({ color: 0x888888 }), // front
+                    new THREE.MeshStandardMaterial({ color: 0x888888 })  // back
+                ];
+                
+                // Make top face transparent to see components
+                materials[2].transparent = true;
+                materials[2].opacity = 0.3;
+                
+                const enclosureMesh = new THREE.Mesh(enclosureGeometry, materials);
+                
+                // Center the enclosure
+                enclosureMesh.position.set(0, 0, 0);
+                
+                scene.add(enclosureMesh);
+                threeJsObjects.push(enclosureMesh);
+                
+                // Add components
+                state.components.forEach(component => {
+                    let componentGeometry, componentMesh;
+                    
+                    // Calculate position relative to center
+                    const xPos = component.x - (dimensions.width / 2);
+                    const yPos = (dimensions.height / 2) - component.y; // Y is inverted in 3D view
+                    let zPos = dimensions.depth / 2; // Place on top surface
+                    
+                    const threeDColor = component.threeDColor || 0x888888;
+                    
+                    if (component.diameter) {
+                        // Round component (pot, jack, LED, etc.)
+                        componentGeometry = new THREE.CylinderGeometry(
+                            component.diameter / 2, 
+                            component.diameter / 2, 
+                            component.height || 10, 
+                            32
+                        );
+                        
+                        // Create materials based on component type
+                        let componentMaterial;
+                        
+                        if (component.type === 'LED') {
+                            // Make LEDs glow
+                            componentMaterial = new THREE.MeshStandardMaterial({ 
+                                color: threeDColor,
+                                emissive: threeDColor,
+                                emissiveIntensity: 0.8,
+                                roughness: 0.2,
+                                metalness: 0.3
+                            });
+                        } else if (component.type === 'Potentiometer') {
+                            componentMaterial = new THREE.MeshStandardMaterial({
+                                color: threeDColor,
+                                roughness: 0.6,
+                                metalness: 0.4
+                            });
+                        } else {
+                            componentMaterial = new THREE.MeshStandardMaterial({ 
+                                color: threeDColor,
+                                roughness: 0.7,
+                                metalness: 0.3
+                            });
+                        }
+                        
+                        componentMesh = new THREE.Mesh(componentGeometry, componentMaterial);
+                        componentMesh.rotation.x = Math.PI / 2; // Rotate to stand up
+                        
+                        // If it's a pot or encoder, add a shaft
+                        if ((component.type === 'Potentiometer' || component.type === 'Encoder') && component.shaftDiameter) {
+                            const shaftHeight = 10;
+                            const shaftGeometry = new THREE.CylinderGeometry(
+                                component.shaftDiameter / 2,
+                                component.shaftDiameter / 2,
+                                shaftHeight,
+                                32
+                            );
+                            
+                            // More metallic material for the shaft
+                            const shaftMaterial = new THREE.MeshStandardMaterial({ 
+                                color: 0x444444,
+                                roughness: 0.4,
+                                metalness: 0.8
+                            });
+                            
+                            const shaftMesh = new THREE.Mesh(shaftGeometry, shaftMaterial);
+                            shaftMesh.position.set(0, 0, component.height / 2 + shaftHeight / 2);
+                            componentMesh.add(shaftMesh);
+                            
+                            // Add a notch or indicator to the shaft
+                            const indicatorGeometry = new THREE.BoxGeometry(
+                                component.shaftDiameter * 0.8,
+                                component.shaftDiameter * 0.15,
+                                component.shaftDiameter * 0.3
+                            );
+                            
+                            const indicatorMaterial = new THREE.MeshStandardMaterial({ 
+                                color: 0x222222,
+                                roughness: 0.6,
+                                metalness: 0.2
+                            });
+                            
+                            const indicatorMesh = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+                            indicatorMesh.position.set(0, 0, shaftHeight / 2 + 0.2);
+                            shaftMesh.add(indicatorMesh);
+                        }
+                    } else {
+                        // Rectangular component (screen, switch, etc.)
+                        componentGeometry = new THREE.BoxGeometry(
+                            component.width, 
+                            component.height, 
+                            component.depth || 5
+                        );
+                        
+                        let componentMaterial;
+                        
+                        if (component.type === 'Screen') {
+                            // Special material for screens with emissive properties
+                            componentMaterial = new THREE.MeshStandardMaterial({ 
+                                color: threeDColor,
+                                emissive: threeDColor,
+                                emissiveIntensity: 0.2,
+                                roughness: 0.1,
+                                metalness: 0.2
+                            });
+                        } else {
+                            componentMaterial = new THREE.MeshStandardMaterial({ 
+                                color: threeDColor,
+                                roughness: 0.7,
+                                metalness: 0.3
+                            });
+                        }
+                        
+                        componentMesh = new THREE.Mesh(componentGeometry, componentMaterial);
+                        
+                        // For toggle switches, add a toggle part
+                        if (component.subtype === 'Toggle SPDT') {
+                            const toggleHeight = 10;
+                            const toggleGeometry = new THREE.CylinderGeometry(
+                                1, 
+                                1, 
+                                toggleHeight, 
+                                16
+                            );
+                            
+                            const toggleMaterial = new THREE.MeshStandardMaterial({ 
+                                color: 0xdddddd,
+                                roughness: 0.5,
+                                metalness: 0.8
+                            });
+                            
+                            const toggleMesh = new THREE.Mesh(toggleGeometry, toggleMaterial);
+                            toggleMesh.position.set(0, 0, component.depth / 2 + toggleHeight / 2);
+                            toggleMesh.rotation.x = Math.PI / 6; // Tilt the toggle slightly
+                            componentMesh.add(toggleMesh);
+                        }
+                    }
+                    
+                    // Position and rotation
+                    componentMesh.position.set(xPos, yPos, zPos);
+                    
+                    // Apply rotation (convert degrees to radians)
+                    const rotationRad = (component.rotation * Math.PI) / 180;
+                    componentMesh.rotation.z = rotationRad;
+                    
+                    // Highlighted material if selected
+                    if (component.id === state.selectedComponentId) {
+                        // Add highlight glow around the selected component
+                        const highlightSize = component.diameter ? component.diameter + 2 : 
+                            Math.max(component.width, component.height) + 2;
+                            
+                        const highlightGeometry = component.diameter ? 
+                            new THREE.CylinderGeometry(highlightSize / 2, highlightSize / 2, 1, 32) :
+                            new THREE.BoxGeometry(component.width + 2, component.height + 2, 1);
+                            
+                        const highlightMaterial = new THREE.MeshBasicMaterial({ 
+                            color: 0x0088ff,
+                            transparent: true,
+                            opacity: 0.3,
+                        });
+                        
+                        const highlightMesh = new THREE.Mesh(highlightGeometry, highlightMaterial);
+                        
+                        if (component.diameter) {
+                            highlightMesh.rotation.x = Math.PI / 2;
+                        }
+                        
+                        highlightMesh.position.set(0, 0, -1); // Place slightly below component
+                        componentMesh.add(highlightMesh);
+                    }
+                    
+                    scene.add(componentMesh);
+                    threeJsObjects.push(componentMesh);
+                });
+                
+                // Add grid helper for reference
+                const gridSize = Math.max(dimensions.width, dimensions.height) * 1.5;
+                const gridDivisions = Math.floor(gridSize / 10);
+                const gridHelper = new THREE.GridHelper(gridSize, gridDivisions, 0x888888, 0xdddddd);
+                gridHelper.position.z = -(dimensions.depth / 2) - 1;
+                gridHelper.rotation.x = Math.PI / 2;
+                scene.add(gridHelper);
+                threeJsObjects.push(gridHelper);
+                
+                // Adjust camera position based on enclosure size
+                const maxDimension = Math.max(dimensions.width, dimensions.height, dimensions.depth);
+                camera.position.z = maxDimension * 3;
+                
+                // Reset controls target to center of enclosure
+                controls.target.set(0, 0, 0);
+                controls.update();
+            }
+
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                if (threeInitialized && state.viewMode === '3d') {
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
