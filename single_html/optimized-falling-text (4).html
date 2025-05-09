@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>High-Quality 3D Breaking Text</title>
+    <style>
+        body { 
+            margin: 0; 
+            overflow: hidden; 
+            background: #1a1a1a;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 20px;
+            border-radius: 10px;
+            z-index: 100;
+            width: 250px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        button {
+            background: linear-gradient(to bottom, #555, #444);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            font-weight: bold;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        button:hover {
+            background: linear-gradient(to bottom, #666, #555);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        input, select {
+            background: #333;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            width: calc(100% - 20px);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
+        }
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #555;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%; 
+            background: #0c84e4;
+            cursor: pointer;
+        }
+        label {
+            display: block;
+            margin-top: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .control-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #444;
+        }
+        .control-group:last-child {
+            border-bottom: none;
+        }
+        #qualityToggle {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+            margin-left: 10px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #555;
+            transition: .4s;
+            border-radius: 24px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #0c84e4;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div class="control-group">
+            <label for="textInput">Text:</label>
+            <input type="text" id="textInput" value="STONE" placeholder="Enter text">
+        </div>
+        
+        <div class="control-group">
+            <label for="heightInput">Drop Height: <span id="heightValue">15</span></label>
+            <input type="range" id="heightInput" min="5" max="25" value="15" step="0.5" 
+                   oninput="document.getElementById('heightValue').textContent = this.value">
+            
+            <label for="materialSelect">Material:</label>
+            <select id="materialSelect">
+                <option value="stone">Stone</option>
+                <option value="granite">Granite</option>
+                <option value="marble">Marble</option>
+                <option value="gold">Gold</option>
+                <option value="copper">Copper</option>
+                <option value="glass">Glass</option>
+                <option value="wood">Wood</option>
+                <option value="neon">Neon</option>
+            </select>
+            
+            <label for="fragmentsSlider">Fragment Detail: <span id="fragmentsValue">Medium</span></label>
+            <input type="range" id="fragmentsSlider" min="1" max="3" value="2" step="1">
+                   
+            <label for="explosionForce">Explosion Force: <span id="explosionValue">1.0</span></label>
+            <input type="range" id="explosionForce" min="0.2" max="3" value="1" step="0.1"
+                   oninput="document.getElementById('explosionValue').textContent = this.value">
+        </div>
+        
+        <div class="control-group">
+            <button id="dropBtn">Drop & Break</button>
+            <button id="resetBtn">Reset</button>
+        </div>
+    </div>
+    
+    <div id="qualityToggle">
+        <span>Post-Processing:</span>
+        <label class="toggle-switch">
+            <input type="checkbox" id="effectsToggle" checked>
+            <span class="slider"></span>
+        </label>
+    </div>
+    
+    <div id="loading" class="loading">Loading high-quality 3D engine...</div>
+
+    <script type="module">
+        import * as THREE from 'https://unpkg.com/three@0.139.0/build/three.module.js';
+        import { FontLoader } from 'https://unpkg.com/three@0.139.0/examples/jsm/loaders/FontLoader.js';
+        import { TextGeometry } from 'https://unpkg.com/three@0.139.0/examples/jsm/geometries/TextGeometry.js';
+        import { RGBELoader } from 'https://unpkg.com/three@0.139.0/examples/jsm/loaders/RGBELoader.js';
+        import { EffectComposer } from 'https://unpkg.com/three@0.139.0/examples/jsm/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'https://unpkg.com/three@0.139.0/examples/jsm/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'https://unpkg.com/three@0.139.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+        import { ShaderPass } from 'https://unpkg.com/three@0.139.0/examples/jsm/postprocessing/ShaderPass.js';
+        import { FXAAShader } from 'https://unpkg.com/three@0.139.0/examples/jsm/shaders/FXAAShader.js';
+        import { OrbitControls } from 'https://unpkg.com/three@0.139.0/examples/jsm/controls/OrbitControls.js';
+
+        // Setup fragment slider update
+        document.getElementById('fragmentsSlider').addEventListener('input', function() {
+            const value = this.value;
+            const label = document.getElementById('fragmentsValue');
+            label.textContent = ['Low', 'Medium', 'High'][value - 1];
+        });
+
+        // Globals
+        let scene, camera, renderer, composer, controls;
+        let envMap, font;
+        let textMesh, fragmentGroup;
+        let particles = [];
+        let fragments = [];
+        let isAnimating = false;
+        let loadingComplete = false;
+        let hasCollided = false;
+        
+        // Material options - enhanced for high quality
+        const materialConfigs = {
+            stone: {
+                color: 0x888888,
+                roughness: 0.8,
+                metalness: 0.2,
+                normalScale: 0.5,
+                emissive: 0x000000,
+                envMapIntensity: 0.2
+            },
+            granite: {
+                color: 0x555555,
+                roughness: 0.7,
+                metalness: 0.1,
+                normalScale: 0.8,
+                emissive: 0x000000,
+                envMapIntensity: 0.3
+            },
+            marble: {
+                color: 0xeeeeee,
+                roughness: 0.2,
+                metalness: 0.1,
+                normalScale: 0.3,
+                emissive: 0x111111,
+                envMapIntensity: 0.5
+            },
+            gold: {
+                color: 0xffd700,
+                roughness: 0.1,
+                metalness: 1.0,
+                normalScale: 0.2,
+                emissive: 0x0,
+                envMapIntensity: 1.0
+            },
+            copper: {
+                color: 0xb87333,
+                roughness: 0.2,
+                metalness: 0.9,
+                normalScale: 0.3,
+                emissive: 0x0,
+                envMapIntensity: 0.8
+            },
+            glass: {
+                color: 0xffffff,
+                roughness: 0.05,
+                metalness: 0.0,
+                normalScale: 0.1,
+                transmission: 1.0,
+                transparent: true,
+                opacity: 0.5,
+                emissive: 0x0,
+                envMapIntensity: 1.5
+            },
+            wood: {
+                color: 0x8B4513,
+                roughness: 0.9,
+                metalness: 0.0,
+                normalScale: 0.6,
+                emissive: 0x0,
+                envMapIntensity: 0.1
+            },
+            neon: {
+                color: 0x00ffff,
+                roughness: 0.2,
+                metalness: 0.0,
+                normalScale: 0.0,
+                emissive: 0x00ffff,
+                emissiveIntensity: 1.0,
+                envMapIntensity: 0.5
+            }
+        };
+        
+        // Texture loaders
+        const textureLoader = new THREE.TextureLoader();
+        const textures = {
+            // Normal maps for materials
+            stoneNormal: 'https://threejs.org/examples/textures/waternormals.jpg',
+            marbleNormal: 'https://threejs.org/examples/textures/waterdudv.jpg',
+            metalNormal: 'https://threejs.org/examples/textures/normal/normalmap.jpg',
+            woodNormal: 'https://threejs.org/examples/textures/normal/normalmap2.jpg',
+            // Environment map for reflections
+            envMapPath: 'https://threejs.org/examples/textures/equirectangular/venice_sunset_1k.hdr'
+        };
+        
+        // Floor parameters
+        const floorY = -5;
+        
+        // Physics constants
+        const GRAVITY = 0.05;
+        const BOUNCE = 0.4;
+        const FRICTION = 0.98;
+        const DRAG = 0.98;
+        
+        // Initialize everything
+        init();
+        
+        async function init() {
+            // Create scene with fog for depth
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050505);
+            scene.fog = new THREE.Fog(0x050505, 30, 100);
+            
+            // Create camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 22);
+            camera.lookAt(0, 0, 0);
+            
+            // Create renderer with high quality settings
+            renderer = new THREE.WebGLRenderer({ 
+                antialias: true,
+                powerPreference: "high-performance" 
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit for performance
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            document.body.appendChild(renderer.domElement);
+            
+            // Add orbit controls for interactive viewing
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.screenSpacePanning = false;
+            controls.minDistance = 5;
+            controls.maxDistance = 50;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Don't let camera go below floor
+            
+            // Setup post-processing
+            setupPostProcessing();
+
+            // Load environment map for realistic reflections and lighting
+            envMap = await loadHDREnvironment();
+            scene.environment = envMap;
+            
+            // Add lights
+            addLights();
+            
+            // Add environment with floor and backdrop
+            createEnvironment();
+            
+            // Load font
+            try {
+                font = await loadFont();
+                createText(document.getElementById("textInput").value);
+                loadingComplete = true;
+                document.getElementById("loading").style.display = "none";
+            } catch (error) {
+                console.error("Error loading font:", error);
+                document.getElementById("loading").innerHTML = "Error loading font. Please refresh.";
+            }
+            
+            // Event listeners
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById("dropBtn").addEventListener('click', dropText);
+            document.getElementById("resetBtn").addEventListener('click', resetScene);
+            document.getElementById("textInput").addEventListener('change', () => resetScene(true));
+            document.getElementById("materialSelect").addEventListener('change', () => resetScene(true));
+            document.getElementById("effectsToggle").addEventListener('change', toggleEffects);
+            
+            // Start animation loop
+            animate();
+        }
+        
+        function setupPostProcessing() {
+            // Create composer for post-processing effects
+            composer = new EffectComposer(renderer);
+            
+            // Add basic render pass
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            
+            // Add bloom effect for glow
+            const bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.5,  // strength
+                0.4,  // radius
+                0.85  // threshold
+            );
+            composer.addPass(bloomPass);
+            
+            // Add anti-aliasing pass
+            const fxaaPass = new ShaderPass(FXAAShader);
+            fxaaPass.material.uniforms.resolution.value.set(
+                1 / (window.innerWidth * renderer.getPixelRatio()),
+                1 / (window.innerHeight * renderer.getPixelRatio())
+            );
+            composer.addPass(fxaaPass);
+        }
+        
+        function toggleEffects() {
+            const enabled = document.getElementById("effectsToggle").checked;
+            // If disabled, we'll just use the regular renderer in the animate loop
+            if (!enabled) {
+                renderer.toneMapping = THREE.NoToneMapping;
+            } else {
+                renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            }
+        }
+        
+        async function loadHDREnvironment() {
+            return new Promise((resolve) => {
+                try {
+                    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+                    pmremGenerator.compileEquirectangularShader();
+                    
+                    // Fallback to a simpler environment if HDR loading fails
+                    const fallbackEnv = () => {
+                        console.log("Using fallback environment");
+                        const cubeRenderTarget = pmremGenerator.fromScene(new THREE.Scene());
+                        pmremGenerator.dispose();
+                        resolve(cubeRenderTarget.texture);
+                    };
+                    
+                    new RGBELoader()
+                        .load(textures.envMapPath, function(texture) {
+                            const envMap = pmremGenerator.fromEquirectangular(texture).texture;
+                            texture.dispose();
+                            pmremGenerator.dispose();
+                            resolve(envMap);
+                        }, undefined, fallbackEnv);
+                } catch (e) {
+                    console.error("Error loading HDR:", e);
+                    // Create a basic environment map
+                    const cubeRenderTarget = pmremGenerator.fromScene(new THREE.Scene());
+                    pmremGenerator.dispose();
+                    resolve(cubeRenderTarget.texture);
+                }
+            });
+        }
+        
+        function addLights() {
+            // Ambient light for general illumination
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+            scene.add(ambientLight);
+            
+            // Main directional light with shadows
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            mainLight.position.set(10, 20, 15);
+            mainLight.castShadow = true;
+            
+            // High quality shadows
+            mainLight.shadow.mapSize.width = 2048;
+            mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 60;
+            mainLight.shadow.camera.left = -20;
+            mainLight.shadow.camera.right = 20;
+            mainLight.shadow.camera.top = 20;
+            mainLight.shadow.camera.bottom = -20;
+            mainLight.shadow.bias = -0.0001;
+            
+            scene.add(mainLight);
+            
+            // Fill light from opposite direction
+            const fillLight = new THREE.DirectionalLight(0x8888ff, 0.5);
+            fillLight.position.set(-15, 10, -15);
+            scene.add(fillLight);
+            
+            // Rim light to highlight edges
+            const rimLight = new THREE.DirectionalLight(0xffffaa, 0.6);
+            rimLight.position.set(5, 5, -10);
+            scene.add(rimLight);
+            
+            // Add subtle point lights for local illumination
+            const pointLight1 = new THREE.PointLight(0xffaa00, 0.6, 30);
+            pointLight1.position.set(5, 10, 5);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0x0088ff, 0.5, 20);
+            pointLight2.position.set(-5, 8, -5);
+            scene.add(pointLight2);
+        }
+        
+        function createEnvironment() {
+            // Create floor with nice materials
+            const floorSize = 100;
+            const floorGeometry = new THREE.PlaneGeometry(floorSize, floorSize);
+            const floorMaterial = new THREE.MeshStandardMaterial({
+                color: 0x333333,
+                roughness: 0.7,
+                metalness: 0.1,
+                envMap: envMap,
+                envMapIntensity: 0.5
+            });
+            
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = floorY;
+            floor.receiveShadow = true;
+            scene.add(floor);
+            
+            // Add subtle grid texture to floor
+            const gridHelper = new THREE.GridHelper(floorSize, 100, 0x444444, 0x222222);
+            gridHelper.position.y = floorY + 0.01; // Slightly above floor to avoid z-fighting
+            gridHelper.material.opacity = 0.3;
+            gridHelper.material.transparent = true;
+            scene.add(gridHelper);
+            
+            // Add subtle backdrop
+            const backdropGeometry = new THREE.PlaneGeometry(120, 60);
+            const backdropMaterial = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.9,
+                metalness: 0.0,
+                side: THREE.DoubleSide
+            });
+            
+            const backdrop = new THREE.Mesh(backdropGeometry, backdropMaterial);
+            backdrop.position.z = -40;
+            backdrop.position.y = 20;
+            scene.add(backdrop);
+        }
+        
+        function loadFont() {
+            return new Promise((resolve, reject) => {
+                const loader = new FontLoader();
+                loader.load(
+                    'https://threejs.org/examples/fonts/helvetiker_bold.typeface.json',
+                    // onLoad callback
+                    font => resolve(font),
+                    // onProgress callback
+                    undefined,
+                    // onError callback
+                    error => reject(error)
+                );
+            });
+        }
+        
+        async function createText(text) {
+            // Remove old text if it exists
+            if (textMesh) scene.remove(textMesh);
+            if (fragmentGroup) scene.remove(fragmentGroup);
+            
+            // Clean up old particles
+            particles.forEach(p => {
+                scene.remove(p);
+                if (p.geometry) p.geometry.dispose();
+                if (p.material) p.material.dispose();
+            });
+            particles = [];
+            
+            // Clear fragments array
+            fragments = [];
+            hasCollided = false;
+            
+            // Create text parameters - high quality
+            const textOptions = {
+                font: font,
+                size: 3,
+                height: 0.7,
+                curveSegments: 8, // Higher for smoother curves
+                bevelEnabled: true,
+                bevelThickness: 0.3,
+                bevelSize: 0.15,
+                bevelOffset: 0,
+                bevelSegments: 5 // Higher for smoother bevels
+            };
+            
+            // Create text geometry
+            const textGeometry = new TextGeometry(text, textOptions);
+            
+            // Center text geometry
+            textGeometry.computeBoundingBox();
+            const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x;
+            const centerOffset = -0.5 * textWidth;
+            
+            // Get selected material
+            const materialType = document.getElementById("materialSelect").value;
+            const materialConfig = materialConfigs[materialType];
+            
+            // Create advanced material with normal map if available
+            const textMaterial = new THREE.MeshPhysicalMaterial({
+                color: materialConfig.color,
+                roughness: materialConfig.roughness,
+                metalness: materialConfig.metalness,
+                envMap: envMap,
+                envMapIntensity: materialConfig.envMapIntensity || 0.5,
+                emissive: materialConfig.emissive || 0x000000,
+                emissiveIntensity: materialConfig.emissiveIntensity || 0
+            });
+            
+            // Add normal map for texture if applicable
+            let normalMap;
+            if (materialType === 'stone' || materialType === 'granite') {
+                normalMap = await loadTexture(textures.stoneNormal);
+            } else if (materialType === 'marble') {
+                normalMap = await loadTexture(textures.marbleNormal);
+            } else if (materialType === 'gold' || materialType === 'copper') {
+                normalMap = await loadTexture(textures.metalNormal);
+            } else if (materialType === 'wood') {
+                normalMap = await loadTexture(textures.woodNormal);
+            }
+            
+            if (normalMap) {
+                textMaterial.normalMap = normalMap;
+                textMaterial.normalScale = new THREE.Vector2(
+                    materialConfig.normalScale || 0.5,
+                    materialConfig.normalScale || 0.5
+                );
+            }
+            
+            // Add transmission for glass
+            if (materialType === 'glass') {
+                textMaterial.transmission = materialConfig.transmission || 0;
+                textMaterial.transparent = materialConfig.transparent || false;
+                textMaterial.opacity = materialConfig.opacity || 1;
+                textMaterial.ior = 1.5; // Index of refraction for glass
+            }
+            
+            // Create text mesh
+            textMesh = new THREE.Mesh(textGeometry, textMaterial);
+            textMesh.position.x = centerOffset;
+            
+            // Get height from slider
+            const height = parseFloat(document.getElementById("heightInput").value);
+            textMesh.position.y = height;
+            
+            textMesh.position.z = 0;
+            textMesh.castShadow = true;
+            textMesh.receiveShadow = true;
+            textMesh.userData.text = text;
+            textMesh.userData.velocity = new THREE.Vector3(0, 0, 0);
+            
+            scene.add(textMesh);
+            
+            // Create fragment group (hidden initially)
+            fragmentGroup = new THREE.Group();
+            fragmentGroup.visible = false;
+            scene.add(fragmentGroup);
+            
+            // Pre-generate fragments for later use
+            await generateFragments(textGeometry, textMaterial, centerOffset, text);
+        }
+        
+        async function loadTexture(url) {
+            return new Promise((resolve) => {
+                textureLoader.load(url, texture => {
+                    resolve(texture);
+                });
+            });
+        }
+        
+        async function generateFragments(textGeometry, material, centerOffset, text) {
+            // Get geometry bounding box for calculations
+            const bbox = textGeometry.boundingBox;
+            
+            // Get fragment detail level
+            const fragDetailLevel = parseInt(document.getElementById('fragmentsSlider').value);
+            
+            // Fragment settings based on detail level
+            const fragmentMultiplier = [0.7, 1.0, 1.5][fragDetailLevel - 1];
+            const fragmentsX = Math.max(5, Math.ceil(text.length * 2 * fragmentMultiplier));
+            const fragmentsY = [2, 3, 4][fragDetailLevel - 1];
+            const fragmentsZ = [2, 2, 3][fragDetailLevel - 1];
+            
+            // Fragment size
+            const cellWidth = (bbox.max.x - bbox.min.x) / fragmentsX;
+            const cellHeight = (bbox.max.y - bbox.min.y) / fragmentsY;
+            const cellDepth = (bbox.max.z - bbox.min.z) / fragmentsZ;
+            
+            // Create fragment meshes with high-quality geometry
+            for (let x = 0; x < fragmentsX; x++) {
+                for (let y = 0; y < fragmentsY; y++) {
+                    for (let z = 0; z < fragmentsZ; z++) {
+                        // Random offset for more natural fragmentation
+                        const jitter = 0.1;
+                        
+                        // Randomize size slightly for more realism
+                        const sizeVariation = 0.3; // 30% size variation
+                        const width = cellWidth * (1 - sizeVariation/2 + Math.random() * sizeVariation);
+                        const height = cellHeight * (1 - sizeVariation/2 + Math.random() * sizeVariation);
+                        const depth = cellDepth * (1 - sizeVariation/2 + Math.random() * sizeVariation);
+                        
+                        // Use more detailed geometry for higher quality
+                        let fragGeometry;
+                        
+                        // Higher detail = more complex fragment shapes
+                        if (fragDetailLevel >= 3) {
+                            // Use dodecahedron for more complex fragment shape
+                            fragGeometry = new THREE.DodecahedronGeometry(
+                                Math.min(width, height, depth) * 0.5,
+                                1 // Detail level
+                            );
+                            
+                            // Scale to match cell dimensions
+                            fragGeometry.scale(
+                                width / Math.min(width, height, depth),
+                                height / Math.min(width, height, depth),
+                                depth / Math.min(width, height, depth)
+                            );
+                        } else if (fragDetailLevel === 2) {
+                            // Use octahedron for medium detail
+                            fragGeometry = new THREE.OctahedronGeometry(
+                                Math.min(width, height, depth) * 0.5,
+                                1 // Detail level
+                            );
+                            
+                            // Scale to match cell dimensions
+                            fragGeometry.scale(
+                                width / Math.min(width, height, depth),
+                                height / Math.min(width, height, depth),
+                                depth / Math.min(width, height, depth)
+                            );
+                        } else {
+                            // Use simple box for low detail
+                            fragGeometry = new THREE.BoxGeometry(width, height, depth);
+                        }
+                        
+                        // Vary the material slightly for each fragment
+                        const fragMaterial = material.clone();
+                        fragMaterial.color.offsetHSL(0, 0, (Math.random() - 0.5) * 0.15);
+                        
+                        // For emissive materials, vary the emission too
+                        if (fragMaterial.emissiveIntensity > 0) {
+                            fragMaterial.emissiveIntensity *= (0.8 + Math.random() * 0.4);
+                        }
+                        
+                        // Create mesh
+                        const fragMesh = new THREE.Mesh(fragGeometry, fragMaterial);
+                        
+                        // Position based on cell position plus randomization
+                        fragMesh.position.x = centerOffset + bbox.min.x + (x + 0.5) * cellWidth + (Math.random() - 0.5) * jitter;
+                        fragMesh.position.y = bbox.min.y + (y + 0.5) * cellHeight + (Math.random() - 0.5) * jitter;
+                        fragMesh.position.z = bbox.min.z + (z + 0.5) * cellDepth + (Math.random() - 0.5) * jitter;
+                        
+                        // Add slight random rotation for more natural look
+                        fragMesh.rotation.x = (Math.random() - 0.5) * 0.2;
+                        fragMesh.rotation.y = (Math.random() - 0.5) * 0.2;
+                        fragMesh.rotation.z = (Math.random() - 0.5) * 0.2;
+                        
+                        // Add fragment data for physics
+                        const fragment = {
+                            mesh: fragMesh,
+                            velocity: new THREE.Vector3(0, 0, 0),
+                            rotationVelocity: new THREE.Vector3(
+                                (Math.random() - 0.5) * 0.06,
+                                (Math.random() - 0.5) * 0.06,
+                                (Math.random() - 0.5) * 0.06
+                            ),
+                            collided: false,
+                            mass: width * height * depth, // Mass based on volume
+                            bounciness: 0.4 + (Math.random() - 0.5) * 0.1 // Slightly varied bounciness
+                        };
+                        
+                        fragments.push(fragment);
+                        fragMesh.castShadow = true;
+                        fragMesh.receiveShadow = true;
+                        fragmentGroup.add(fragMesh);
+                    }
+                }
+            }
+        }
+        
+        function dropText() {
+            if (!loadingComplete || isAnimating) return;
+            
+            // Reset collision state
+            hasCollided = false;
+            
+            // Make the text fall as one piece initially
+            textMesh.visible = true;
+            fragmentGroup.visible = false;
+            
+            // Initialize velocity
+            textMesh.userData.velocity = new THREE.Vector3(0, 0, 0);
+            
+            isAnimating = true;
+            
+            // Focus camera on where impact will happen
+            focusCameraOnImpact();
+        }
+        
+        function focusCameraOnImpact() {
+            // Smoothly move camera to a good position to see the impact
+            const height = parseFloat(document.getElementById("heightInput").value);
+            
+            // Higher drops = move camera back more
+            const distanceFactor = 1 + (height / 20);
+            
+            // Calculate camera animation
+            const targetPosition = new THREE.Vector3(6, 3, 22 * distanceFactor);
+            const duration = 1.5;
+            const startPosition = camera.position.clone();
+            const startTime = Date.now();
+            
+            function updateCamera() {
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                const t = Math.min(elapsedTime / duration, 1);
+                const easedT = 1 - Math.pow(1 - t, 3); // Cubic ease out
+                
+                // Interpolate position
+                camera.position.lerpVectors(startPosition, targetPosition, easedT);
+                
+                // Look at origin
+                camera.lookAt(0, 0, 0);
+                
+                // Update controls target
+                controls.target.set(0, 0, 0);
+                controls.update();
+                
+                // Continue animation if not complete
+                if (t < 1) {
+                    requestAnimationFrame(updateCamera);
+                }
+            }
+            
+            // Start camera animation
+            updateCamera();
+        }
+        
+        function breakText() {
+            // Hide original text
+            textMesh.visible = false;
+            
+            // Show fragments at the text position
+            fragmentGroup.visible = true;
+            fragmentGroup.position.copy(textMesh.position);
+            
+            // Get explosion force from slider
+            const explosionForce = parseFloat(document.getElementById("explosionForce").value);
+            
+            // Set initial velocities for fragments with explosion effect
+            fragments.forEach(fragment => {
+                // Calculate direction from center
+                const direction = new THREE.Vector3();
+                direction.x = fragment.mesh.position.x;
+                direction.y = fragment.mesh.position.y;
+                direction.z = fragment.mesh.position.z;
+                direction.normalize();
+                
+                // Apply velocity based on direction and randomness
+                fragment.velocity.set(
+                    direction.x * explosionForce * (0.5 + Math.random()),
+                    (direction.y + 0.5) * explosionForce * (0.5 + Math.random()),  // Add upward bias
+                    direction.z * explosionForce * (0.5 + Math.random())
+                );
+                
+                // Add text's downward velocity to fragments
+                fragment.velocity.y += textMesh.userData.velocity.y * 0.8;
+                
+                // Apply more dramatic rotation
+                fragment.rotationVelocity.x = (Math.random() - 0.5) * 0.2 * explosionForce;
+                fragment.rotationVelocity.y = (Math.random() - 0.5) * 0.2 * explosionForce;
+                fragment.rotationVelocity.z = (Math.random() - 0.5) * 0.2 * explosionForce;
+                
+                fragment.collided = false;
+            });
+            
+            // Create impact effects
+            createImpactEffect(textMesh.position.clone());
+            createShockwave(textMesh.position.clone());
+            
+            hasCollided = true;
+        }
+        
+        function createImpactEffect(position) {
+            // Get fragment detail level for particle count scaling
+            const fragDetailLevel = parseInt(document.getElementById('fragmentsSlider').value);
+            const materialType = document.getElementById("materialSelect").value;
+            
+            // Create high-quality particle system for impact effect
+            const particleCount = 50 * fragDetailLevel;
+            const particleGeometry = new THREE.BufferGeometry();
+            const particlePositions = new Float32Array(particleCount * 3);
+            const particleVelocities = [];
+            const particleSizes = new Float32Array(particleCount);
+            
+            // Material color based on the text material
+            let particleColor;
+            switch(materialType) {
+                case 'stone':
+                case 'granite':
+                    particleColor = 0x888888;
+                    break;
+                case 'marble':
+                    particleColor = 0xeeeeee;
+                    break;
+                case 'gold':
+                    particleColor = 0xffd700;
+                    break;
+                case 'copper':
+                    particleColor = 0xb87333;
+                    break;
+                case 'glass':
+                    particleColor = 0xaaddff;
+                    break;
+                case 'wood':
+                    particleColor = 0x8B4513;
+                    break;
+                case 'neon':
+                    particleColor = 0x00ffff;
+                    break;
+                default:
+                    particleColor = 0xffffff;
+            }
+            
+            // Create particles at impact position
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                const spread = 4;
+                
+                // Position with slight randomization
+                particlePositions[i3] = position.x + (Math.random() - 0.5) * spread;
+                particlePositions[i3 + 1] = position.y - 0.5 + Math.random() * 2;
+                particlePositions[i3 + 2] = position.z + (Math.random() - 0.5) * spread;
+                
+                // Velocity based on position to create outward explosion
+                const direction = new THREE.Vector3(
+                    particlePositions[i3] - position.x,
+                    particlePositions[i3 + 1] - position.y,
+                    particlePositions[i3 + 2] - position.z
+                );
+                direction.normalize();
+                
+                const speed = 0.1 + Math.random() * 0.2;
+                particleVelocities.push(
+                    new THREE.Vector3(
+                        direction.x * speed,
+                        direction.y * speed + 0.05 + Math.random() * 0.1, // Add upward bias
+                        direction.z * speed
+                    )
+                );
+                
+                // Random particle sizes
+                particleSizes[i] = 0.2 + Math.random() * 0.6;
+            }
+            
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            particleGeometry.setAttribute('size', new THREE.BufferAttribute(particleSizes, 1));
+            
+            // Create high-quality particle material with glow effect
+            const particleMaterial = new THREE.PointsMaterial({
+                color: particleColor,
+                size: 0.5,
+                transparent: true,
+                opacity: 0.8,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            
+            // Create particle system
+            const particleSystem = new THREE.Points(particleGeometry, particleMaterial);
+            scene.add(particleSystem);
+            particles.push(particleSystem);
+            
+            // Special effect for neon - add a point light at impact
+            if (materialType === 'neon') {
+                const impactLight = new THREE.PointLight(0x00ffff, 2, 10);
+                impactLight.position.copy(position);
+                scene.add(impactLight);
+                particles.push(impactLight); // Add to particles for cleanup
+                
+                // Fade out the light
+                const lightStartTime = Date.now();
+                const lightDuration = 1000; // 1 second
+                
+                function updateLight() {
+                    const elapsed = Date.now() - lightStartTime;
+                    if (elapsed < lightDuration) {
+                        impactLight.intensity = 2 * (1 - elapsed / lightDuration);
+                        requestAnimationFrame(updateLight);
+                    } else {
+                        scene.remove(impactLight);
+                    }
+                }
+                
+                updateLight();
+            }
+            
+            // Animate particles
+            const particleStartTime = Date.now();
+            const particleDuration = 2000; // 2 seconds
+            
+            function updateParticles() {
+                const elapsed = Date.now() - particleStartTime;
+                if (elapsed < particleDuration) {
+                    const positions = particleGeometry.attributes.position.array;
+                    
+                    for (let i = 0; i < particleCount; i++) {
+                        const i3 = i * 3;
+                        
+                        // Update position
+                        positions[i3] += particleVelocities[i].x;
+                        positions[i3 + 1] += particleVelocities[i].y;
+                        positions[i3 + 2] += particleVelocities[i].z;
+                        
+                        // Apply gravity and drag
+                        particleVelocities[i].y -= 0.005;
+                        particleVelocities[i].x *= 0.99;
+                        particleVelocities[i].y *= 0.99;
+                        particleVelocities[i].z *= 0.99;
+                        
+                        // Floor collision
+                        if (positions[i3 + 1] <= floorY + 0.1) {
+                            positions[i3 + 1] = floorY + 0.1;
+                            particleVelocities[i].y = -particleVelocities[i].y * 0.3; // Bounce
+                            particleVelocities[i].x *= 0.8; // Friction
+                            particleVelocities[i].z *= 0.8; // Friction
+                        }
+                    }
+                    
+                    particleGeometry.attributes.position.needsUpdate = true;
+                    
+                    // Fade out
+                    const fadeRatio = elapsed / particleDuration;
+                    particleMaterial.opacity = 0.8 * (1 - fadeRatio);
+                    
+                    requestAnimationFrame(updateParticles);
+                } else {
+                    // Remove particles when animation is complete
+                    scene.remove(particleSystem);
+                    particleGeometry.dispose();
+                    particleMaterial.dispose();
+                    
+                    // Remove from particles array
+                    const index = particles.indexOf(particleSystem);
+                    if (index !== -1) {
+                        particles.splice(index, 1);
+                    }
+                }
+            }
+            
+            // Start particle animation
+            updateParticles();
+        }
+        
+        function createShockwave(position) {
+            // Create a ring that expands outward from the impact point
+            const ringGeometry = new THREE.RingGeometry(0.1, 0.5, 32);
+            
+            // Material based on text material
+            const materialType = document.getElementById("materialSelect").value;
+            let ringColor;
+            
+            switch(materialType) {
+                case 'gold':
+                    ringColor = 0xffd700;
+                    break;
+                case 'copper':
+                    ringColor = 0xb87333;
+                    break;
+                case 'glass':
+                    ringColor = 0xaaddff;
+                    break;
+                case 'neon':
+                    ringColor = 0x00ffff;
+                    break;
+                default:
+                    ringColor = 0xffffff;
+            }
+            
+            const ringMaterial = new THREE.MeshBasicMaterial({
+                color: ringColor,
+                transparent: true,
+                opacity: 0.7,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.position.copy(position);
+            ring.position.y = floorY + 0.05; // Just above floor
+            ring.rotation.x = -Math.PI / 2; // Flat on floor
+            scene.add(ring);
+            particles.push(ring);
+            
+            // Animate ring expansion
+            const startTime = Date.now();
+            const duration = 1000; // 1 second
+            
+            function updateRing() {
+                const elapsed = Date.now() - startTime;
+                if (elapsed < duration) {
+                    const progress = elapsed / duration;
+                    
+                    // Expand radius
+                    const currentSize = 10 * progress;
+                    ring.scale.set(currentSize, currentSize, 1);
+                    
+                    // Fade out
+                    ringMaterial.opacity = 0.7 * (1 - progress);
+                    
+                    requestAnimationFrame(updateRing);
+                } else {
+                    // Remove ring
+                    scene.remove(ring);
+                    ringGeometry.dispose();
+                    ringMaterial.dispose();
+                    
+                    // Remove from particles array
+                    const index = particles.indexOf(ring);
+                    if (index !== -1) {
+                        particles.splice(index, 1);
+                    }
+                }
+            }
+            
+            // Start ring animation
+            updateRing();
+        }
+        
+        function resetScene(forceRecreate = false) {
+            isAnimating = false;
+            hasCollided = false;
+            
+            // Reset camera position
+            controls.reset();
+            
+            // Check if text input or material changed
+            const newText = document.getElementById("textInput").value;
+            const materialType = document.getElementById("materialSelect").value;
+            
+            if (forceRecreate || !textMesh || textMesh.userData.text !== newText || 
+                textMesh.material.metalness !== materialConfigs[materialType].metalness) {
+                createText(newText);
+            } else {
+                // Just reset position
+                if (textMesh) {
+                    textMesh.visible = true;
+                    const height = parseFloat(document.getElementById("heightInput").value);
+                    textMesh.position.y = height;
+                }
+                
+                if (fragmentGroup) {
+                    fragmentGroup.visible = false;
+                }
+            }
+            
+            // Clean up old particles
+            particles.forEach(p => {
+                scene.remove(p);
+                if (p.geometry) p.geometry.dispose();
+                if (p.material) p.material.dispose();
+            });
+            particles = [];
+        }
+        
+        function updateText() {
+            if (!isAnimating) return;
+            
+            if (!hasCollided) {
+                // Apply gravity to text
+                textMesh.userData.velocity.y -= GRAVITY;
+                
+                // Update text position
+                textMesh.position.y += textMesh.userData.velocity.y;
+                
+                // Check floor collision
+                if (textMesh.position.y <= floorY + 1.5) { // Adjust for text height
+                    textMesh.position.y = floorY + 1.5;
+                    
+                    // Break the text on collision
+                    breakText();
+                }
+            } else {
+                // Update fragments
+                updateFragments();
+            }
+        }
+        
+        function updateFragments() {
+            let activeFragments = 0;
+            
+            fragments.forEach(fragment => {
+                // Apply gravity
+                fragment.velocity.y -= GRAVITY;
+                
+                // Update position
+                fragment.mesh.position.x += fragment.velocity.x;
+                fragment.mesh.position.y += fragment.velocity.y;
+                fragment.mesh.position.z += fragment.velocity.z;
+                
+                // Update rotation with more natural motion
+                fragment.mesh.rotation.x += fragment.rotationVelocity.x;
+                fragment.mesh.rotation.y += fragment.rotationVelocity.y;
+                fragment.mesh.rotation.z += fragment.rotationVelocity.z;
+                
+                // Apply drag to rotation
+                fragment.rotationVelocity.multiplyScalar(DRAG);
+                
+                // Floor collision
+                if (fragment.mesh.position.y <= floorY + fragment.mesh.geometry.parameters.radius || 
+                    fragment.mesh.position.y <= floorY + fragment.mesh.geometry.parameters.height / 2) {
+                    
+                    // Set position to floor level to prevent sinking
+                    if (fragment.mesh.geometry.parameters.radius) {
+                        fragment.mesh.position.y = floorY + fragment.mesh.geometry.parameters.radius;
+                    } else {
+                        fragment.mesh.position.y = floorY + fragment.mesh.geometry.parameters.height / 2;
+                    }
+                    
+                    if (!fragment.collided || Math.abs(fragment.velocity.y) > 0.1) {
+                        // Each fragment has slightly different bounce physics
+                        fragment.velocity.y = -fragment.velocity.y * fragment.bounciness;
+                        fragment.velocity.x *= FRICTION;
+                        fragment.velocity.z *= FRICTION;
+                        
+                        // Add some random rotation on impact for realism
+                        if (Math.abs(fragment.velocity.y) > 0.15) {
+                            fragment.rotationVelocity.x += (Math.random() - 0.5) * 0.05;
+                            fragment.rotationVelocity.z += (Math.random() - 0.5) * 0.05;
+                        }
+                        
+                        fragment.collided = true;
+                    } else {
+                        // Stop vertical movement after bounce energy is lost
+                        fragment.velocity.y = 0;
+                        fragment.velocity.x *= FRICTION;
+                        fragment.velocity.z *= FRICTION;
+                    }
+                }
+                
+                // Wall boundaries 
+                const BOUND = 30;
+                if (Math.abs(fragment.mesh.position.x) > BOUND) {
+                    fragment.mesh.position.x = Math.sign(fragment.mesh.position.x) * BOUND;
+                    fragment.velocity.x *= -0.5; // Bounce off walls with energy loss
+                }
+                if (Math.abs(fragment.mesh.position.z) > BOUND) {
+                    fragment.mesh.position.z = Math.sign(fragment.mesh.position.z) * BOUND;
+                    fragment.velocity.z *= -0.5; // Bounce off walls with energy loss
+                }
+                
+                // Check if fragment is still active
+                const isMoving = (
+                    Math.abs(fragment.velocity.x) > 0.01 ||
+                    Math.abs(fragment.velocity.y) > 0.01 ||
+                    Math.abs(fragment.velocity.z) > 0.01 ||
+                    Math.abs(fragment.rotationVelocity.x) > 0.001 ||
+                    Math.abs(fragment.rotationVelocity.y) > 0.001 ||
+                    Math.abs(fragment.rotationVelocity.z) > 0.001
+                );
+                
+                if (isMoving) {
+                    activeFragments++;
+                }
+            });
+            
+            // If very few fragments are still moving, stop the animation
+            if (activeFragments < fragments.length * 0.05 && isAnimating) {
+                isAnimating = false;
+            }
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Update post-processing resolution
+            composer.setSize(window.innerWidth, window.innerHeight);
+            
+            // Update FXAA shader resolution
+            const fxaaPass = composer.passes.find(pass => pass.material && pass.material.uniforms.resolution);
+            if (fxaaPass) {
+                fxaaPass.material.uniforms.resolution.value.set(
+                    1 / (window.innerWidth * renderer.getPixelRatio()),
+                    1 / (window.innerHeight * renderer.getPixelRatio())
+                );
+            }
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // Update controls
+            controls.update();
+            
+            // Update text and fragments
+            updateText();
+            
+            // Render scene with post-processing if enabled
+            if (document.getElementById("effectsToggle").checked) {
+                composer.render();
+            } else {
+                renderer.render(scene, camera);
+            }
+        }
+    </script>
+</body>
+</html>
