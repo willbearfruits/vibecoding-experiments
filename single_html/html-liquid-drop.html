@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Red Liquid Drop Suspended in Air</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: white;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Initialize scene, camera, and renderer
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff); // White background
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.z = 5;
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.body.appendChild(renderer.domElement);
+        
+        // Add lights
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(5, 5, 5);
+        directionalLight.castShadow = true;
+        directionalLight.shadow.mapSize.width = 1024;
+        directionalLight.shadow.mapSize.height = 1024;
+        scene.add(directionalLight);
+        
+        const pointLight = new THREE.PointLight(0xff5555, 0.7);
+        pointLight.position.set(-3, 3, 2);
+        scene.add(pointLight);
+        
+        // Single drop parameters
+        const drop = {
+            position: new THREE.Vector3(0, 0, 0),
+            baseRadius: 1.0,
+            radius: 1.0,
+            pulsateSpeed: 0.8,
+            pulsateAmount: 0.08,
+            floatOffset: 0,
+            floatSpeed: 0.3
+        };
+        
+        // Create liquid material with advanced shaders
+        const liquidMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                uTime: { value: 0 },
+                uDropPosition: { value: drop.position },
+                uDropRadius: { value: drop.radius },
+                uCameraPosition: { value: camera.position }
+            },
+            vertexShader: `
+                varying vec3 vPosition;
+                varying vec3 vNormal;
+                varying vec2 vUv;
+                
+                void main() {
+                    vPosition = position;
+                    vNormal = normal;
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float uTime;
+                uniform vec3 uDropPosition;
+                uniform float uDropRadius;
+                uniform vec3 uCameraPosition;
+                
+                varying vec3 vPosition;
+                varying vec3 vNormal;
+                varying vec2 vUv;
+                
+                float sdfSphere(vec3 p, vec3 center, float radius) {
+                    return length(p - center) - radius;
+                }
+                
+                // Smooth minimum function for blending
+                float smin(float a, float b, float k) {
+                    float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+                    return mix(b, a, h) - k * h * (1.0 - h);
+                }
+                
+                // Main SDF function - creates a drop shape
+                float sceneSDF(vec3 p) {
+                    // Main sphere
+                    float sphere = sdfSphere(p, uDropPosition, uDropRadius);
+                    
+                    // Slightly deform the sphere to make it more drop-like
+                    float dropFactor = 0.2;
+                    float teardrop = sphere - dropFactor * p.y;
+                    
+                    // Add small details with noise
+                    float noiseAmount = 0.03;
+                    float noise = sin(p.x * 10.0 + uTime) * sin(p.y * 8.0 + uTime * 0.7) * sin(p.z * 12.0 + uTime * 0.5) * noiseAmount;
+                    
+                    return teardrop + noise;
+                }
+                
+                vec3 calculateNormal(vec3 p) {
+                    const float h = 0.0001;
+                    float centerDistance = sceneSDF(p);
+                    vec3 normal = vec3(
+                        sceneSDF(p + vec3(h, 0, 0)) - centerDistance,
+                        sceneSDF(p + vec3(0, h, 0)) - centerDistance,
+                        sceneSDF(p + vec3(0, 0, h)) - centerDistance
+                    );
+                    return normalize(normal);
+                }
+                
+                void main() {
+                    vec3 point = vPosition;
+                    
+                    // Calculate SDF value
+                    float distance = sceneSDF(point);
+                    
+                    // Threshold for the surface
+                    float threshold = 0.0;
+                    
+                    // If point is outside the drop, discard
+                    if (distance > threshold) {
+                        discard;
+                    }
+                    
+                    // Calculate accurate normal using SDF
+                    vec3 normal = calculateNormal(point);
+                    
+                    // Enhanced lighting calculations
+                    // Key light (directional)
+                    vec3 lightPos1 = vec3(5.0, 5.0, 5.0);
+                    vec3 lightDir1 = normalize(lightPos1 - point);
+                    float diff1 = max(dot(normal, lightDir1), 0.0);
+                    
+                    // Fill light (point)
+                    vec3 lightPos2 = vec3(-3.0, 3.0, 2.0);
+                    vec3 lightDir2 = normalize(lightPos2 - point);
+                    float diff2 = max(dot(normal, lightDir2), 0.0) * 0.7;
+                    
+                    // Combined diffuse lighting
+                    float diffuse = diff1 + diff2;
+                    
+                    // Specular highlights
+                    vec3 viewDir = normalize(uCameraPosition - point);
+                    vec3 halfwayDir1 = normalize(lightDir1 + viewDir);
+                    float spec1 = pow(max(dot(normal, halfwayDir1), 0.0), 64.0);
+                    
+                    vec3 halfwayDir2 = normalize(lightDir2 + viewDir);
+                    float spec2 = pow(max(dot(normal, halfwayDir2), 0.0), 32.0);
+                    
+                    float specular = spec1 * 0.8 + spec2 * 0.4;
+                    
+                    // Base red color for the drop
+                    vec3 baseColor = vec3(1.0, 0.05, 0.05);
+                    
+                    // Distance from center affects color (darker center, brighter edges)
+                    float centerDist = length(point - uDropPosition);
+                    float intensity = smoothstep(0.0, uDropRadius, centerDist);
+                    
+                    // Mix more orange/bright red at the edges
+                    vec3 edgeColor = vec3(1.0, 0.3, 0.2);
+                    vec3 dropColor = mix(baseColor, edgeColor, intensity * 0.5);
+                    
+                    // Advanced fresnel effect (edges glow)
+                    float fresnelPower = 3.0;
+                    float fresnel = pow(1.0 - max(dot(normal, viewDir), 0.0), fresnelPower);
+                    
+                    // Internal scattering effect (subsurface scattering simulation)
+                    float scatterFactor = 0.15;
+                    float scatter = (1.0 - intensity) * scatterFactor;
+                    
+                    // Combine all lighting effects
+                    vec3 finalColor = dropColor * (0.2 + 0.6 * diffuse) + vec3(1.0, 0.6, 0.6) * specular;
+                    
+                    // Add fresnel rim light and scattering
+                    finalColor = mix(finalColor, vec3(1.0, 0.4, 0.3), fresnel * 0.6);
+                    finalColor += baseColor * scatter;
+                    
+                    // Additional highlights based on surface variation
+                    float surfaceVariation = sin(point.x * 20.0 + point.y * 15.0 + point.z * 25.0) * 0.05;
+                    finalColor += vec3(1.0, 0.9, 0.9) * surfaceVariation * specular;
+                    
+                    gl_FragColor = vec4(finalColor, 1.0);
+                }
+            `,
+            side: THREE.BackSide
+        });
+        
+        // Create sphere for rendering the drop
+        const sphereGeometry = new THREE.SphereGeometry(1.5, 64, 64);
+        const dropMesh = new THREE.Mesh(sphereGeometry, liquidMaterial);
+        dropMesh.castShadow = true;
+        scene.add(dropMesh);
+        
+        // Create a subtle shadow receiver plane
+        const shadowPlaneGeometry = new THREE.PlaneGeometry(10, 10);
+        const shadowPlaneMaterial = new THREE.ShadowMaterial({
+            opacity: 0.2
+        });
+        const shadowPlane = new THREE.Mesh(shadowPlaneGeometry, shadowPlaneMaterial);
+        shadowPlane.rotation.x = -Math.PI / 2;
+        shadowPlane.position.y = -2.5;
+        shadowPlane.receiveShadow = true;
+        scene.add(shadowPlane);
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = performance.now() * 0.001;
+            
+            // Update the drop's pulsation
+            drop.radius = drop.baseRadius * (1.0 + drop.pulsateAmount * Math.sin(time * drop.pulsateSpeed));
+            
+            // Subtle floating effect
+            drop.floatOffset = Math.sin(time * drop.floatSpeed) * 0.1;
+            dropMesh.position.y = drop.floatOffset;
+            
+            // Subtle rotation for visual interest
+            dropMesh.rotation.y = time * 0.1;
+            
+            // Update shader uniforms
+            liquidMaterial.uniforms.uTime.value = time;
+            liquidMaterial.uniforms.uDropRadius.value = drop.radius;
+            liquidMaterial.uniforms.uDropPosition.value = new THREE.Vector3(0, drop.floatOffset, 0);
+            
+            renderer.render(scene, camera);
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Interactive camera movement on mouse move
+        document.addEventListener('mousemove', (event) => {
+            const mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            const mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
+            
+            camera.position.x = mouseX * 1.5;
+            camera.position.y = mouseY * 1.5;
+            camera.position.z = 5;
+            camera.lookAt(0, 0, 0);
+            
+            // Update camera position in shader
+            liquidMaterial.uniforms.uCameraPosition.value = camera.position;
+        });
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
