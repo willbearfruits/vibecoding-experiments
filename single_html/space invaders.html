@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Invaders Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #121212;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 600px;
+            height: 500px;
+            border: 2px solid #33ff33;
+            background-color: black;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(51, 255, 51, 0.5);
+        }
+        
+        .player {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 20px;
+            background-color: #33ff33;
+            border-radius: 5px;
+        }
+        
+        .bullet {
+            position: absolute;
+            width: 4px;
+            height: 10px;
+            background-color: #ffffff;
+            border-radius: 2px;
+        }
+        
+        .enemy {
+            position: absolute;
+            width: 40px;
+            height: 30px;
+            background-color: red;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 600px;
+            margin-bottom: 10px;
+        }
+        
+        .score, .lives {
+            font-size: 20px;
+            color: #33ff33;
+        }
+        
+        .controls {
+            margin-top: 15px;
+            text-align: center;
+            color: #aaaaaa;
+        }
+        
+        button {
+            background-color: #33ff33;
+            color: black;
+            border: none;
+            padding: 8px 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+        
+        button:hover {
+            background-color: #1aaa1a;
+        }
+        
+        .game-over, .game-start {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 32px;
+            color: #ff3333;
+            text-align: center;
+            display: none;
+            z-index: 10;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #33ff33;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-info">
+        <div class="score">Score: 0</div>
+        <div class="lives">Lives: 3</div>
+    </div>
+    
+    <div class="game-container">
+        <div class="player"></div>
+        <div class="game-start start-screen">SPACE INVADERS<br><button id="start-button">START GAME</button></div>
+        <div class="game-over">GAME OVER<br>Score: 0</div>
+    </div>
+    
+    <div class="controls">
+        <p>Use ← → arrow keys to move | Spacebar to shoot</p>
+    </div>
+
+    <script>
+        // Game variables
+        const gameContainer = document.querySelector('.game-container');
+        const player = document.querySelector('.player');
+        const scoreElement = document.querySelector('.score');
+        const livesElement = document.querySelector('.lives');
+        const gameOverScreen = document.querySelector('.game-over');
+        const startScreen = document.querySelector('.game-start');
+        const startButton = document.getElementById('start-button');
+        
+        let gameRunning = false;
+        let playerPosition = 270;
+        let score = 0;
+        let lives = 3;
+        let bullets = [];
+        let enemies = [];
+        let enemyDirection = 1;
+        let enemySpeed = 1;
+        let lastEnemyMoveTime = 0;
+        
+        // Game container dimensions
+        const gameWidth = gameContainer.offsetWidth;
+        const gameHeight = gameContainer.offsetHeight;
+        
+        // Player controls
+        const keys = {
+            left: false,
+            right: false,
+            space: false
+        };
+        
+        // Event listeners
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('keyup', handleKeyUp);
+        startButton.addEventListener('click', startGame);
+        
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowLeft') keys.left = true;
+            if (e.key === 'ArrowRight') keys.right = true;
+            if (e.key === ' ') {
+                keys.space = true;
+                if (gameRunning && !isShooting()) {
+                    shootBullet();
+                }
+                e.preventDefault();
+            }
+        }
+        
+        function handleKeyUp(e) {
+            if (e.key === 'ArrowLeft') keys.left = false;
+            if (e.key === 'ArrowRight') keys.right = false;
+            if (e.key === ' ') keys.space = false;
+        }
+        
+        function isShooting() {
+            // Check if there are already bullets being shot
+            return bullets.some(bullet => bullet.shooting);
+        }
+        
+        function startGame() {
+            // Reset game state
+            gameRunning = true;
+            score = 0;
+            lives = 3;
+            playerPosition = (gameWidth - 60) / 2;
+            bullets = [];
+            enemies = [];
+            
+            // Update UI
+            scoreElement.textContent = `Score: ${score}`;
+            livesElement.textContent = `Lives: ${lives}`;
+            gameOverScreen.style.display = 'none';
+            startScreen.style.display = 'none';
+            
+            // Reset player position
+            player.style.left = `${playerPosition}px`;
+            
+            // Create enemies
+            createEnemies();
+            
+            // Start game loop
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            lastEnemyMoveTime = performance.now();
+            gameLoop();
+        }
+        
+        function createEnemies() {
+            // Clear any existing enemies
+            enemies.forEach(enemy => {
+                if (enemy.element) {
+                    gameContainer.removeChild(enemy.element);
+                }
+            });
+            enemies = [];
+            
+            // Create new enemies in a 4x8 grid
+            const enemyWidth = 40;
+            const enemyHeight = 30;
+            const enemyPadding = 10;
+            const rows = 4;
+            const cols = 8;
+            
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const enemy = document.createElement('div');
+                    enemy.className = 'enemy';
+                    
+                    // Position the enemy
+                    const x = col * (enemyWidth + enemyPadding) + enemyPadding;
+                    const y = row * (enemyHeight + enemyPadding) + enemyPadding;
+                    
+                    enemy.style.left = `${x}px`;
+                    enemy.style.top = `${y}px`;
+                    
+                    gameContainer.appendChild(enemy);
+                    
+                    // Add enemy to our array
+                    enemies.push({
+                        element: enemy,
+                        x: x,
+                        y: y,
+                        width: enemyWidth,
+                        height: enemyHeight,
+                        alive: true
+                    });
+                }
+            }
+        }
+        
+        function shootBullet() {
+            const bullet = document.createElement('div');
+            bullet.className = 'bullet';
+            
+            // Position the bullet at the center of the player
+            const bulletX = playerPosition + 28; // Center of player (60/2) - width of bullet (4/2)
+            const bulletY = gameHeight - 35; // Player's top position minus bullet height
+            
+            bullet.style.left = `${bulletX}px`;
+            bullet.style.top = `${bulletY}px`;
+            
+            gameContainer.appendChild(bullet);
+            
+            // Add bullet to our array with shooting status
+            bullets.push({
+                element: bullet,
+                x: bulletX,
+                y: bulletY,
+                width: 4,
+                height: 10,
+                speed: -5, // Negative because we're moving up
+                shooting: true
+            });
+        }
+        
+        function movePlayer() {
+            const playerWidth = 60;
+            const speed = 5;
+            
+            if (keys.left && playerPosition > 0) {
+                playerPosition -= speed;
+            }
+            
+            if (keys.right && playerPosition < gameWidth - playerWidth) {
+                playerPosition += speed;
+            }
+            
+            player.style.left = `${playerPosition}px`;
+        }
+        
+        function moveBullets() {
+            // Move bullets up
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                bullet.y += bullet.speed;
+                bullet.element.style.top = `${bullet.y}px`;
+                
+                // Remove bullets that go off screen
+                if (bullet.y < 0) {
+                    gameContainer.removeChild(bullet.element);
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+        
+        function moveEnemies(timestamp) {
+            // Move enemies back and forth
+            let moveDown = false;
+            
+            if (timestamp - lastEnemyMoveTime > 1000) { // Change direction every 1 second
+                const enemyFirst = enemies[0];
+                
+                // Check if the first enemy reached the edge
+                if ((enemyFirst.x <= 0 && enemyDirection === -1) || 
+                    (enemyFirst.x >= gameWidth - enemyFirst.width && enemyDirection === 1)) {
+                    
+                    moveDown = true;
+                    enemyDirection *= -1;
+                }
+                
+                lastEnemyMoveTime = timestamp;
+            }
+            
+            // Move enemies up if needed or continue horizontal movement
+            if (moveDown) {
+                for (const enemy of enemies) {
+                    enemy.y += 20; // Move down by 20 pixels
+                    enemy.element.style.top = `${enemy.y}px`;
+                    
+                    // Check if enemies reached the player's position
+                    if (enemy.y + enemy.height >= gameHeight - 30) { // Player is at about y:gameHeight-30
+                        gameOver();
+                        return;
+                    }
+                }
+            } else {
+                for (const enemy of enemies) {
+                    enemy.x += enemyDirection * 5; // Move horizontally by 5 pixels
+                    enemy.element.style.left = `${enemy.x}px`;
+                }
+            }
+        }
+        
+        function checkBulletCollisions() {
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                
+                for (let j = enemies.length - 1; j >= 0; j--) {
+                    const enemy = enemies[j];
+                    
+                    // Check if bullet hit enemy
+                    if (bullet.x < enemy.x + enemy.width &&
+                        bullet.x + bullet.width > enemy.x &&
+                        bullet.y < enemy.y + enemy.height &&
+                        bullet.y + bullet.height > enemy.y) {
+                        
+                        // Remove the bullet and mark the enemy as destroyed
+                        gameContainer.removeChild(bullet.element);
+                        bullets.splice(i, 1);
+                        
+                        gameContainer.removeChild(enemy.element);
+                        enemies.splice(j, 1);
+                        
+                        // Increase score
+                        score += 10;
+                        scoreElement.textContent = `Score: ${score}`;
+                        
+                        break; // Move to the next bullet
+                    }
+                }
+            }
+        }
+        
+        function checkPlayerHit() {
+            for (const enemy of enemies) {
+                if (enemy.alive && playerPosition < enemy.x + enemy.width &&
+                    playerPosition + 60 > enemy.x &&
+                    gameHeight - 30 - playerPosition < enemy.y + enemy.height &&
+                    gameHeight - 10 - playerPosition > enemy.y) {
+                    
+                    gameOver();
+                    return;
+                }
+            }
+        }
+        
+        function gameOver() {
+            gameRunning = false;
+            gameOverScreen.querySelector('br').nextSibling.textContent = `Score: ${score}`;
+            gameOverScreen.style.display = 'block';
+            
+            // Remove all bullets
+            bullets.forEach(bullet => {
+                if (bullet.element) {
+                    gameContainer.removeChild(bullet.element);
+                }
+            });
+            bullets = [];
+        }
+        
+        function gameLoop(timestamp) {
+            if (gameRunning) {
+                movePlayer();
+                moveBullets();
+                moveEnemies(timestamp);
+                checkBulletCollisions();
+                checkPlayerHit();
+                
+                animationFrameId = requestAnimationFrame(gameLoop);
+            }
+        }
+    </script>
+</body>
+</html>
