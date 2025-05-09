@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Shader System</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #111;
+            color: #0f0;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+        }
+        .audio-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .canvas-container {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        canvas {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            border: 1px solid #0f0;
+            box-shadow: 0 0 10px #0f0;
+        }
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .control-group {
+            background-color: #222;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #0f0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="range"] {
+            width: 100%;
+            background: #333;
+            -webkit-appearance: none;
+            height: 10px;
+            border-radius: 5px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            background: #0f0;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        input[type="number"] {
+            width: 50px;
+            background: #333;
+            border: 1px solid #0f0;
+            color: #0f0;
+            font-family: inherit;
+            padding: 3px;
+        }
+        .transport {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #222;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 10px 15px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 5px #0f03;
+        }
+        button:hover {
+            background-color: #333;
+            box-shadow: 0 0 10px #0f0;
+        }
+        .presets {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        pre {
+            background-color: #222;
+            padding: 15px;
+            overflow-x: auto;
+            border: 1px solid #0f0;
+            box-shadow: 0 0 5px #0f03;
+            margin-top: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            background-color: #222;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            padding: 10px;
+            border: 1px solid #0f0;
+            margin-top: 20px;
+            resize: vertical;
+        }
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            background-color: #222;
+            border-top: 1px solid #0f0;
+            border-left: 1px solid #0f0;
+            border-right: 1px solid #0f0;
+            border-bottom: none;
+        }
+        .tab.active {
+            background-color: #333;
+            box-shadow: 0 0 5px #0f0;
+        }
+        .tab-content {
+            display: none;
+            padding: 15px;
+            background-color: #222;
+            border: 1px solid #0f0;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        #visualization-select {
+            background: #222;
+            color: #0f0;
+            border: 1px solid #0f0;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+        .info {
+            margin-bottom: 20px;
+            background-color: #222;
+            padding: 15px;
+            border: 1px solid #0f0;
+        }
+        .editor-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Audio Shader System</h1>
+        
+        <div class="info">
+            <p>This system applies the concept of shaders to audio generation, creating complex sounds through mathematical algorithms. 
+            Control parameters to explore sounds from harmonious to chaotic, with real-time visualization.</p>
+        </div>
+        
+        <div class="transport">
+            <button id="play-button">Play</button>
+            <button id="stop-button">Stop</button>
+            <select id="visualization-select">
+                <option value="waveform">Waveform</option>
+                <option value="frequency">Frequency</option>
+                <option value="3d">3D Surface</option>
+                <option value="particles">Particles</option>
+            </select>
+        </div>
+        
+        <div class="presets">
+            <button class="preset" data-preset="harmonic">Harmonic Waves</button>
+            <button class="preset" data-preset="chaotic">Chaotic System</button>
+            <button class="preset" data-preset="drone">Ambient Drone</button>
+            <button class="preset" data-preset="glitch">Digital Glitch</button>
+            <button class="preset" data-preset="evolving">Evolving Texture</button>
+        </div>
+        
+        <div class="audio-container">
+            <div class="canvas-container">
+                <canvas id="visualizer"></canvas>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <label for="frequency">Base Frequency</label>
+                    <div class="slider-container">
+                        <input type="range" id="frequency" min="20" max="500" value="220" step="1">
+                        <input type="number" id="frequency-value" value="220" min="20" max="500">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="modulation">Modulation Depth</label>
+                    <div class="slider-container">
+                        <input type="range" id="modulation" min="0" max="1" value="0.3" step="0.01">
+                        <input type="number" id="modulation-value" value="0.3" min="0" max="1" step="0.01">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="modFrequency">Mod Frequency</label>
+                    <div class="slider-container">
+                        <input type="range" id="modFrequency" min="0.1" max="20" value="5" step="0.1">
+                        <input type="number" id="modFrequency-value" value="5" min="0.1" max="20" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="harmonics">Harmonics</label>
+                    <div class="slider-container">
+                        <input type="range" id="harmonics" min="1" max="20" value="3" step="1">
+                        <input type="number" id="harmonics-value" value="3" min="1" max="20" step="1">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="chaos">Chaos Factor</label>
+                    <div class="slider-container">
+                        <input type="range" id="chaos" min="0" max="1" value="0.1" step="0.01">
+                        <input type="number" id="chaos-value" value="0.1" min="0" max="1" step="0.01">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="feedback">Feedback</label>
+                    <div class="slider-container">
+                        <input type="range" id="feedback" min="0" max="0.95" value="0.2" step="0.01">
+                        <input type="number" id="feedback-value" value="0.2" min="0" max="0.95" step="0.01">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="bitcrush">Bit Reduction</label>
+                    <div class="slider-container">
+                        <input type="range" id="bitcrush" min="1" max="16" value="16" step="1">
+                        <input type="number" id="bitcrush-value" value="16" min="1" max="16" step="1">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="filter">Filter Cutoff</label>
+                    <div class="slider-container">
+                        <input type="range" id="filter" min="20" max="20000" value="2000" step="1">
+                        <input type="number" id="filter-value" value="2000" min="20" max="20000">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="resonance">Resonance</label>
+                    <div class="slider-container">
+                        <input type="range" id="resonance" min="0" max="20" value="2" step="0.1">
+                        <input type="number" id="resonance-value" value="2" min="0" max="20" step="0.1">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="attack">Attack (ms)</label>
+                    <div class="slider-container">
+                        <input type="range" id="attack" min="1" max="2000" value="100" step="1">
+                        <input type="number" id="attack-value" value="100" min="1" max="2000">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="release">Release (ms)</label>
+                    <div class="slider-container">
+                        <input type="range" id="release" min="1" max="5000" value="500" step="1">
+                        <input type="number" id="release-value" value="500" min="1" max="5000">
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label for="time-warp">Time Warp</label>
+                    <div class="slider-container">
+                        <input type="range" id="time-warp" min="0.1" max="2" value="1" step="0.01">
+                        <input type="number" id="time-warp-value" value="1" min="0.1" max="2" step="0.01">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="tabs">
+            <div class="tab active" data-tab="algorithm">Algorithm</div>
+            <div class="tab" data-tab="about">About Audio Shaders</div>
+        </div>
+        
+        <div class="tab-content active" id="algorithm">
+            <p>Current audio shader algorithm (read-only):</p>
+            <pre id="algorithm-display">
+// Current Audio Shader Algorithm
+function audioShader(time, sampleRate, frequency, modulation, modFrequency, harmonics, 
+                   chaos, feedback, bitcrush, prevSample = 0) {
+    // Time warping for non-linear time progression
+    const warpedTime = time * timeWarp;
+    
+    // Base oscillator
+    let signal = 0;
+    
+    // Add harmonics
+    for (let i = 1; i <= harmonics; i++) {
+        // Frequency modulation 
+        const modulatedFreq = frequency * i * (1 + modulation * Math.sin(warpedTime * modFrequency * 0.1));
+        
+        // Phase calculation with chaotic element
+        const phase = warpedTime * modulatedFreq + chaos * prevSample * feedback * 10;
+        
+        // Different waveforms for richer timbre
+        const sine = Math.sin(phase * Math.PI * 2);
+        const tri = 2 * Math.abs(2 * (phase % 1) - 1) - 1;
+        
+        // Mix waveforms based on chaos parameter
+        const mixed = sine * (1 - chaos) + tri * chaos;
+        
+        // Add harmonic with decreasing amplitude
+        signal += mixed * (1 / i) * (0.7 + 0.3 * Math.sin(warpedTime * 0.25));
+    }
+    
+    // Add feedback with chaotic modulation
+    signal += prevSample * feedback * (1 + chaos * Math.sin(warpedTime * 5));
+    
+    // Apply bit reduction/crushing effect
+    const bitDepth = 2 ** bitcrush;
+    signal = Math.round(signal * bitDepth) / bitDepth;
+    
+    // Soft clipping to prevent harsh distortion
+    signal = Math.tanh(signal * 1.5);
+    
+    return signal;
+}
+</pre>
+        </div>
+        
+        <div class="tab-content" id="about">
+            <h3>What are Audio Shaders?</h3>
+            <p>
+                Audio shaders are inspired by fragment shaders in graphics programming, where each pixel's color is 
+                calculated based on mathematical algorithms. Similarly, audio shaders calculate each sample of audio 
+                based on mathematical functions, time, and various parameters.
+            </p>
+            <p>
+                The concept allows for procedural audio generation where complex sounds emerge from relatively simple formulas.
+                Just as graphical shaders create intricate visual patterns, audio shaders can create rich sonic landscapes.
+            </p>
+            <h3>How This System Works</h3>
+            <p>
+                1. The Web Audio API creates and processes audio in real-time
+            </p>
+            <p>
+                2. A ScriptProcessorNode runs our "shader" function for each audio sample
+            </p>
+            <p>
+                3. The visualization uses Canvas or WebGL to provide visual feedback
+            </p>
+            <p>
+                4. The controls modify parameters that affect both sound and visuals
+            </p>
+            <p>
+                Each parameter influences the sound in different ways:
+            </p>
+            <ul>
+                <li><strong>Frequency</strong> - The fundamental pitch</li>
+                <li><strong>Modulation Depth</strong> - How much the frequency varies</li>
+                <li><strong>Harmonics</strong> - Number of overtones</li>
+                <li><strong>Chaos</strong> - Introduces non-linear behavior</li>
+                <li><strong>Feedback</strong> - Feeds output back into the algorithm</li>
+                <li><strong>Bit Reduction</strong> - Reduces audio resolution for digital artifacts</li>
+            </ul>
+            <p>
+                Advanced implementations could allow custom shader functions to be entered and compiled in real-time,
+                similar to how WebGL shaders work.
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        // Audio context and nodes
+        let audioContext;
+        let scriptNode;
+        let filterNode;
+        let gainNode;
+        let analyserNode;
+        let isPlaying = false;
+        let lastSample = 0;
+        let sampleHistory = new Float32Array(1024);
+        let historyIndex = 0;
+        let startTime = 0;
+        let timeWarp = 1;
+        
+        // Canvas and visualization
+        const canvas = document.getElementById('visualizer');
+        const ctx = canvas.getContext('2d');
+        let canvasWidth, canvasHeight;
+        let currentVisualization = 'waveform';
+        const particles = [];
+        const PARTICLE_COUNT = 200;
+        
+        // Resize canvas
+        function resizeCanvas() {
+            canvasWidth = canvas.width = canvas.offsetWidth;
+            canvasHeight = canvas.height = canvas.offsetHeight;
+            
+            // Recreate particles if visualization is active
+            if (currentVisualization === 'particles') {
+                createParticles();
+            }
+        }
+        
+        // Create particles for particle visualization
+        function createParticles() {
+            particles.length = 0;
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push({
+                    x: Math.random() * canvasWidth,
+                    y: Math.random() * canvasHeight,
+                    size: Math.random() * 5 + 1,
+                    speed: Math.random() * 2 + 0.5,
+                    angle: Math.random() * Math.PI * 2
+                });
+            }
+        }
+        
+        // Initialize audio
+        function initAudio() {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            // Create nodes
+            scriptNode = audioContext.createScriptProcessor(1024, 1, 1);
+            filterNode = audioContext.createBiquadFilter();
+            gainNode = audioContext.createGain();
+            analyserNode = audioContext.createAnalyser();
+            
+            // Configure filter
+            filterNode.type = 'lowpass';
+            filterNode.frequency.value = 2000;
+            filterNode.Q.value = 2;
+            
+            // Connect nodes
+            scriptNode.connect(filterNode);
+            filterNode.connect(gainNode);
+            gainNode.connect(analyserNode);
+            analyserNode.connect(audioContext.destination);
+            
+            // Configure analyser
+            analyserNode.fftSize = 2048;
+            
+            // Audio shader algorithm
+            scriptNode.onaudioprocess = function(audioProcessingEvent) {
+                const outputBuffer = audioProcessingEvent.outputBuffer;
+                const outputData = outputBuffer.getChannelData(0);
+                
+                // Get current parameters
+                const frequency = parseFloat(document.getElementById('frequency').value);
+                const modulation = parseFloat(document.getElementById('modulation').value);
+                const modFrequency = parseFloat(document.getElementById('modFrequency').value);
+                const harmonics = parseInt(document.getElementById('harmonics').value);
+                const chaos = parseFloat(document.getElementById('chaos').value);
+                const feedback = parseFloat(document.getElementById('feedback').value);
+                const bitcrush = parseInt(document.getElementById('bitcrush').value);
+                timeWarp = parseFloat(document.getElementById('time-warp').value);
+                
+                // Update filter parameters
+                filterNode.frequency.value = parseFloat(document.getElementById('filter').value);
+                filterNode.Q.value = parseFloat(document.getElementById('resonance').value);
+                
+                const currentTime = audioContext.currentTime - startTime;
+                
+                // Process each sample
+                for (let i = 0; i < outputData.length; i++) {
+                    const time = currentTime + i / audioContext.sampleRate;
+                    outputData[i] = audioShader(
+                        time, 
+                        audioContext.sampleRate, 
+                        frequency, 
+                        modulation, 
+                        modFrequency, 
+                        harmonics, 
+                        chaos, 
+                        feedback, 
+                        bitcrush, 
+                        lastSample
+                    );
+                    
+                    lastSample = outputData[i];
+                    
+                    // Store sample in history for visualization
+                    sampleHistory[historyIndex] = lastSample;
+                    historyIndex = (historyIndex + 1) % sampleHistory.length;
+                }
+            };
+        }
+        
+        // Audio shader algorithm
+        function audioShader(time, sampleRate, frequency, modulation, modFrequency, harmonics, 
+                           chaos, feedback, bitcrush, prevSample = 0) {
+            // Time warping for non-linear time progression
+            const warpedTime = time * timeWarp;
+            
+            // Base oscillator
+            let signal = 0;
+            
+            // Add harmonics
+            for (let i = 1; i <= harmonics; i++) {
+                // Frequency modulation 
+                const modulatedFreq = frequency * i * (1 + modulation * Math.sin(warpedTime * modFrequency * 0.1));
+                
+                // Phase calculation with chaotic element
+                const phase = warpedTime * modulatedFreq + chaos * prevSample * feedback * 10;
+                
+                // Different waveforms for richer timbre
+                const sine = Math.sin(phase * Math.PI * 2);
+                const tri = 2 * Math.abs(2 * (phase % 1) - 1) - 1;
+                
+                // Mix waveforms based on chaos parameter
+                const mixed = sine * (1 - chaos) + tri * chaos;
+                
+                // Add harmonic with decreasing amplitude
+                signal += mixed * (1 / i) * (0.7 + 0.3 * Math.sin(warpedTime * 0.25));
+            }
+            
+            // Add feedback with chaotic modulation
+            signal += prevSample * feedback * (1 + chaos * Math.sin(warpedTime * 5));
+            
+            // Apply bit reduction/crushing effect
+            const bitDepth = 2 ** bitcrush;
+            signal = Math.round(signal * bitDepth) / bitDepth;
+            
+            // Soft clipping to prevent harsh distortion
+            signal = Math.tanh(signal * 1.5);
+            
+            return signal;
+        }
+        
+        // Start audio
+        function startAudio() {
+            if (!audioContext) {
+                initAudio();
+            }
+            
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            
+            gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
+            
+            const attackTime = parseFloat(document.getElementById('attack').value) / 1000;
+            gainNode.gain.linearRampToValueAtTime(0.7, audioContext.currentTime + attackTime);
+            
+            startTime = audioContext.currentTime;
+            isPlaying = true;
+        }
+        
+        // Stop audio
+        function stopAudio() {
+            if (!audioContext) return;
+            
+            const releaseTime = parseFloat(document.getElementById('release').value) / 1000;
+            
+            gainNode.gain.cancelScheduledValues(audioContext.currentTime);
+            gainNode.gain.setValueAtTime(gainNode.gain.value, audioContext.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0, audioContext.currentTime + releaseTime);
+            
+            setTimeout(() => {
+                if (scriptNode) {
+                    scriptNode.disconnect();
+                }
+                isPlaying = false;
+            }, releaseTime * 1000);
+        }
+        
+        // Visualize waveform
+        function visualizeWaveform() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Set line style
+            ctx.strokeStyle = '#0f0';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            
+            const sliceWidth = canvasWidth / sampleHistory.length;
+            let x = 0;
+            
+            for (let i = 0; i < sampleHistory.length; i++) {
+                const index = (historyIndex + i) % sampleHistory.length;
+                const y = (0.5 + sampleHistory[index] * 0.5) * canvasHeight;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                x += sliceWidth;
+            }
+            
+            ctx.stroke();
+        }
+        
+        // Visualize frequency
+        function visualizeFrequency() {
+            const bufferLength = analyserNode.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyserNode.getByteFrequencyData(dataArray);
+            
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            const barWidth = canvasWidth / bufferLength * 4;
+            let x = 0;
+            
+            for (let i = 0; i < bufferLength; i++) {
+                if (i % 4 === 0) {  // Skip some bars for performance
+                    const barHeight = dataArray[i] / 255 * canvasHeight;
+                    
+                    // Calculate gradient color
+                    const hue = i / bufferLength * 120;
+                    ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
+                    
+                    ctx.fillRect(x, canvasHeight - barHeight, barWidth, barHeight);
+                    
+                    x += barWidth + 1;
+                }
+            }
+        }
+        
+        // Visualize 3D surface
+        function visualize3D() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            const time = audioContext ? audioContext.currentTime - startTime : performance.now() / 1000;
+            const gridSize = 20;
+            const cellWidth = canvasWidth / gridSize;
+            const cellHeight = canvasHeight / gridSize;
+            
+            // Draw 3D grid
+            for (let x = 0; x < gridSize; x++) {
+                for (let y = 0; y < gridSize; y++) {
+                    // Calculate z-value with audio influence
+                    const sampleIndex = Math.floor(((x * gridSize + y) / (gridSize * gridSize)) * sampleHistory.length);
+                    const audioValue = sampleHistory[(historyIndex + sampleIndex) % sampleHistory.length];
+                    
+                    // Surface function
+                    const frequency = parseFloat(document.getElementById('frequency').value);
+                    const chaos = parseFloat(document.getElementById('chaos').value);
+                    
+                    const nx = x / gridSize - 0.5;
+                    const ny = y / gridSize - 0.5;
+                    const z = Math.sin(nx * 5 + time) * Math.cos(ny * 5 + time * 0.5) * 0.5;
+                    
+                    // Apply audio influence
+                    const displacement = z + audioValue * 0.5 * (1 + chaos);
+                    
+                    // Convert to RGB
+                    const r = Math.floor((displacement + 1) * 0.5 * 100);
+                    const g = Math.floor(Math.abs(displacement) * 255);
+                    const b = Math.floor((1 - Math.abs(displacement)) * 100);
+                    
+                    // Draw cell
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    
+                    // Calculate 3D projection
+                    const scale = 50 * (1 + displacement * 0.5);
+                    const offsetX = (displacement * 10) * (nx);
+                    const offsetY = (displacement * 10) * (ny);
+                    
+                    ctx.fillRect(
+                        x * cellWidth + offsetX, 
+                        y * cellHeight + offsetY, 
+                        cellWidth + scale * 0.05, 
+                        cellHeight + scale * 0.05
+                    );
+                }
+            }
+        }
+        
+        // Visualize particles
+        function visualizeParticles() {
+            ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+            
+            // Get audio data for influencing particles
+            const bufferLength = analyserNode.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            analyserNode.getByteFrequencyData(dataArray);
+            
+            // Calculate average amplitude
+            let sum = 0;
+            for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i];
+            }
+            const avgAmplitude = sum / bufferLength / 255;
+            
+            // Draw and update particles
+            particles.forEach((p, index) => {
+                // Get audio bin that corresponds to this particle
+                const binIndex = Math.floor((index / PARTICLE_COUNT) * (bufferLength / 4));
+                const binValue = dataArray[binIndex] / 255;
+                
+                // Update position
+                p.angle += (0.01 + binValue * 0.05);
+                const speed = p.speed * (1 + avgAmplitude * 3);
+                p.x += Math.cos(p.angle) * speed;
+                p.y += Math.sin(p.angle) * speed;
+                
+                // Wrap around screen
+                if (p.x < 0) p.x += canvasWidth;
+                if (p.x > canvasWidth) p.x -= canvasWidth;
+                if (p.y < 0) p.y += canvasHeight;
+                if (p.y > canvasHeight) p.y -= canvasHeight;
+                
+                // Draw particle
+                const hue = (binIndex / (bufferLength / 4)) * 360;
+                ctx.fillStyle = `hsla(${hue}, 100%, ${50 + binValue * 50}%, ${0.3 + binValue * 0.7})`;
+                
+                const size = p.size * (1 + binValue * 3);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Connect nearby particles
+                particles.forEach((p2, j) => {
+                    if (j <= index) return; // Only check each pair once
+                    
+                    const dx = p.x - p2.x;
+                    const dy = p.y - p2.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < 50 + avgAmplitude * 100) {
+                        ctx.strokeStyle = `rgba(0, 255, 0, ${0.1 * (1 - distance / (50 + avgAmplitude * 100))})`;
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(p.x, p.y);
+                        ctx.lineTo(p2.x, p2.y);
+                        ctx.stroke();
+                    }
+                });
+            });
+        }
+        
+        // Render current visualization
+        function render() {
+            if (isPlaying || currentVisualization === '3d' || currentVisualization === 'particles') {
+                switch (currentVisualization) {
+                    case 'waveform':
+                        visualizeWaveform();
+                        break;
+                    case 'frequency':
+                        visualizeFrequency();
+                        break;
+                    case '3d':
+                        visualize3D();
+                        break;
+                    case 'particles':
+                        visualizeParticles();
+                        break;
+                }
+            }
+            
+            requestAnimationFrame(render);
+        }
+        
+        // Initialize
+        function init() {
+            // Set up event listeners
+            document.getElementById('play-button').addEventListener('click', startAudio);
+            document.getElementById('stop-button').addEventListener('click', stopAudio);
+            
+            document.getElementById('visualization-select').addEventListener('change', function() {
+                currentVisualization = this.value;
+                if (currentVisualization === 'particles') {
+                    createParticles();
+                }
+            });
+            
+            // Set up presets
+            document.querySelectorAll('.preset').forEach(button => {
+                button.addEventListener('click', function() {
+                    const preset = this.dataset.preset;
+                    applyPreset(preset);
+                });
+            });
+            
+            // Tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab).classList.add('active');
+                });
+            });
+            
+            // Connect sliders to number inputs
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                const valueInput = document.getElementById(`${slider.id}-value`);
+                
+                slider.addEventListener('input', function() {
+                    valueInput.value = this.value;
+                });
+                
+                valueInput.addEventListener('input', function() {
+                    slider.value = this.value;
+                });
+            });
+            
+            // Set up canvas
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Show basic 3D visualization even when not playing
+            if (!isPlaying && currentVisualization === '3d') {
+                createParticles();
+            }
+            
+            // Start animation loop
+            render();
+        }
+        
+        // Presets
+        function applyPreset(preset) {
+            switch (preset) {
+                case 'harmonic':
+                    // Beautiful harmonic sound
+                    document.getElementById('frequency').value = 220;
+                    document.getElementById('modulation').value = 0.1;
+                    document.getElementById('modFrequency').value = 2.5;
+                    document.getElementById('harmonics').value = 5;
+                    document.getElementById('chaos').value = 0.05;
+                    document.getElementById('feedback').value = 0.1;
+                    document.getElementById('bitcrush').value = 16;
+                    document.getElementById('filter').value = 5000;
+                    document.getElementById('resonance').value = 1;
+                    document.getElementById('time-warp').value = 1;
+                    break;
+                    
+                case 'chaotic':
+                    // Chaotic noisy sound
+                    document.getElementById('frequency').value = 85;
+                    document.getElementById('modulation').value = 0.8;
+                    document.getElementById('modFrequency').value = 12;
+                    document.getElementById('harmonics').value = 10;
+                    document.getElementById('chaos').value = 0.9;
+                    document.getElementById('feedback').value = 0.85;
+                    document.getElementById('bitcrush').value = 4;
+                    document.getElementById('filter').value = 8000;
+                    document.getElementById('resonance').value = 10;
+                    document.getElementById('time-warp').value = 1.5;
+                    break;
+                    
+                case 'drone':
+                    // Ambient drone
+                    document.getElementById('frequency').value = 55;
+                    document.getElementById('modulation').value = 0.2;
+                    document.getElementById('modFrequency').value = 0.5;
+                    document.getElementById('harmonics').value = 8;
+                    document.getElementById('chaos').value = 0.15;
+                    document.getElementById('feedback').value = 0.4;
+                    document.getElementById('bitcrush').value = 12;
+                    document.getElementById('filter').value = 1200;
+                    document.getElementById('resonance').value = 3;
+                    document.getElementById('time-warp').value = 0.5;
+                    break;
+                    
+                case 'glitch':
+                    // Digital glitch sound
+                    document.getElementById('frequency').value = 120;
+                    document.getElementById('modulation').value = 0.4;
+                    document.getElementById('modFrequency').value = 8;
+                    document.getElementById('harmonics').value = 3;
+                    document.getElementById('chaos').value = 0.6;
+                    document.getElementById('feedback').value = 0.7;
+                    document.getElementById('bitcrush').value = 3;
+                    document.getElementById('filter').value = 10000;
+                    document.getElementById('resonance').value = 5;
+                    document.getElementById('time-warp').value = 1.2;
+                    break;
+                    
+                case 'evolving':
+                    // Evolving texture
+                    document.getElementById('frequency').value = 145;
+                    document.getElementById('modulation').value = 0.35;
+                    document.getElementById('modFrequency').value = 0.8;
+                    document.getElementById('harmonics').value = 7;
+                    document.getElementById('chaos').value = 0.3;
+                    document.getElementById('feedback').value = 0.5;
+                    document.getElementById('bitcrush').value = 10;
+                    document.getElementById('filter').value = 3000;
+                    document.getElementById('resonance').value = 4;
+                    document.getElementById('time-warp').value = 0.8;
+                    break;
+            }
+            
+            // Update all value displays
+            document.querySelectorAll('input[type="range"]').forEach(slider => {
+                const valueInput = document.getElementById(`${slider.id}-value`);
+                valueInput.value = slider.value;
+            });
+        }
+        
+        // Initialize on page load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
