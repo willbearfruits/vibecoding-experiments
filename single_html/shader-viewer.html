@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Shader Viewer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: white;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .editor {
+            width: 40%;
+            padding: 10px;
+            background-color: #333;
+            display: flex;
+            flex-direction: column;
+        }
+        .render-view {
+            width: 60%;
+            overflow: hidden;
+            position: relative;
+        }
+        #canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        textarea {
+            flex: 1;
+            background-color: #222;
+            color: #eee;
+            border: 1px solid #555;
+            font-family: monospace;
+            font-size: 14px;
+            padding: 10px;
+            resize: none;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: #ff6666;
+            padding: 10px;
+            background-color: rgba(50, 0, 0, 0.2);
+            margin-top: 10px;
+            font-family: monospace;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .controls {
+            margin-top: 10px;
+        }
+        .fps-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="editor">
+            <h2>Fragment Shader</h2>
+            <textarea id="fragment-shader">
+precision mediump float;
+
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+
+void main() {
+    // Get normalized coordinates
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 uv = st * 2.0 - 1.0;
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    // Mouse influence on tunnel direction
+    vec2 mouse = u_mouse / u_resolution.xy * 2.0 - 1.0;
+    mouse.x *= u_resolution.x / u_resolution.y;
+    
+    // Subtle mouse influence (not too strong)
+    vec2 p = uv + mouse * 0.3;
+    
+    // Tunnel effect - polar coordinates
+    float radius = length(p);
+    float angle = atan(p.y, p.x);
+    
+    // Create the tunnel effect
+    float brightness = 1.0 / (radius * 2.5); // Inverse radius for tunnel effect
+    
+    // Add animation - moving along the tunnel
+    float tunnelSpeed = u_time * 0.5;
+    
+    // Create alternating rings with noise
+    float rings = sin(radius * 10.0 - tunnelSpeed * 3.0) * 0.5 + 0.5;
+    float twists = sin(angle * 5.0 + tunnelSpeed) * 0.5 + 0.5;
+    
+    // Mix the effects
+    float pattern = mix(rings, twists, 0.5);
+    
+    // Create color based on position in tunnel and time
+    vec3 color = vec3(
+        brightness * (sin(angle * 3.0 + u_time) * 0.5 + 0.5),
+        brightness * (cos(radius * 10.0 - u_time * 2.0) * 0.5 + 0.5),
+        brightness * (sin(radius * 8.0 + angle * 2.0 - u_time * 3.0) * 0.5 + 0.5)
+    );
+    
+    // Adjust with the pattern
+    color *= pattern * 1.5;
+    color = pow(color, vec3(0.8)); // Adjust gamma for better brightness
+    
+    gl_FragColor = vec4(color, 1.0);
+}
+            </textarea>
+            <button id="run-shader">Run Shader</button>
+            <div class="controls">
+                <button id="save-shader">Save Shader</button>
+                <button id="example1">Example 1: Circles</button>
+                <button id="example2">Example 2: Plasma</button>
+            </div>
+            <div id="error" class="error"></div>
+        </div>
+        <div class="render-view">
+            <canvas id="canvas"></canvas>
+            <div class="fps-counter">FPS: <span id="fps">0</span></div>
+        </div>
+    </div>
+
+    <script>
+        // WebGL shader setup
+        const canvas = document.getElementById('canvas');
+        const gl = canvas.getContext('webgl');
+        
+        if (!gl) {
+            alert('WebGL not supported in your browser');
+        }
+        
+        // Set canvas dimensions
+        function resizeCanvas() {
+            const renderView = document.querySelector('.render-view');
+            canvas.width = renderView.clientWidth;
+            canvas.height = renderView.clientHeight;
+            gl.viewport(0, 0, canvas.width, canvas.height);
+        }
+        
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        // Create shader program
+        let shaderProgram;
+        let errorDisplay = document.getElementById('error');
+        
+        // Vertex shader source - static for all examples
+        const vsSource = `
+            attribute vec4 aVertexPosition;
+            void main() {
+                gl_Position = aVertexPosition;
+            }
+        `;
+        
+        function createShader(type, source) {
+            const shader = gl.createShader(type);
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                const error = gl.getShaderInfoLog(shader);
+                gl.deleteShader(shader);
+                throw error;
+            }
+            
+            return shader;
+        }
+        
+        function createShaderProgram(vsSource, fsSource) {
+            try {
+                const vertexShader = createShader(gl.VERTEX_SHADER, vsSource);
+                const fragmentShader = createShader(gl.FRAGMENT_SHADER, fsSource);
+                
+                const program = gl.createProgram();
+                gl.attachShader(program, vertexShader);
+                gl.attachShader(program, fragmentShader);
+                gl.linkProgram(program);
+                
+                if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                    const error = gl.getProgramInfoLog(program);
+                    gl.deleteProgram(program);
+                    throw error;
+                }
+                
+                errorDisplay.textContent = '';
+                return program;
+            } catch (error) {
+                errorDisplay.textContent = error;
+                return null;
+            }
+        }
+        
+        // Setup a full-screen quad
+        function initBuffers() {
+            const positionBuffer = gl.createBuffer();
+            gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+            
+            const positions = [
+                1.0,  1.0,
+               -1.0,  1.0,
+                1.0, -1.0,
+               -1.0, -1.0,
+            ];
+            
+            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
+            
+            return {
+                position: positionBuffer,
+            };
+        }
+        
+        // Uniforms and attributes
+        let uniformLocations = {};
+        let attributeLocations = {};
+        
+        function getLocations(program) {
+            uniformLocations = {
+                time: gl.getUniformLocation(program, 'u_time'),
+                resolution: gl.getUniformLocation(program, 'u_resolution'),
+                mouse: gl.getUniformLocation(program, 'u_mouse'),
+            };
+            
+            attributeLocations = {
+                vertexPosition: gl.getAttribLocation(program, 'aVertexPosition'),
+            };
+        }
+        
+        // Mouse tracking
+        let mouseX = 0;
+        let mouseY = 0;
+        
+        canvas.addEventListener('mousemove', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            mouseX = event.clientX - rect.left;
+            mouseY = canvas.height - (event.clientY - rect.top); // Flip Y to match WebGL coords
+        });
+        
+        // FPS counter
+        let frameCount = 0;
+        let lastTime = 0;
+        let fps = 0;
+        
+        function updateFPS(now) {
+            frameCount++;
+            
+            if (now - lastTime >= 1000) {
+                fps = frameCount;
+                document.getElementById('fps').textContent = fps;
+                frameCount = 0;
+                lastTime = now;
+            }
+        }
+        
+        // Main render function
+        function render(now) {
+            now *= 0.001; // Convert to seconds
+            updateFPS(now * 1000);
+            
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+            
+            if (!shaderProgram) {
+                requestAnimationFrame(render);
+                return;
+            }
+            
+            gl.useProgram(shaderProgram);
+            
+            // Update uniforms
+            gl.uniform1f(uniformLocations.time, now);
+            gl.uniform2f(uniformLocations.resolution, canvas.width, canvas.height);
+            gl.uniform2f(uniformLocations.mouse, mouseX, mouseY);
+            
+            const buffers = initBuffers();
+            
+            // Set vertex attribute
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffers.position);
+            gl.vertexAttribPointer(
+                attributeLocations.vertexPosition,
+                2,        // num components
+                gl.FLOAT, // type
+                false,    // normalize
+                0,        // stride
+                0         // offset
+            );
+            gl.enableVertexAttribArray(attributeLocations.vertexPosition);
+            
+            // Draw
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+            
+            requestAnimationFrame(render);
+        }
+        
+        // Initialize and run shader
+        function initShader() {
+            const fragmentShaderSource = document.getElementById('fragment-shader').value;
+            shaderProgram = createShaderProgram(vsSource, fragmentShaderSource);
+            
+            if (shaderProgram) {
+                getLocations(shaderProgram);
+            }
+        }
+        
+        // Button event listeners
+        document.getElementById('run-shader').addEventListener('click', initShader);
+        
+        document.getElementById('save-shader').addEventListener('click', () => {
+            const shaderCode = document.getElementById('fragment-shader').value;
+            const blob = new Blob([shaderCode], {type: 'text/plain'});
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'shader.frag';
+            a.click();
+        });
+        
+        // Example shaders
+        document.getElementById('example1').addEventListener('click', () => {
+            document.getElementById('fragment-shader').value = `precision mediump float;
+
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+
+void main() {
+    // Optical illusion spiral tunnel
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 uv = (st * 2.0 - 1.0);
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    // Polar coordinates
+    float radius = length(uv);
+    float angle = atan(uv.y, uv.x);
+    
+    // Mouse influence on spiral center
+    vec2 mouse = u_mouse / u_resolution.xy * 2.0 - 1.0;
+    mouse.x *= u_resolution.x / u_resolution.y;
+    float mouseDist = length(uv - mouse * 0.5);
+    
+    // Create spiral effect
+    float spiral = angle / 3.14159 + radius * 5.0 - u_time * 0.5;
+    spiral = fract(spiral);
+    
+    // Add depth with concentric rings
+    float rings = sin(radius * 20.0 - u_time) * 0.5 + 0.5;
+    
+    // Combine effects
+    float pattern = smoothstep(0.3, 0.7, spiral) * rings;
+    pattern = mix(pattern, 1.0 - pattern, smoothstep(0.4, 0.6, mouseDist));
+    
+    // Create psychedelic colors
+    vec3 color = vec3(
+        sin(u_time + uv.x * 2.0) * 0.5 + 0.5,
+        cos(u_time * 0.7 + radius * 5.0) * 0.5 + 0.5,
+        sin(angle * 3.0 + u_time * 0.5) * 0.5 + 0.5
+    );
+    
+    // Apply pattern
+    color = mix(color, vec3(1.0 - radius), pattern);
+    
+    gl_FragColor = vec4(color, 1.0);
+}`;
+            initShader();
+        });
+        
+        document.getElementById('example2').addEventListener('click', () => {
+            document.getElementById('fragment-shader').value = `precision mediump float;
+
+uniform float u_time;
+uniform vec2 u_resolution;
+uniform vec2 u_mouse;
+
+#define PI 3.14159265359
+
+// Warp tunnel effect
+void main() {
+    vec2 st = gl_FragCoord.xy / u_resolution.xy;
+    vec2 uv = (st * 2.0 - 1.0);
+    uv.x *= u_resolution.x / u_resolution.y;
+    
+    // Mouse influences warp direction
+    vec2 mouse = u_mouse / u_resolution.xy * 2.0 - 1.0;
+    mouse.x *= u_resolution.x / u_resolution.y;
+    
+    // Create a warping effect using the mouse
+    float warpTime = u_time * 0.8;
+    float warpStrength = 2.0 + sin(warpTime) * 0.5;
+    
+    // Warp the coordinates
+    float angle = atan(uv.y, uv.x);
+    float radius = length(uv);
+    
+    // Add distortion based on mouse position
+    float mouseInfluence = 0.1 / (0.1 + length(uv - mouse * 0.3));
+    radius += mouseInfluence * sin(angle * 6.0 + warpTime * 2.0) * 0.1;
+    
+    // Zoom in/out effect
+    float zoom = 0.5 + 0.3 * sin(warpTime * 0.5);
+    
+    // Map to transformed coordinates
+    vec2 polar = vec2(
+        radius * cos(angle + radius * warpStrength) * zoom,
+        radius * sin(angle + radius * warpStrength) * zoom
+    );
+    
+    // Create tunnel layers
+    float layer1 = fract(radius * 5.0 - warpTime);
+    float layer2 = fract(angle * 3.0 / PI + warpTime * 0.25);
+    float layer3 = fract(radius * 7.0 + angle * 2.0 / PI - warpTime * 0.5);
+    
+    // Mix layers
+    float pattern = mix(layer1, layer2, 0.5);
+    pattern = mix(pattern, layer3, 0.3);
+    
+    // Create tunnel color
+    vec3 color = mix(
+        vec3(0.1, 0.5, 0.9),
+        vec3(0.9, 0.2, 0.5),
+        pattern
+    );
+    
+    // Add glow at the center
+    color += 0.1 / (radius * 10.0 + 0.1);
+    
+    // Add edge highlights
+    color += smoothstep(0.3, 0.31, pattern) * 0.5;
+    
+    gl_FragColor = vec4(color, 1.0);
+}`;
+            initShader();
+        });
+        
+        // Start with the default shader
+        initShader();
+        requestAnimationFrame(render);
+    </script>
+</body>
+</html>
