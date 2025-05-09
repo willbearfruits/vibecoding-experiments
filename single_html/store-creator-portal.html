@@ -1,0 +1,2380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEVELA | KillAllUnicorns Store</title>
+    <style>
+        /* Base styles */
+        :root {
+            --primary: #ff2a6d;
+            --secondary: #05d9e8;
+            --dark: #121212;
+            --light: #d1d7e0;
+            --accent: #ff5c00;
+            --glitch: #01c5c4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Courier New', monospace;
+        }
+
+        body {
+            background-color: var(--dark);
+            color: var(--light);
+            overflow-x: hidden;
+            font-size: 16px;
+        }
+
+        /* Glitch effect */
+        .glitch-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .glitch {
+            position: relative;
+            font-weight: bold;
+            font-size: 2.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: var(--primary);
+            animation: glitch-skew 1s infinite linear alternate-reverse;
+        }
+
+        .glitch::before,
+        .glitch::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch::before {
+            color: var(--secondary);
+            animation: glitch-anim 5s infinite linear alternate-reverse;
+            clip-path: polygon(0 0, 100% 0, 100% 33%, 0 33%);
+            transform: translate(-0.04em, -0.03em);
+        }
+
+        .glitch::after {
+            color: var(--accent);
+            animation: glitch-anim2 1s infinite linear alternate-reverse;
+            clip-path: polygon(0 67%, 100% 67%, 100% 100%, 0 100%);
+            transform: translate(0.04em, 0.03em);
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                clip-path: polygon(0 3%, 100% 3%, 100% 5%, 0 5%);
+                transform: translate(0);
+            }
+            10% {
+                clip-path: polygon(0 10%, 100% 10%, 100% 20%, 0 20%);
+                transform: translate(-1px, 1px);
+            }
+            20% {
+                clip-path: polygon(0 15%, 100% 15%, 100% 25%, 0 25%);
+                transform: translate(1px, 0);
+            }
+            30% {
+                clip-path: polygon(0 40%, 100% 40%, 100% 45%, 0 45%);
+                transform: translate(1px, 1px);
+            }
+            40% {
+                clip-path: polygon(0 50%, 100% 50%, 100% 55%, 0 55%);
+                transform: translate(1px, -1px);
+            }
+            50% {
+                clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%);
+                transform: translate(-1px, 1px);
+            }
+            60% {
+                clip-path: polygon(0 70%, 100% 70%, 100% 75%, 0 75%);
+                transform: translate(1px, -1px);
+            }
+            70% {
+                clip-path: polygon(0 80%, 100% 80%, 100% 85%, 0 85%);
+                transform: translate(1px, 1px);
+            }
+            80% {
+                clip-path: polygon(0 90%, 100% 90%, 100% 95%, 0 95%);
+                transform: translate(-1px, 1px);
+            }
+            90% {
+                clip-path: polygon(0 96%, 100% 96%, 100% 99%, 0 99%);
+                transform: translate(-1px, -1px);
+            }
+            100% {
+                clip-path: polygon(0 3%, 100% 3%, 100% 5%, 0 5%);
+                transform: translate(0);
+            }
+        }
+
+        @keyframes glitch-anim2 {
+            0% {
+                clip-path: polygon(0 40%, 100% 40%, 100% 45%, 0 45%);
+                transform: translate(-1px, 1px);
+            }
+            50% {
+                clip-path: polygon(0 90%, 100% 90%, 100% 95%, 0 95%);
+                transform: translate(1px, 0);
+            }
+            100% {
+                clip-path: polygon(0 60%, 100% 60%, 100% 65%, 0 65%);
+                transform: translate(0);
+            }
+        }
+
+        @keyframes glitch-skew {
+            0% {
+                transform: skew(0deg);
+            }
+            20% {
+                transform: skew(0.5deg);
+            }
+            40% {
+                transform: skew(0deg);
+            }
+            60% {
+                transform: skew(-0.5deg);
+            }
+            80% {
+                transform: skew(0.25deg);
+            }
+            100% {
+                transform: skew(0deg);
+            }
+        }
+
+        /* Grid layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            padding: 20px;
+        }
+
+        /* Navigation */
+        nav {
+            background-color: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(5px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            gap: 20px;
+        }
+
+        nav a {
+            color: var(--light);
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: var(--primary);
+            text-shadow: 0 0 8px var(--primary);
+        }
+
+        /* Header */
+        header {
+            padding: 80px 20px;
+            text-align: center;
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.9)), url('https://source.unsplash.com/random/1600x900/?circuit,noise,glitch') no-repeat center center;
+            background-size: cover;
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(0, 0, 0, 0.1),
+                rgba(0, 0, 0, 0.1) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        header h1 {
+            margin-bottom: 20px;
+            font-size: 3rem;
+            letter-spacing: 5px;
+            color: var(--light);
+        }
+
+        header p {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            font-size: 1.2rem;
+            line-height: 1.6;
+        }
+
+        /* Buttons */
+        .btn {
+            background-color: transparent;
+            color: var(--light);
+            border: 2px solid var(--primary);
+            padding: 10px 25px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+            margin: 10px;
+            text-decoration: none;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: var(--primary);
+            top: 0;
+            left: -100%;
+            transition: all 0.3s;
+            z-index: -1;
+        }
+
+        .btn:hover {
+            color: var(--dark);
+        }
+
+        .btn:hover::before {
+            left: 0;
+        }
+
+        /* Product cards */
+        .product-card {
+            background-color: rgba(18, 18, 18, 0.8);
+            border: 1px solid var(--secondary);
+            border-radius: 5px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(5, 217, 232, 0.2);
+        }
+
+        .product-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
+        }
+
+        .product-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 3px;
+            margin-bottom: 15px;
+        }
+
+        .product-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: var(--primary);
+        }
+
+        .product-card .price {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--secondary);
+            margin: 10px 0;
+        }
+
+        .product-card .description {
+            flex-grow: 1;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .product-card .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .product-card .tag {
+            background-color: rgba(255, 42, 109, 0.2);
+            color: var(--primary);
+            font-size: 0.7rem;
+            padding: 3px 8px;
+            border-radius: 3px;
+        }
+
+        /* Sections */
+        section {
+            padding: 60px 20px;
+            position: relative;
+        }
+
+        section h2 {
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 40px;
+            letter-spacing: 3px;
+            color: var(--secondary);
+            text-transform: uppercase;
+        }
+
+        .section-intro {
+            max-width: 800px;
+            margin: 0 auto 40px;
+            text-align: center;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+
+        /* Category sections */
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .category-header .view-all {
+            color: var(--secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: color 0.3s;
+        }
+
+        .category-header .view-all:hover {
+            color: var(--primary);
+        }
+
+        /* Diagonal section dividers */
+        .diagonal-divider {
+            position: relative;
+            height: 150px;
+            margin-top: -75px;
+            margin-bottom: -75px;
+            z-index: 1;
+        }
+
+        .diagonal-divider::after {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: var(--dark);
+            transform: skewY(-3deg);
+            z-index: -1;
+        }
+
+        .even-section {
+            background-color: rgba(24, 24, 30, 1);
+        }
+
+        /* Blinking cursor */
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.2em;
+            background-color: var(--light);
+            margin-left: 5px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        /* Newsletter form */
+        .newsletter {
+            max-width: 500px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .newsletter input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--secondary);
+            color: var(--light);
+            font-size: 1rem;
+        }
+
+        .newsletter input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Footer */
+        footer {
+            background-color: rgba(0, 0, 0, 0.9);
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .footer-nav {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .footer-nav a {
+            color: var(--light);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .footer-nav a:hover {
+            color: var(--primary);
+        }
+
+        .social-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .social-links a {
+            color: var(--light);
+            font-size: 1.5rem;
+            transition: color 0.3s;
+        }
+
+        .social-links a:hover {
+            color: var(--primary);
+        }
+
+        .copyright {
+            font-size: 0.8rem;
+            color: rgba(209, 215, 224, 0.6);
+        }
+
+        /* Editor styles */
+        #editor-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            transition: right 0.4s;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #editor-panel.visible {
+            right: 0;
+        }
+
+        #editor-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background-color: var(--primary);
+            color: var(--dark);
+            width: 50px;
+            height: 50px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            transition: background-color 0.3s;
+        }
+
+        #editor-toggle:hover {
+            background-color: var(--secondary);
+        }
+
+        .editor-header {
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .editor-header h2 {
+            color: var(--secondary);
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .editor-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .editor-tab {
+            padding: 8px 15px;
+            background-color: rgba(255,255,255,0.1);
+            border: none;
+            color: var(--light);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .editor-tab.active {
+            background-color: var(--primary);
+            color: var(--dark);
+        }
+
+        .editor-content {
+            padding: 20px;
+            flex-grow: 1;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .editor-form-group {
+            margin-bottom: 20px;
+        }
+
+        .editor-form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: var(--secondary);
+        }
+
+        .editor-form-group input,
+        .editor-form-group textarea,
+        .editor-form-group select {
+            width: 100%;
+            padding: 10px;
+            background-color: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--light);
+            font-size: 0.9rem;
+        }
+
+        .editor-form-group input:focus,
+        .editor-form-group textarea:focus,
+        .editor-form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .editor-form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .editor-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .editor-btn {
+            padding: 8px 15px;
+            background-color: var(--primary);
+            color: var(--dark);
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .editor-btn.cancel {
+            background-color: rgba(255,255,255,0.1);
+            color: var(--light);
+        }
+
+        .editor-btn:hover {
+            background-color: var(--secondary);
+        }
+
+        .product-list {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .product-list-item {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .product-list-item:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .product-list-item.selected {
+            background-color: rgba(255, 42, 109, 0.2);
+        }
+
+        /* Editable elements */
+        [contenteditable] {
+            outline: none;
+            padding: 5px;
+            transition: background-color 0.3s;
+        }
+
+        [contenteditable]:hover {
+            background-color: rgba(255, 42, 109, 0.1);
+        }
+
+        [contenteditable]:focus {
+            background-color: rgba(5, 217, 232, 0.1);
+        }
+
+        .media-upload {
+            margin-top: 10px;
+        }
+
+        .media-preview {
+            margin-top: 10px;
+            max-width: 100%;
+            max-height: 200px;
+        }
+
+        /* Code editor */
+        .code-editor {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .code-editor textarea {
+            width: 100%;
+            min-height: 200px;
+            background-color: rgba(0,0,0,0.3);
+            color: var(--light);
+            font-family: monospace;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            resize: vertical;
+        }
+
+        /* Media modal */
+        #media-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            z-index: 2000;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            max-width: 800px;
+            margin: 40px auto;
+            background-color: var(--dark);
+            padding: 20px;
+            border: 1px solid var(--secondary);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.5rem;
+            background: none;
+            border: none;
+            color: var(--light);
+            cursor: pointer;
+        }
+
+        .media-library {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .media-item {
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 5px;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .media-item:hover {
+            transform: scale(1.05);
+            border-color: var(--primary);
+        }
+
+        .media-item img,
+        .media-item video,
+        .media-item audio {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--secondary);
+            color: var(--dark);
+            padding: 10px 20px;
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 2000;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+
+        .toast.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Category styles */
+        .category-section {
+            margin-bottom: 60px;
+        }
+
+        /* Theme switcher */
+        .theme-switcher {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .theme-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+
+        .theme-option:hover {
+            transform: scale(1.1);
+        }
+
+        .theme-option.active {
+            border: 2px solid var(--light);
+        }
+
+        /* Progress bar */
+        .progress-bar {
+            height: 4px;
+            background-color: var(--primary);
+            width: 0%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1001;
+            transition: width 0.3s;
+        }
+
+        /* Audio player */
+        .audio-player {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            nav ul {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            header h1 {
+                font-size: 2rem;
+            }
+
+            #editor-panel {
+                width: 100%;
+                right: -100%;
+            }
+
+            .grid-container {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress bar -->
+    <div class="progress-bar"></div>
+
+    <!-- Editor toggle button -->
+    <button id="editor-toggle">✎</button>
+
+    <!-- Editor panel -->
+    <div id="editor-panel">
+        <div class="editor-header">
+            <h2>Creator Portal</h2>
+            <div class="editor-tabs">
+                <button class="editor-tab active" data-tab="products">Products</button>
+                <button class="editor-tab" data-tab="media">Media</button>
+                <button class="editor-tab" data-tab="layout">Layout</button>
+                <button class="editor-tab" data-tab="code">Code</button>
+                <button class="editor-tab" data-tab="themes">Themes</button>
+            </div>
+        </div>
+        <div class="editor-content">
+            <!-- Products tab -->
+            <div class="tab-content active" data-tab-content="products">
+                <div class="product-list">
+                    <!-- Product list will be populated by JavaScript -->
+                </div>
+                <div class="editor-form-group">
+                    <label for="product-name">Product Name</label>
+                    <input type="text" id="product-name">
+                </div>
+                <div class="editor-form-group">
+                    <label for="product-price">Price</label>
+                    <input type="text" id="product-price">
+                </div>
+                <div class="editor-form-group">
+                    <label for="product-category">Category</label>
+                    <select id="product-category">
+                        <option value="pcb">PCBs</option>
+                        <option value="pedal">Pedals</option>
+                        <option value="synth">Synthesizers</option>
+                        <option value="digital">Digital</option>
+                        <option value="kit">Kits & Boards</option>
+                        <option value="art">Artwork</option>
+                        <option value="misc">Miscellaneous</option>
+                    </select>
+                </div>
+                <div class="editor-form-group">
+                    <label for="product-image">Image URL</label>
+                    <input type="text" id="product-image">
+                    <button class="editor-btn media-upload" id="select-product-image">Select Image</button>
+                    <img class="media-preview" id="product-image-preview" style="display: none;">
+                </div>
+                <div class="editor-form-group">
+                    <label for="product-description">Description</label>
+                    <textarea id="product-description"></textarea>
+                </div>
+                <div class="editor-form-group">
+                    <label for="product-tags">Tags (comma separated)</label>
+                    <input type="text" id="product-tags">
+                </div>
+                <div class="editor-buttons">
+                    <button class="editor-btn" id="save-product">Save</button>
+                    <button class="editor-btn" id="new-product">New</button>
+                    <button class="editor-btn" id="delete-product">Delete</button>
+                </div>
+            </div>
+
+            <!-- Media tab -->
+            <div class="tab-content" data-tab-content="media">
+                <div class="editor-form-group">
+                    <label for="media-upload">Upload Media</label>
+                    <input type="file" id="media-upload" multiple>
+                </div>
+                <div class="editor-form-group">
+                    <label>Media Library</label>
+                    <div class="media-library">
+                        <!-- Media items will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="editor-form-group">
+                    <label for="embed-code">Embed Code</label>
+                    <textarea id="embed-code"></textarea>
+                </div>
+                <div class="editor-buttons">
+                    <button class="editor-btn" id="insert-embed">Insert Embed</button>
+                </div>
+            </div>
+
+            <!-- Layout tab -->
+            <div class="tab-content" data-tab-content="layout">
+                <div class="editor-form-group">
+                    <label>Header Content</label>
+                    <textarea id="header-content"></textarea>
+                </div>
+                <div class="editor-form-group">
+                    <label>Footer Content</label>
+                    <textarea id="footer-content"></textarea>
+                </div>
+                <div class="editor-form-group">
+                    <label>Section Order</label>
+                    <div id="section-order" class="product-list">
+                        <!-- Section list will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="editor-buttons">
+                    <button class="editor-btn" id="save-layout">Save Layout</button>
+                </div>
+            </div>
+
+            <!-- Code tab -->
+            <div class="tab-content" data-tab-content="code">
+                <div class="editor-form-group">
+                    <label for="code-name">Code Snippet Name</label>
+                    <input type="text" id="code-name">
+                </div>
+                <div class="editor-form-group">
+                    <label for="code-language">Language</label>
+                    <select id="code-language">
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="cpp">C++</option>
+                    </select>
+                </div>
+                <div class="editor-form-group">
+                    <label for="code-content">Code</label>
+                    <div class="code-editor">
+                        <textarea id="code-content"></textarea>
+                    </div>
+                </div>
+                <div class="editor-buttons">
+                    <button class="editor-btn" id="save-code">Save Code</button>
+                    <button class="editor-btn" id="insert-code">Insert to Product</button>
+                </div>
+            </div>
+
+            <!-- Themes tab -->
+            <div class="tab-content" data-tab-content="themes">
+                <div class="editor-form-group">
+                    <label>Theme Colors</label>
+                    <div class="theme-switcher">
+                        <div class="theme-option active" style="background: linear-gradient(to bottom right, #ff2a6d, #05d9e8, #ff5c00);" data-theme="default"></div>
+                        <div class="theme-option" style="background: linear-gradient(to bottom right, #00ff66, #0066ff, #9900ff);" data-theme="cyber"></div>
+                        <div class="theme-option" style="background: linear-gradient(to bottom right, #ffcc00, #ff3300, #660066);" data-theme="retro"></div>
+                        <div class="theme-option" style="background: linear-gradient(to bottom right, #cccccc, #666666, #333333);" data-theme="mono"></div>
+                    </div>
+                </div>
+                <div class="editor-form-group">
+                    <label for="custom-css">Custom CSS</label>
+                    <textarea id="custom-css"></textarea>
+                </div>
+                <div class="editor-buttons">
+                    <button class="editor-btn" id="apply-theme">Apply Theme</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Media Modal -->
+    <div id="media-modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2>Media Library</h2>
+            <div class="media-library-modal">
+                <!-- Media items will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">
+            <div class="glitch-container">
+                <div class="glitch" data-text="NEVELA">NEVELA</div>
+            </div>
+        </div>
+        <ul>
+            <li><a href="#pcbs">PCBs</a></li>
+            <li><a href="#pedals">Pedals</a></li>
+            <li><a href="#synths">Synthesizers</a></li>
+            <li><a href="#digital">Digital</a></li>
+            <li><a href="#kits">Kits & Boards</a></li>
+            <li><a href="#art">Artwork</a></li>
+            <li><a href="#about">About</a></li>
+        </ul>
+    </nav>
+
+    <!-- Header -->
+    <header>
+        <h1 contenteditable="true">RESURRECTION ELECTRONICS</h1>
+        <p contenteditable="true">Breathing life into dead technology. Custom-built instruments, DIY kits, and experimental sound devices born from the remains of our digital world.</p>
+        <a href="#shop" class="btn">EXPLORE THE VOID</a>
+    </header>
+
+    <!-- PCBs Section -->
+    <section id="pcbs">
+        <h2 contenteditable="true">PCBs & CIRCUITS</h2>
+        <p class="section-intro" contenteditable="true">Raw electronic nervous systems waiting to be brought to life. These circuit boards are the foundation for your sonic experimentation - from simple noise makers to complex modular systems.</p>
+        <div class="grid-container">
+            <div class="product-card" data-id="pcb1">
+                <img src="https://source.unsplash.com/random/600x400/?circuit,pcb" alt="Ouroboros Feedback Generator">
+                <h3 contenteditable="true">Ouroboros Feedback Generator</h3>
+                <div class="description" contenteditable="true">A self-eating snake of sound. This PCB creates endless feedback loops that evolve over time, producing hypnotic drones and chaotic noise bursts. Perfect for drone music or as a processing module in a larger system.</div>
+                <div class="tags">
+                    <span class="tag">Noise</span>
+                    <span class="tag">Drone</span>
+                    <span class="tag">DIY</span>
+                </div>
+                <div class="price" contenteditable="true">$35</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="pcb2">
+                <img src="https://source.unsplash.com/random/600x400/?electronics,circuit" alt="Yormungandr Multi-Filter">
+                <h3 contenteditable="true">Yormungandr Multi-Filter</h3>
+                <div class="description" contenteditable="true">Named after the world-serpent of Norse mythology, this filter board wraps around your sound and squeezes it into new forms. Features 4 filter types with CV control inputs and self-oscillation capability.</div>
+                <div class="tags">
+                    <span class="tag">Filter</span>
+                    <span class="tag">Modular</span>
+                    <span class="tag">CV</span>
+                </div>
+                <div class="price" contenteditable="true">$48</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="pcb3">
+                <img src="https://source.unsplash.com/random/600x400/?electronics,board" alt="Cadavre Oscillator">
+                <h3 contenteditable="true">Cadavre Oscillator</h3>
+                <div class="description" contenteditable="true">The core of any synthesizer - reanimated. This voltage-controlled oscillator produces triangle, saw, and square waves with unique wavefolding capabilities that give it a distinct undead character. Includes 1V/oct tracking.</div>
+                <div class="tags">
+                    <span class="tag">VCO</span>
+                    <span class="tag">Synth</span>
+                    <span class="tag">Analog</span>
+                </div>
+                <div class="price" contenteditable="true">$42</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="diagonal-divider"></div>
+
+    <!-- Pedals Section -->
+    <section id="pedals" class="even-section">
+        <h2 contenteditable="true">PEDALS & EFFECTS</h2>
+        <p class="section-intro" contenteditable="true">Sound manipulators that transform ordinary signals into extraordinary noise. These pedals don't just process your sound - they mutate it into something entirely new.</p>
+        <div class="grid-container">
+            <div class="product-card" data-id="pedal1">
+                <img src="https://source.unsplash.com/random/600x400/?pedal,effect" alt="Havilio Doom Drone">
+                <h3 contenteditable="true">Havilio Doom Drone</h3>
+                <div class="description" contenteditable="true">Summon endless walls of distorted doom with this self-destruction drone pedal. Featuring feedback routing, pitch shifting, and an 'OVERWHELM' knob that gradually increases intensity until the signal collapses under its own weight.</div>
+                <div class="tags">
+                    <span class="tag">Distortion</span>
+                    <span class="tag">Drone</span>
+                    <span class="tag">Doom</span>
+                </div>
+                <div class="price" contenteditable="true">$175</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="pedal2">
+                <img src="https://source.unsplash.com/random/600x400/?guitar,pedal" alt="Bacteriophage Glitch Delay">
+                <h3 contenteditable="true">Bacteriophage Glitch Delay</h3>
+                <div class="description" contenteditable="true">A delay unit infected with digital diseases. Your sound becomes the host as the Bacteriophage injects corrupted echoes back into the signal path. Features granular buffer manipulation and viral cross-contamination between delay lines.</div>
+                <div class="tags">
+                    <span class="tag">Glitch</span>
+                    <span class="tag">Delay</span>
+                    <span class="tag">Digital</span>
+                </div>
+                <div class="price" contenteditable="true">$220</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="pedal3">
+                <img src="https://source.unsplash.com/random/600x400/?distortion,pedal" alt="Parve Fake French Fuzz">
+                <h3 contenteditable="true">Parve Fake French Fuzz</h3>
+                <div class="description" contenteditable="true">Neither meat nor dairy - just pure fuzz absurdity. This pedal creates thick, velvet-like distortion with a bizarre twist: a 'language' switch that modulates the fuzz pattern based on nonsensical French phonemes. Très brutal.</div>
+                <div class="tags">
+                    <span class="tag">Fuzz</span>
+                    <span class="tag">Distortion</span>
+                    <span class="tag">Bizarre</span>
+                </div>
+                <div class="price" contenteditable="true">$155</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="diagonal-divider"></div>
+
+    <!-- Synths Section -->
+    <section id="synths">
+        <h2 contenteditable="true">SYNTHESIZERS</h2>
+        <p class="section-intro" contenteditable="true">Complete sound generation systems built from technological remains. Each synthesizer has its own unique character - the electronic embodiment of resurrection and creative destruction.</p>
+        <div class="grid-container">
+            <div class="product-card" data-id="synth1">
+                <img src="https://source.unsplash.com/random/600x400/?synthesizer" alt="Nevela Piano Wing">
+                <h3 contenteditable="true">Nevela Piano Wing</h3>
+                <div class="description" contenteditable="true">A reborn grand piano harp transformed into a playable drone instrument. This electroacoustic synthesizer combines the resonant qualities of piano strings with electromagnetic excitation and processing. Each one is unique, built from a salvaged piano.</div>
+                <div class="tags">
+                    <span class="tag">Acoustic</span>
+                    <span class="tag">Electronic</span>
+                    <span class="tag">Unique</span>
+                </div>
+                <div class="price" contenteditable="true">$895</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="synth2">
+                <img src="https://source.unsplash.com/random/600x400/?modular,synth" alt="Existential Noise System">
+                <h3 contenteditable="true">Existential Noise System</h3>
+                <div class="description" contenteditable="true">A semi-modular synthesizer inspired by absurdist philosophy. Features 3 oscillators, digital wavetable morphing, a chaotic modulation section, and a patch bay for external connectivity. The "No Exit" mode creates inescapable feedback pathways.</div>
+                <div class="tags">
+                    <span class="tag">Semi-modular</span>
+                    <span class="tag">Experimental</span>
+                    <span class="tag">Wavetable</span>
+                </div>
+                <div class="price" contenteditable="true">$650</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="synth3">
+                <img src="https://source.unsplash.com/random/600x400/?electronic,instrument" alt="Wrong Wave Parking Lot Ambient Generator">
+                <h3 contenteditable="true">Wrong Wave Parking Lot Ambient Generator</h3>
+                <div class="description" contenteditable="true">Inspired by underground garage acoustics, this ambient synthesizer creates cavernous soundscapes with built-in ventilation simulation and concrete reverberation algorithms. Includes contact mics for sampling real-world mechanical sounds.</div>
+                <div class="tags">
+                    <span class="tag">Ambient</span>
+                    <span class="tag">Field Recording</span>
+                    <span class="tag">Reverb</span>
+                </div>
+                <div class="price" contenteditable="true">$420</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="diagonal-divider"></div>
+
+    <!-- Digital Section -->
+    <section id="digital" class="even-section">
+        <h2 contenteditable="true">DIGITAL CREATIONS</h2>
+        <p class="section-intro" contenteditable="true">Software instruments, VST plugins, sample packs and code art. The digital realm offers infinite possibilities for sound manipulation and creation.</p>
+        <div class="grid-container">
+            <div class="product-card" data-id="digital1">
+                <img src="https://source.unsplash.com/random/600x400/?software,code" alt="KillAllUnicorns VST Suite">
+                <h3 contenteditable="true">KillAllUnicorns VST Suite</h3>
+                <div class="description" contenteditable="true">A collection of bizarre audio plugins including a drone metal generator, feedback simulator, and "fake language" vocal processor. Perfect for creating experimental soundscapes and noise music. Available in VST3, AU, and AAX formats.</div>
+                <div class="tags">
+                    <span class="tag">VST</span>
+                    <span class="tag">Plugin</span>
+                    <span class="tag">Software</span>
+                </div>
+                <div class="price" contenteditable="true">$85</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="digital2">
+                <img src="https://source.unsplash.com/random/600x400/?waveform,sound" alt="Remainders Sample Library">
+                <h3 contenteditable="true">Remainders Sample Library</h3>
+                <div class="description" contenteditable="true">Over 3GB of carefully processed sounds from technological waste. Includes dying hard drives, electric motor resonances, circuit-bent toys, and electromagnetic interference – all meticulously recorded and organized for music production.</div>
+                <div class="tags">
+                    <span class="tag">Samples</span>
+                    <span class="tag">Field Recording</span>
+                    <span class="tag">Found Sounds</span>
+                </div>
+                <div class="price" contenteditable="true">$65</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="digital3">
+                <img src="https://source.unsplash.com/random/600x400/?algorithm,data" alt="Ensuing Algorithmic Composer">
+                <h3 contenteditable="true">Ensuing Algorithmic Composer</h3>
+                <div class="description" contenteditable="true">A Max/MSP based generative music system inspired by the Ouroboros symbol. Creates endless, self-consuming musical structures using cyclical algorithms. Includes patches for ambient, rhythmic, and noise-based compositions.</div>
+                <div class="tags">
+                    <span class="tag">Generative</span>
+                    <span class="tag">Max/MSP</span>
+                    <span class="tag">Algorithmic</span>
+                </div>
+                <div class="price" contenteditable="true">$110</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+        </div>
+
+        <!-- Code example -->
+        <div style="margin-top: 50px; background-color: rgba(0,0,0,0.3); padding: 20px; border-radius: 5px;">
+            <h3 contenteditable="true">Drone Metal Generator Code Example</h3>
+            <pre style="background-color: rgba(0,0,0,0.5); padding: 15px; overflow-x: auto; color: var(--light); font-family: monospace; margin-top: 15px; border-left: 3px solid var(--primary);">
+// KillAllUnicorns Drone Metal Generator
+// Example Python code for creating sustained drone tones
+
+import numpy as np
+from scipy.io import wavfile
+import sounddevice as sd
+
+class DroneGenerator:
+    def __init__(self, base_freq=55.0, sample_rate=44100):
+        self.base_freq = base_freq
+        self.sample_rate = sample_rate
+        self.feedback = 0.0
+        
+    def generate_drone(self, duration=10.0, distortion=0.8, overwhelm=0.5):
+        """Generate a drone metal sound with increasing intensity."""
+        samples = int(duration * self.sample_rate)
+        t = np.linspace(0, duration, samples, False)
+        
+        # Generate base oscillators
+        osc1 = np.sin(2 * np.pi * self.base_freq * t)
+        osc2 = np.sin(2 * np.pi * (self.base_freq * 1.01) * t)  # Slight detuning
+        osc3 = np.sin(2 * np.pi * (self.base_freq * 0.5) * t)   # Octave down
+        
+        # Combine oscillators
+        signal = (osc1 + osc2 + osc3) / 3.0
+        
+        # Apply envelope for increasing intensity
+        envelope = np.linspace(0.5, 1.0, samples) ** (1.0 - overwhelm)
+        signal = signal * envelope
+        
+        # Apply distortion
+        signal = np.tanh(signal * distortion * 10) / np.tanh(distortion * 10)
+        
+        # Add feedback/self-destruction
+        for i in range(1, samples):
+            if i > self.sample_rate:  # After 1 second
+                feedback_idx = i - int(self.sample_rate * 0.1)  # 100ms delay
+                self.feedback = self.feedback * 0.95 + signal[feedback_idx] * 0.05
+                signal[i] += self.feedback * min(1.0, overwhelm * i / samples * 5)
+        
+        return signal
+        
+    def play(self, duration=30.0):
+        """Generate and play a drone."""
+        drone = self.generate_drone(duration)
+        sd.play(drone, self.sample_rate)
+        sd.wait()
+        
+    def save(self, filename, duration=30.0):
+        """Generate and save a drone to a WAV file."""
+        drone = self.generate_drone(duration)
+        wavfile.write(filename, self.sample_rate, (drone * 32767).astype(np.int16))
+
+# Create a drone generator
+drone = DroneGenerator(base_freq=55.0)  # A1 note
+
+# Generate and save a 30-second drone
+drone.save("kill_all_unicorns_drone.wav", duration=30.0)
+</pre>
+        </div>
+    </section>
+
+    <div class="diagonal-divider"></div>
+
+    <!-- Kits Section -->
+    <section id="kits">
+        <h2 contenteditable="true">KITS & BOARDS</h2>
+        <p class="section-intro" contenteditable="true">DIY electronics kits for the hands-on creator. Each kit comes with all the components you need, detailed instructions, and insight into the principles behind the circuit. Build your own noise machines.</p>
+        <div class="grid-container">
+            <div class="product-card" data-id="kit1">
+                <img src="https://source.unsplash.com/random/600x400/?electronics,diy" alt="Creative Destruction Kit">
+                <h3 contenteditable="true">Creative Destruction Kit</h3>
+                <div class="description" contenteditable="true">A beginner-friendly introduction to circuit bending and hardware hacking. Learn to transform common electronic devices into sound generators. Includes tools, components, and a detailed guide to the art of creative destruction.</div>
+                <div class="tags">
+                    <span class="tag">Beginner</span>
+                    <span class="tag">Circuit Bending</span>
+                    <span class="tag">Educational</span>
+                </div>
+                <div class="price" contenteditable="true">$95</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="kit2">
+                <img src="https://source.unsplash.com/random/600x400/?soldering,electronics" alt="Gefilte Scheisse Noise Box">
+                <h3 contenteditable="true">Gefilte Scheisse Noise Box</h3>
+                <div class="description" contenteditable="true">Build your own chaotic noise generator inspired by the Gefilte Scheisse sound installation. Features piezo microphones, feedback circuits, and motorized elements that create evolving soundscapes through physical motion and acoustic feedback.</div>
+                <div class="tags">
+                    <span class="tag">Noise</span>
+                    <span class="tag">Kinetic</span>
+                    <span class="tag">Interactive</span>
+                </div>
+                <div class="price" contenteditable="true">$135</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="kit3">
+                <img src="https://source.unsplash.com/random/600x400/?arduino,diy" alt="Machine Learning Synth Kit">
+                <h3 contenteditable="true">Machine Learning Synth Kit</h3>
+                <div class="description" contenteditable="true">An experimental synthesizer that evolves over time. Built around a microcontroller running simplified machine learning algorithms, this synth learns from how you play it and develops its own sonic personality. No two units will sound the same.</div>
+                <div class="tags">
+                    <span class="tag">AI</span>
+                    <span class="tag">Digital</span>
+                    <span class="tag">Advanced</span>
+                </div>
+                <div class="price" contenteditable="true">$195</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="diagonal-divider"></div>
+
+    <!-- Artwork Section -->
+    <section id="art" class="even-section">
+        <h2 contenteditable="true">ARTWORK & ARTIFACTS</h2>
+        <p class="section-intro" contenteditable="true">Physical and digital artwork that explores the intersection of technology, mythology, and sound. From prints to interactive installations, these pieces extend the KillAllUnicorns aesthetic beyond sound.</p>
+        <div class="grid-container">
+            <div class="product-card" data-id="art1">
+                <img src="https://source.unsplash.com/random/600x400/?circuit,art" alt="Circuit Board Mandala - Limited Print">
+                <h3 contenteditable="true">Circuit Board Mandala - Limited Print</h3>
+                <div class="description" contenteditable="true">A high-quality print of an intricate mandala created from photographed circuit boards, PCB traces, and electronic components. Each print is signed and numbered in a limited edition of 50.</div>
+                <div class="tags">
+                    <span class="tag">Print</span>
+                    <span class="tag">Visual</span>
+                    <span class="tag">Limited Edition</span>
+                </div>
+                <div class="price" contenteditable="true">$85</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="art2">
+                <img src="https://source.unsplash.com/random/600x400/?data,glitch" alt="Glitch Oracle - Digital Art Collection">
+                <h3 contenteditable="true">Glitch Oracle - Digital Art Collection</h3>
+                <div class="description" contenteditable="true">A series of 10 high-resolution digital artworks created using corrupted data and machine learning algorithms. These images explore the "oracle" nature of technological errors - finding meaning in the breakdown of systems.</div>
+                <div class="tags">
+                    <span class="tag">Digital</span>
+                    <span class="tag">Glitch Art</span>
+                    <span class="tag">AI</span>
+                </div>
+                <div class="price" contenteditable="true">$50</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+            <div class="product-card" data-id="art3">
+                <img src="https://source.unsplash.com/random/600x400/?sculpture,tech" alt="Cadavre 3.0 - Sound Sculpture">
+                <h3 contenteditable="true">Cadavre 3.0 - Sound Sculpture</h3>
+                <div class="description" contenteditable="true">A tabletop version of the Cadavre installation. This sculptural piece combines salvaged electronic parts with acoustic elements to create a self-contained sound object that responds to touch and proximity. Each piece is unique.</div>
+                <div class="tags">
+                    <span class="tag">Sculpture</span>
+                    <span class="tag">Interactive</span>
+                    <span class="tag">One-of-a-kind</span>
+                </div>
+                <div class="price" contenteditable="true">$350</div>
+                <a href="#" class="btn">RESURRECT</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="diagonal-divider"></div>
+
+    <!-- About Section -->
+    <section id="about">
+        <h2 contenteditable="true">ABOUT THE VOID</h2>
+        <div class="grid-container" style="grid-template-columns: 1fr 1fr;">
+            <div>
+                <h3 contenteditable="true">KillAllUnicorns</h3>
+                <p contenteditable="true">KillAllUnicorns is one of the many aliases of Yaniv Schonfeld, an interdisciplinary artist working at the intersection of sound, technology, and performance. The brand emerged from years of experimental music projects, instrument building, and installations that explore the cycle of technological death and rebirth.</p>
+                <p contenteditable="true">Each product is hand-crafted or personally designed, bringing together DIY electronics culture with conceptual art traditions. Our philosophy centers on creative destruction - finding new life in discarded technology and pushing the boundaries of what sound and music can be.</p>
+                <p contenteditable="true">Nothing here is mass produced. Everything carries the traces of its creation, the mythology of its components, and the absurdity of its existence. Welcome to the void.</p>
+            </div>
+            <div>
+                <div style="padding: 20px; background-color: rgba(0,0,0,0.3); border-left: 3px solid var(--primary);">
+                    <h3 contenteditable="true">Myth & Technology</h3>
+                    <p contenteditable="true">"In my work, I see technology as a modern mythology. The circuit becomes the labyrinth, the oscillator becomes the oracle, and the feedback loop becomes the Ouroboros - the snake eating its own tail.</p>
+                    <p contenteditable="true">When we resurrect dead technology, we participate in an ancient ritual dressed in contemporary garb. The synthesizer is our altar, the soldering iron our wand, and the noise we summon is our communion with forces beyond understanding."</p>
+                    <p style="text-align: right; font-style: italic;" contenteditable="true">- Yaniv Schonfeld</p>
+                </div>
+                <div style="margin-top: 20px;">
+                    <h3 contenteditable="true">DIY Philosophy</h3>
+                    <p contenteditable="true">We believe in demystifying technology through hands-on creation. Whether you're building one of our kits or using a finished instrument, you're encouraged to understand it, modify it, and make it truly yours. There are no sealed boxes here - only open systems waiting for your input.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Newsletter -->
+    <div class="diagonal-divider"></div>
+    <section class="even-section">
+        <h2 contenteditable="true">JOIN THE RITUAL</h2>
+        <div class="newsletter">
+            <p contenteditable="true">Subscribe to receive updates on new products, workshops, and performance dates. Be the first to know when new creations emerge from the void.</p>
+            <form>
+                <input type="email" placeholder="YOUR EMAIL ADDRESS">
+                <button type="submit" class="btn">SUBMIT TO THE VOID</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-nav">
+            <a href="#pcbs">PCBs</a>
+            <a href="#pedals">Pedals</a>
+            <a href="#synths">Synthesizers</a>
+            <a href="#digital">Digital</a>
+            <a href="#kits">Kits & Boards</a>
+            <a href="#art">Artwork</a>
+            <a href="#about">About</a>
+        </div>
+        <div class="social-links">
+            <a href="#" aria-label="Bandcamp">&#9835;</a>
+            <a href="#" aria-label="Instagram">&#128247;</a>
+            <a href="#" aria-label="YouTube">&#9654;</a>
+            <a href="#" aria-label="GitHub">&#60;/&#62;</a>
+        </div>
+        <p class="copyright" contenteditable="true">© 2025 NEVELA | KillAllUnicorns | WillBear_Fruits | All rights recycled from technological waste.</p>
+    </footer>
+
+    <!-- Toast notification -->
+    <div class="toast">Changes saved successfully!</div>
+
+    <script>
+        // Store data
+        let products = [
+            // PCBs
+            {
+                id: "pcb1",
+                name: "Ouroboros Feedback Generator",
+                price: "$35",
+                category: "pcb",
+                image: "https://source.unsplash.com/random/600x400/?circuit,pcb",
+                description: "A self-eating snake of sound. This PCB creates endless feedback loops that evolve over time, producing hypnotic drones and chaotic noise bursts. Perfect for drone music or as a processing module in a larger system.",
+                tags: ["Noise", "Drone", "DIY"]
+            },
+            {
+                id: "pcb2",
+                name: "Yormungandr Multi-Filter",
+                price: "$48",
+                category: "pcb",
+                image: "https://source.unsplash.com/random/600x400/?electronics,circuit",
+                description: "Named after the world-serpent of Norse mythology, this filter board wraps around your sound and squeezes it into new forms. Features 4 filter types with CV control inputs and self-oscillation capability.",
+                tags: ["Filter", "Modular", "CV"]
+            },
+            {
+                id: "pcb3",
+                name: "Cadavre Oscillator",
+                price: "$42",
+                category: "pcb",
+                image: "https://source.unsplash.com/random/600x400/?electronics,board",
+                description: "The core of any synthesizer - reanimated. This voltage-controlled oscillator produces triangle, saw, and square waves with unique wavefolding capabilities that give it a distinct undead character. Includes 1V/oct tracking.",
+                tags: ["VCO", "Synth", "Analog"]
+            },
+            // Pedals
+            {
+                id: "pedal1",
+                name: "Havilio Doom Drone",
+                price: "$175",
+                category: "pedal",
+                image: "https://source.unsplash.com/random/600x400/?pedal,effect",
+                description: "Summon endless walls of distorted doom with this self-destruction drone pedal. Featuring feedback routing, pitch shifting, and an 'OVERWHELM' knob that gradually increases intensity until the signal collapses under its own weight.",
+                tags: ["Distortion", "Drone", "Doom"]
+            },
+            {
+                id: "pedal2",
+                name: "Bacteriophage Glitch Delay",
+                price: "$220",
+                category: "pedal",
+                image: "https://source.unsplash.com/random/600x400/?guitar,pedal",
+                description: "A delay unit infected with digital diseases. Your sound becomes the host as the Bacteriophage injects corrupted echoes back into the signal path. Features granular buffer manipulation and viral cross-contamination between delay lines.",
+                tags: ["Glitch", "Delay", "Digital"]
+            },
+            {
+                id: "pedal3",
+                name: "Parve Fake French Fuzz",
+                price: "$155",
+                category: "pedal",
+                image: "https://source.unsplash.com/random/600x400/?distortion,pedal",
+                description: "Neither meat nor dairy - just pure fuzz absurdity. This pedal creates thick, velvet-like distortion with a bizarre twist: a 'language' switch that modulates the fuzz pattern based on nonsensical French phonemes. Très brutal.",
+                tags: ["Fuzz", "Distortion", "Bizarre"]
+            },
+            // Synths
+            {
+                id: "synth1",
+                name: "Nevela Piano Wing",
+                price: "$895",
+                category: "synth",
+                image: "https://source.unsplash.com/random/600x400/?synthesizer",
+                description: "A reborn grand piano harp transformed into a playable drone instrument. This electroacoustic synthesizer combines the resonant qualities of piano strings with electromagnetic excitation and processing. Each one is unique, built from a salvaged piano.",
+                tags: ["Acoustic", "Electronic", "Unique"]
+            },
+            {
+                id: "synth2",
+                name: "Existential Noise System",
+                price: "$650",
+                category: "synth",
+                image: "https://source.unsplash.com/random/600x400/?modular,synth",
+                description: "A semi-modular synthesizer inspired by absurdist philosophy. Features 3 oscillators, digital wavetable morphing, a chaotic modulation section, and a patch bay for external connectivity. The \"No Exit\" mode creates inescapable feedback pathways.",
+                tags: ["Semi-modular", "Experimental", "Wavetable"]
+            },
+            {
+                id: "synth3",
+                name: "Wrong Wave Parking Lot Ambient Generator",
+                price: "$420",
+                category: "synth",
+                image: "https://source.unsplash.com/random/600x400/?electronic,instrument",
+                description: "Inspired by underground garage acoustics, this ambient synthesizer creates cavernous soundscapes with built-in ventilation simulation and concrete reverberation algorithms. Includes contact mics for sampling real-world mechanical sounds.",
+                tags: ["Ambient", "Field Recording", "Reverb"]
+            },
+            // Digital
+            {
+                id: "digital1",
+                name: "KillAllUnicorns VST Suite",
+                price: "$85",
+                category: "digital",
+                image: "https://source.unsplash.com/random/600x400/?software,code",
+                description: "A collection of bizarre audio plugins including a drone metal generator, feedback simulator, and \"fake language\" vocal processor. Perfect for creating experimental soundscapes and noise music. Available in VST3, AU, and AAX formats.",
+                tags: ["VST", "Plugin", "Software"]
+            },
+            {
+                id: "digital2",
+                name: "Remainders Sample Library",
+                price: "$65",
+                category: "digital",
+                image: "https://source.unsplash.com/random/600x400/?waveform,sound",
+                description: "Over 3GB of carefully processed sounds from technological waste. Includes dying hard drives, electric motor resonances, circuit-bent toys, and electromagnetic interference – all meticulously recorded and organized for music production.",
+                tags: ["Samples", "Field Recording", "Found Sounds"]
+            },
+            {
+                id: "digital3",
+                name: "Ensuing Algorithmic Composer",
+                price: "$110",
+                category: "digital",
+                image: "https://source.unsplash.com/random/600x400/?algorithm,data",
+                description: "A Max/MSP based generative music system inspired by the Ouroboros symbol. Creates endless, self-consuming musical structures using cyclical algorithms. Includes patches for ambient, rhythmic, and noise-based compositions.",
+                tags: ["Generative", "Max/MSP", "Algorithmic"]
+            },
+            // Kits
+            {
+                id: "kit1",
+                name: "Creative Destruction Kit",
+                price: "$95",
+                category: "kit",
+                image: "https://source.unsplash.com/random/600x400/?electronics,diy",
+                description: "A beginner-friendly introduction to circuit bending and hardware hacking. Learn to transform common electronic devices into sound generators. Includes tools, components, and a detailed guide to the art of creative destruction.",
+                tags: ["Beginner", "Circuit Bending", "Educational"]
+            },
+            {
+                id: "kit2",
+                name: "Gefilte Scheisse Noise Box",
+                price: "$135",
+                category: "kit",
+                image: "https://source.unsplash.com/random/600x400/?soldering,electronics",
+                description: "Build your own chaotic noise generator inspired by the Gefilte Scheisse sound installation. Features piezo microphones, feedback circuits, and motorized elements that create evolving soundscapes through physical motion and acoustic feedback.",
+                tags: ["Noise", "Kinetic", "Interactive"]
+            },
+            {
+                id: "kit3",
+                name: "Machine Learning Synth Kit",
+                price: "$195",
+                category: "kit",
+                image: "https://source.unsplash.com/random/600x400/?arduino,diy",
+                description: "An experimental synthesizer that evolves over time. Built around a microcontroller running simplified machine learning algorithms, this synth learns from how you play it and develops its own sonic personality. No two units will sound the same.",
+                tags: ["AI", "Digital", "Advanced"]
+            },
+            // Art
+            {
+                id: "art1",
+                name: "Circuit Board Mandala - Limited Print",
+                price: "$85",
+                category: "art",
+                image: "https://source.unsplash.com/random/600x400/?circuit,art",
+                description: "A high-quality print of an intricate mandala created from photographed circuit boards, PCB traces, and electronic components. Each print is signed and numbered in a limited edition of 50.",
+                tags: ["Print", "Visual", "Limited Edition"]
+            },
+            {
+                id: "art2",
+                name: "Glitch Oracle - Digital Art Collection",
+                price: "$50",
+                category: "art",
+                image: "https://source.unsplash.com/random/600x400/?data,glitch",
+                description: "A series of 10 high-resolution digital artworks created using corrupted data and machine learning algorithms. These images explore the \"oracle\" nature of technological errors - finding meaning in the breakdown of systems.",
+                tags: ["Digital", "Glitch Art", "AI"]
+            },
+            {
+                id: "art3",
+                name: "Cadavre 3.0 - Sound Sculpture",
+                price: "$350",
+                category: "art",
+                image: "https://source.unsplash.com/random/600x400/?sculpture,tech",
+                description: "A tabletop version of the Cadavre installation. This sculptural piece combines salvaged electronic parts with acoustic elements to create a self-contained sound object that responds to touch and proximity. Each piece is unique.",
+                tags: ["Sculpture", "Interactive", "One-of-a-kind"]
+            }
+        ];
+
+        // Media library
+        let mediaLibrary = [
+            {
+                id: "media1",
+                type: "image",
+                url: "https://source.unsplash.com/random/600x400/?circuit,pcb",
+                name: "Circuit Board Close-up"
+            },
+            {
+                id: "media2",
+                type: "image",
+                url: "https://source.unsplash.com/random/600x400/?electronics,synth",
+                name: "Modular Synthesizer"
+            },
+            {
+                id: "media3",
+                type: "image",
+                url: "https://source.unsplash.com/random/600x400/?guitar,pedal",
+                name: "Guitar Pedal"
+            }
+        ];
+
+        // Code snippets
+        let codeSnippets = [
+            {
+                id: "code1",
+                name: "Drone Generator",
+                language: "python",
+                code: `import numpy as np
+from scipy.io import wavfile
+import sounddevice as sd
+
+class DroneGenerator:
+    def __init__(self, base_freq=55.0, sample_rate=44100):
+        self.base_freq = base_freq
+        self.sample_rate = sample_rate
+        self.feedback = 0.0
+        
+    def generate_drone(self, duration=10.0, distortion=0.8, overwhelm=0.5):
+        """Generate a drone metal sound with increasing intensity."""
+        samples = int(duration * self.sample_rate)
+        t = np.linspace(0, duration, samples, False)
+        
+        # Generate base oscillators
+        osc1 = np.sin(2 * np.pi * self.base_freq * t)
+        osc2 = np.sin(2 * np.pi * (self.base_freq * 1.01) * t)  # Slight detuning
+        osc3 = np.sin(2 * np.pi * (self.base_freq * 0.5) * t)   # Octave down
+        
+        # Combine oscillators
+        signal = (osc1 + osc2 + osc3) / 3.0
+        
+        # Apply envelope for increasing intensity
+        envelope = np.linspace(0.5, 1.0, samples) ** (1.0 - overwhelm)
+        signal = signal * envelope
+        
+        # Apply distortion
+        signal = np.tanh(signal * distortion * 10) / np.tanh(distortion * 10)
+        
+        # Add feedback/self-destruction
+        for i in range(1, samples):
+            if i > self.sample_rate:  # After 1 second
+                feedback_idx = i - int(self.sample_rate * 0.1)  # 100ms delay
+                self.feedback = self.feedback * 0.95 + signal[feedback_idx] * 0.05
+                signal[i] += self.feedback * min(1.0, overwhelm * i / samples * 5)
+        
+        return signal
+        
+    def play(self, duration=30.0):
+        """Generate and play a drone."""
+        drone = self.generate_drone(duration)
+        sd.play(drone, self.sample_rate)
+        sd.wait()
+        
+    def save(self, filename, duration=30.0):
+        """Generate and save a drone to a WAV file."""
+        drone = self.generate_drone(duration)
+        wavfile.write(filename, self.sample_rate, (drone * 32767).astype(np.int16))
+
+# Create a drone generator
+drone = DroneGenerator(base_freq=55.0)  # A1 note
+
+# Generate and save a 30-second drone
+drone.save("kill_all_unicorns_drone.wav", duration=30.0)`
+            },
+            {
+                id: "code2",
+                name: "Arduino Noise Generator",
+                language: "cpp",
+                code: `/*
+ * KillAllUnicorns - Simple Arduino Noise Generator
+ * ------------------------------------------------
+ * Creates glitchy sounds by manipulating PWM outputs
+ */
+
+const int audioOutPin = 9;  // PWM output pin
+const int potPin1 = A0;     // Potentiometer for pitch
+const int potPin2 = A1;     // Potentiometer for chaos
+const int buttonPin = 2;    // Button for mode switching
+
+int mode = 0;               // Current sound mode
+int maxModes = 3;           // Number of available modes
+
+// Shift register for feedback
+byte shiftReg = 0;
+
+void setup() {
+  pinMode(audioOutPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  
+  // Set up Timer1 for PWM audio output
+  TCCR1A = 0x00;
+  TCCR1B = 0x09;  // 0b00001001; no prescaler
+  TCCR1A |= (1 << COM1A1);
+  TCCR1A |= (1 << WGM11);
+  TCCR1B |= (1 << WGM13);
+  
+  ICR1 = 8000;    // PWM frequency (affects pitch range)
+  OCR1A = 0;      // PWM duty cycle
+  
+  // Initialize serial for debugging
+  Serial.begin(9600);
+  Serial.println("KillAllUnicorns Noise Generator");
+  Serial.println("-------------------------------");
+  Serial.println("Mode 0: Basic Noise");
+  Serial.println("Mode 1: Feedback Noise");
+  Serial.println("Mode 2: Digital Destruction");
+}
+
+void loop() {
+  // Check for mode change
+  if (digitalRead(buttonPin) == LOW) {
+    mode = (mode + 1) % maxModes;
+    Serial.print("Switched to mode: ");
+    Serial.println(mode);
+    delay(300); // Simple debounce
+  }
+  
+  // Read control values
+  int pitch = analogRead(potPin1);
+  int chaos = analogRead(potPin2);
+  
+  // Generate sound based on mode
+  switch (mode) {
+    case 0: // Basic noise
+      basicNoise(pitch, chaos);
+      break;
+    case 1: // Feedback noise
+      feedbackNoise(pitch, chaos);
+      break;
+    case 2: // Digital destruction
+      digitalDestruction(pitch, chaos);
+      break;
+  }
+}
+
+// Simple bit-crushed oscillator
+void basicNoise(int pitch, int chaos) {
+  // Map pitch value to a usable range
+  int period = map(pitch, 0, 1023, 1, 500);
+  
+  // Chaos affects the waveform complexity
+  byte wave = map(chaos, 0, 1023, 0, 7);
+  
+  // Generate a sample
+  byte sample = ((millis() / period) & (0x01 << wave)) ? 255 : 0;
+  
+  // Output the sample
+  analogWrite(audioOutPin, sample);
+  delayMicroseconds(50); // Control the update rate
+}
+
+// Feedback algorithm with chaotic behavior
+void feedbackNoise(int pitch, int chaos) {
+  // Shift register for feedback
+  shiftReg = (shiftReg << 1) | (shiftReg >> 7);
+  
+  // XOR with pitch control for added complexity
+  shiftReg ^= (pitch >> 2);
+  
+  // Apply chaos parameter
+  if ((chaos >> 5) & 1) {
+    shiftReg ^= 0x3F;
+  }
+  
+  // Output the sample
+  analogWrite(audioOutPin, shiftReg);
+  delayMicroseconds(map(pitch, 0, 1023, 10, 1000));
+}
+
+// More complex algorithm with digital artifacts
+void digitalDestruction(int pitch, int chaos) {
+  static uint16_t noiseSeed = 1;
+  
+  // Pseudo-random number generator
+  noiseSeed = (noiseSeed * 2053) + 13849;
+  
+  // Apply pitch control
+  int threshold = map(pitch, 0, 1023, 0, 65535);
+  
+  // Apply destruction/chaos
+  int destruction = map(chaos, 0, 1023, 0, 1023);
+  noiseSeed ^= destruction;
+  
+  // Generate output
+  byte output = (noiseSeed > threshold) ? 255 : 0;
+  
+  // Apply glitches based on chaos
+  if (chaos > 700) {
+    if ((noiseSeed & 0x3F) == 0x3F) {
+      output = 0; // Occasional dropout
+    }
+  }
+  
+  analogWrite(audioOutPin, output);
+  delayMicroseconds(80);
+}`
+            }
+        ];
+
+        // Theme settings
+        const themes = {
+            default: {
+                primary: '#ff2a6d',
+                secondary: '#05d9e8',
+                dark: '#121212',
+                light: '#d1d7e0',
+                accent: '#ff5c00',
+                glitch: '#01c5c4'
+            },
+            cyber: {
+                primary: '#00ff66',
+                secondary: '#0066ff',
+                dark: '#000033',
+                light: '#ffffff',
+                accent: '#9900ff',
+                glitch: '#00ffff'
+            },
+            retro: {
+                primary: '#ffcc00',
+                secondary: '#ff3300',
+                dark: '#330000',
+                light: '#ffeecc',
+                accent: '#660066',
+                glitch: '#ff99cc'
+            },
+            mono: {
+                primary: '#ffffff',
+                secondary: '#aaaaaa',
+                dark: '#000000',
+                light: '#eeeeee',
+                accent: '#666666',
+                glitch: '#888888'
+            }
+        };
+
+        // DOM elements
+        const editorToggle = document.getElementById('editor-toggle');
+        const editorPanel = document.getElementById('editor-panel');
+        const editorTabs = document.querySelectorAll('.editor-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const productList = document.querySelector('.product-list');
+        const saveProductBtn = document.getElementById('save-product');
+        const newProductBtn = document.getElementById('new-product');
+        const deleteProductBtn = document.getElementById('delete-product');
+        const mediaModal = document.getElementById('media-modal');
+        const closeModalBtn = document.querySelector('.close-modal');
+        const toast = document.querySelector('.toast');
+        const progressBar = document.querySelector('.progress-bar');
+        const applyThemeBtn = document.getElementById('apply-theme');
+        const themeOptions = document.querySelectorAll('.theme-option');
+
+        // Current state
+        let currentProductId = null;
+        let selectedMedia = null;
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate product list
+            populateProductList();
+            
+            // Editor toggle
+            editorToggle.addEventListener('click', function() {
+                editorPanel.classList.toggle('visible');
+            });
+            
+            // Tab switching
+            editorTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all tabs
+                    editorTabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Add active class to clicked tab
+                    this.classList.add('active');
+                    
+                    // Show corresponding content
+                    const tabId = this.getAttribute('data-tab');
+                    document.querySelector(`[data-tab-content="${tabId}"]`).classList.add('active');
+                });
+            });
+            
+            // Product selection
+            productList.addEventListener('click', function(e) {
+                const item = e.target.closest('.product-list-item');
+                if (item) {
+                    const productId = item.getAttribute('data-id');
+                    selectProduct(productId);
+                }
+            });
+            
+            // Save product
+            saveProductBtn.addEventListener('click', function() {
+                saveProduct();
+            });
+            
+            // New product
+            newProductBtn.addEventListener('click', function() {
+                clearProductForm();
+                currentProductId = generateId();
+            });
+            
+            // Delete product
+            deleteProductBtn.addEventListener('click', function() {
+                if (currentProductId) {
+                    deleteProduct(currentProductId);
+                }
+            });
+            
+            // Select product image
+            document.getElementById('select-product-image').addEventListener('click', function() {
+                openMediaModal('select-image');
+            });
+            
+            // Close modal
+            if (closeModalBtn) {
+                closeModalBtn.addEventListener('click', function() {
+                    mediaModal.style.display = 'none';
+                });
+            }
+            
+            // Apply theme
+            if (applyThemeBtn) {
+                applyThemeBtn.addEventListener('click', function() {
+                    const selectedTheme = document.querySelector('.theme-option.active').getAttribute('data-theme');
+                    applyTheme(selectedTheme);
+                    showToast('Theme applied successfully!');
+                });
+            }
+            
+            // Theme selection
+            themeOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    themeOptions.forEach(o => o.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+            
+            // Make elements editable
+            setupContentEditable();
+            
+            // Scroll progress
+            window.addEventListener('scroll', updateScrollProgress);
+        });
+
+        // Populate product list
+        function populateProductList() {
+            productList.innerHTML = '';
+            products.forEach(product => {
+                const item = document.createElement('div');
+                item.className = 'product-list-item';
+                item.setAttribute('data-id', product.id);
+                item.textContent = product.name;
+                productList.appendChild(item);
+            });
+        }
+
+        // Select product
+        function selectProduct(productId) {
+            currentProductId = productId;
+            
+            // Clear previous selection
+            const items = document.querySelectorAll('.product-list-item');
+            items.forEach(item => item.classList.remove('selected'));
+            
+            // Highlight selected item
+            const selectedItem = document.querySelector(`.product-list-item[data-id="${productId}"]`);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+            }
+            
+            // Find product data
+            const product = products.find(p => p.id === productId);
+            if (product) {
+                // Fill form
+                document.getElementById('product-name').value = product.name;
+                document.getElementById('product-price').value = product.price;
+                document.getElementById('product-category').value = product.category;
+                document.getElementById('product-image').value = product.image;
+                document.getElementById('product-description').value = product.description;
+                document.getElementById('product-tags').value = product.tags.join(', ');
+                
+                // Show image preview
+                const imagePreview = document.getElementById('product-image-preview');
+                imagePreview.src = product.image;
+                imagePreview.style.display = 'block';
+            }
+        }
+
+        // Save product
+        function saveProduct() {
+            if (!currentProductId) return;
+            
+            // Gather form data
+            const name = document.getElementById('product-name').value;
+            const price = document.getElementById('product-price').value;
+            const category = document.getElementById('product-category').value;
+            const image = document.getElementById('product-image').value;
+            const description = document.getElementById('product-description').value;
+            const tagsString = document.getElementById('product-tags').value;
+            const tags = tagsString.split(',').map(tag => tag.trim()).filter(tag => tag);
+            
+            // Find product index
+            const productIndex = products.findIndex(p => p.id === currentProductId);
+            
+            // Update or add product
+            const productData = {
+                id: currentProductId,
+                name,
+                price,
+                category,
+                image,
+                description,
+                tags
+            };
+            
+            if (productIndex !== -1) {
+                // Update existing product
+                products[productIndex] = productData;
+                
+                // Update product card if it exists on the page
+                const productCard = document.querySelector(`.product-card[data-id="${currentProductId}"]`);
+                if (productCard) {
+                    productCard.querySelector('h3').textContent = name;
+                    productCard.querySelector('.price').textContent = price;
+                    productCard.querySelector('.description').textContent = description;
+                    productCard.querySelector('img').src = image;
+                    
+                    // Update tags
+                    const tagsContainer = productCard.querySelector('.tags');
+                    tagsContainer.innerHTML = '';
+                    tags.forEach(tag => {
+                        const tagSpan = document.createElement('span');
+                        tagSpan.className = 'tag';
+                        tagSpan.textContent = tag;
+                        tagsContainer.appendChild(tagSpan);
+                    });
+                }
+            } else {
+                // Add new product
+                products.push(productData);
+            }
+            
+            // Update product list
+            populateProductList();
+            
+            // Show success message
+            showToast('Product saved successfully!');
+        }
+
+        // Delete product
+        function deleteProduct(productId) {
+            // Find product index
+            const productIndex = products.findIndex(p => p.id === productId);
+            
+            if (productIndex !== -1) {
+                // Remove from products array
+                products.splice(productIndex, 1);
+                
+                // Remove from DOM if present
+                const productCard = document.querySelector(`.product-card[data-id="${productId}"]`);
+                if (productCard) {
+                    productCard.remove();
+                }
+                
+                // Update product list
+                populateProductList();
+                
+                // Clear form
+                clearProductForm();
+                
+                // Show success message
+                showToast('Product deleted successfully!');
+            }
+        }
+
+        // Clear product form
+        function clearProductForm() {
+            document.getElementById('product-name').value = '';
+            document.getElementById('product-price').value = '';
+            document.getElementById('product-category').value = 'pcb';
+            document.getElementById('product-image').value = '';
+            document.getElementById('product-description').value = '';
+            document.getElementById('product-tags').value = '';
+            document.getElementById('product-image-preview').style.display = 'none';
+            
+            // Clear selection
+            const items = document.querySelectorAll('.product-list-item');
+            items.forEach(item => item.classList.remove('selected'));
+            
+            currentProductId = null;
+        }
+
+        // Open media modal
+        function openMediaModal(action) {
+            mediaModal.style.display = 'block';
+            
+            // Populate media library
+            const mediaLibraryContainer = document.querySelector('.media-library-modal');
+            mediaLibraryContainer.innerHTML = '';
+            
+            mediaLibrary.forEach(media => {
+                const mediaItem = document.createElement('div');
+                mediaItem.className = 'media-item';
+                mediaItem.setAttribute('data-id', media.id);
+                
+                if (media.type === 'image') {
+                    const img = document.createElement('img');
+                    img.src = media.url;
+                    img.alt = media.name;
+                    mediaItem.appendChild(img);
+                } else if (media.type === 'video') {
+                    const video = document.createElement('video');
+                    video.src = media.url;
+                    mediaItem.appendChild(video);
+                } else if (media.type === 'audio') {
+                    const audio = document.createElement('audio');
+                    audio.src = media.url;
+                    audio.controls = true;
+                    mediaItem.appendChild(audio);
+                }
+                
+                const mediaName = document.createElement('div');
+                mediaName.textContent = media.name;
+                mediaItem.appendChild(mediaName);
+                
+                mediaItem.addEventListener('click', function() {
+                    if (action === 'select-image') {
+                        document.getElementById('product-image').value = media.url;
+                        const imagePreview = document.getElementById('product-image-preview');
+                        imagePreview.src = media.url;
+                        imagePreview.style.display = 'block';
+                        mediaModal.style.display = 'none';
+                    }
+                });
+                
+                mediaLibraryContainer.appendChild(mediaItem);
+            });
+        }
+
+        // Setup contenteditable elements
+        function setupContentEditable() {
+            const editableElements = document.querySelectorAll('[contenteditable="true"]');
+            
+            editableElements.forEach(element => {
+                element.addEventListener('blur', function() {
+                    // Save to local storage to persist changes
+                    localStorage.setItem(`content-${element.tagName}-${Array.from(element.parentNode.children).indexOf(element)}`, element.innerHTML);
+                    
+                    // Show success message
+                    showToast('Content updated!');
+                });
+                
+                // Load content from local storage if available
+                const storageKey = `content-${element.tagName}-${Array.from(element.parentNode.children).indexOf(element)}`;
+                const savedContent = localStorage.getItem(storageKey);
+                
+                if (savedContent) {
+                    element.innerHTML = savedContent;
+                }
+            });
+        }
+
+        // Update scroll progress
+        function updateScrollProgress() {
+            const windowHeight = window.innerHeight;
+            const documentHeight = document.documentElement.scrollHeight;
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            const scrolled = (scrollTop / (documentHeight - windowHeight)) * 100;
+            progressBar.style.width = `${scrolled}%`;
+        }
+
+        // Show toast notification
+        function showToast(message) {
+            toast.textContent = message;
+            toast.classList.add('visible');
+            
+            setTimeout(() => {
+                toast.classList.remove('visible');
+            }, 3000);
+        }
+
+        // Apply theme
+        function applyTheme(themeName) {
+            const theme = themes[themeName];
+            
+            if (theme) {
+                document.documentElement.style.setProperty('--primary', theme.primary);
+                document.documentElement.style.setProperty('--secondary', theme.secondary);
+                document.documentElement.style.setProperty('--dark', theme.dark);
+                document.documentElement.style.setProperty('--light', theme.light);
+                document.documentElement.style.setProperty('--accent', theme.accent);
+                document.documentElement.style.setProperty('--glitch', theme.glitch);
+                
+                // Apply custom CSS
+                const customCSS = document.getElementById('custom-css').value;
+                let styleTag = document.getElementById('custom-style-tag');
+                
+                if (!styleTag) {
+                    styleTag = document.createElement('style');
+                    styleTag.id = 'custom-style-tag';
+                    document.head.appendChild(styleTag);
+                }
+                
+                styleTag.textContent = customCSS;
+                
+                // Save theme preference
+                localStorage.setItem('theme', themeName);
+            }
+        }
+
+        // Generate unique ID
+        function generateId() {
+            return 'id_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Load saved theme if available
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            applyTheme(savedTheme);
+            
+            // Update selected theme option
+            const themeOption = document.querySelector(`.theme-option[data-theme="${savedTheme}"]`);
+            if (themeOption) {
+                document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('active'));
+                themeOption.classList.add('active');
+            }
+        }
+
+        // Code snippets integration
+        document.getElementById('save-code').addEventListener('click', function() {
+            const name = document.getElementById('code-name').value;
+            const language = document.getElementById('code-language').value;
+            const code = document.getElementById('code-content').value;
+            
+            if (name && code) {
+                const snippet = {
+                    id: generateId(),
+                    name,
+                    language,
+                    code
+                };
+                
+                codeSnippets.push(snippet);
+                showToast('Code snippet saved!');
+            }
+        });
+
+        document.getElementById('insert-code').addEventListener('click', function() {
+            const code = document.getElementById('code-content').value;
+            const language = document.getElementById('code-language').value;
+            
+            if (currentProductId && code) {
+                // Find product
+                const product = products.find(p => p.id === currentProductId);
+                
+                if (product) {
+                    // Add code to description
+                    const codeBlock = `\n\n\`\`\`${language}\n${code}\n\`\`\``;
+                    document.getElementById('product-description').value += codeBlock;
+                    
+                    showToast('Code inserted to product description');
+                }
+            } else {
+                showToast('Please select a product first');
+            }
+        });
+
+        // Media upload handling
+        document.getElementById('media-upload').addEventListener('change', function(event) {
+            const files = event.target.files;
+            
+            if (files.length > 0) {
+                Array.from(files).forEach(file => {
+                    // In a real implementation, this would upload to a server
+                    // For this demo, we'll create a fake URL
+                    const fileType = file.type.split('/')[0];
+                    const fakeUrl = `https://source.unsplash.com/random/600x400/?${fileType},${file.name.split('.')[0]}`;
+                    
+                    const media = {
+                        id: generateId(),
+                        type: fileType,
+                        url: fakeUrl,
+                        name: file.name
+                    };
+                    
+                    mediaLibrary.push(media);
+                });
+                
+                showToast(`${files.length} files uploaded to library`);
+            }
+        });
+
+        // Embed handling
+        document.getElementById('insert-embed').addEventListener('click', function() {
+            const embedCode = document.getElementById('embed-code').value;
+            
+            if (embedCode && currentProductId) {
+                // Find product
+                const product = products.find(p => p.id === currentProductId);
+                
+                if (product) {
+                    // Add embed to description
+                    document.getElementById('product-description').value += `\n\n${embedCode}`;
+                    
+                    showToast('Embed code inserted to product description');
+                }
+            } else {
+                showToast('Please enter embed code and select a product');
+            }
+        });
+
+        // Layout handling
+        document.getElementById('save-layout').addEventListener('click', function() {
+            const headerContent = document.getElementById('header-content').value;
+            const footerContent = document.getElementById('footer-content').value;
+            
+            // In a real implementation, this would update DOM elements
+            // For this demo, we'll just save to local storage
+            
+            localStorage.setItem('header-content', headerContent);
+            localStorage.setItem('footer-content', footerContent);
+            
+            showToast('Layout saved successfully!');
+        });
+    </script>
+</body>
+</html>
