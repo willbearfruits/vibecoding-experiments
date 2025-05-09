@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GLITCH WING v7‑stable — Fractal Lite</title>
+<meta charset="UTF-8" />
+<style>
+ html,body{margin:0;padding:0;background:#000;overflow:hidden;font-family:monospace;color:#fff}
+ canvas{image-rendering:pixelated}
+ #hud{position:fixed;top:8px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:8px;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);font-size:.8rem;user-select:none;pointer-events:none}
+ #hud b{color:#0ff;text-shadow:0 0 4px #0ff}
+</style>
+</head>
+<body>
+<div id="hud"></div>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.0/lib/p5.min.js"></script>
+<script>
+/* ==========================================================
+   GLITCH WING v7‑stable  —  proven working build
+   ----------------------------------------------------------
+   • Moderate‑res fractal dither (rez=5) every frame
+   • Player anchored 60 px from left but can strafe a little
+   • Triple‑shot, shield, rapid power‑ups
+   • Boss each stage, infinite levels
+   • Optimised for 60 fps on mid‑range hardware
+========================================================== */
+
+/* ===== Tunables ===== */
+const SCALE=1.2;               // sprite scale
+const REZ=5;                  // nebula dither block (lower = finer)
+const CAM_BASE=4;             // scroll speed
+const LEVEL_LEN=3000;         // world px per level
+const PLAYER_V=5, PLAYER_H=4; // player speeds
+const ENEMY_FREQ=[60,120,180], POWER_FREQ=360;
+
+/* ===== State ===== */
+let level, camX, stageLen, bossActive;
+const player={x:60,y:0,lives:3,shotCD:0,triple:false,shield:0,rapid:0};
+const bullets=[], enemies=[], enemyBul=[], powerups=[], particles=[];
+let score=0, gameOver=false, boss;
+
+/* ===== Setup ===== */
+function setup(){
+  createCanvas(windowWidth,windowHeight); pixelDensity(1); noSmooth();
+  reset();
+}
+function windowResized(){ resizeCanvas(windowWidth,windowHeight);}  
+function reset(){ level=1; camX=0; stageLen=LEVEL_LEN; bossActive=false; boss=null; gameOver=false;
+  Object.assign(player,{x:60,y:height/2,lives:3,shotCD:0,triple:false,shield:0,rapid:0});
+  bullets.length=enemies.length=enemyBul.length=powerups.length=particles.length=0; score=0; }
+
+/* ===== Input ===== */
+function keyPressed(){ if(key==='r'||key==='R') reset(); if([' ','x','X','k','K'].includes(key)) shoot(); }
+function shoot(){ if(player.shotCD||gameOver) return;
+  fire(12,0); if(player.triple){fire(12,-2);fire(12,2);} player.shotCD = player.rapid?4:10;
+  function fire(vx,vy){ bullets.push({x:playerWorldX()+16,y:player.y,vx,vy,w:6,h:3}); }
+}
+
+/* ===== Loop ===== */
+function draw(){ background(0); drawNebula(); handleMove(); if(!gameOver) stepWorld(); drawWorld(); updateHUD(); }
+function handleMove(){ if(gameOver) return; if(keyIsDown(UP_ARROW)||keyIsDown(87)) player.y-=PLAYER_V; if(keyIsDown(DOWN_ARROW)||keyIsDown(83)) player.y+=PLAYER_V; if(keyIsDown(LEFT_ARROW)||keyIsDown(65)) player.x-=PLAYER_H; if(keyIsDown(RIGHT_ARROW)||keyIsDown(68)) player.x+=PLAYER_H; player.y=constrain(player.y,30,height-30); player.x=constrain(player.x,20,width*0.7); }
+function stepWorld(){ camX+=CAM_BASE+level*0.4; if(player.shield)player.shield--; if(player.rapid)player.rapid--; if(player.shotCD)player.shotCD--; spawnWorld(); updateEntities(); collisions(); if(camX>stageLen&&!bossActive) spawnBoss(); if(bossActive) bossAI(); score=floor((level-1)*LEVEL_LEN/10+(camX-(level-1)*LEVEL_LEN)/10); }
+function playerWorldX(){return camX+player.x;}
+
+/* ===== Spawns ===== */
+function spawnWorld(){ if(bossActive) return; if(frameCount%ENEMY_FREQ[0]==0) enemies.push(newEnemy(0)); if(frameCount%ENEMY_FREQ[1]==0) enemies.push(newEnemy(1)); if(frameCount%ENEMY_FREQ[2]==0) enemies.push(newEnemy(2)); if(frameCount%POWER_FREQ==0) powerups.push(newPower()); }
+function newEnemy(t){ const y=random(50,height-50); return {type:t,x:camX+width+60,y,w:20*SCALE,h:16*SCALE,base:y}; }
+function newPower(){ const kinds=['triple','shield','rapid']; return {kind:random(kinds),x:camX+width+70,y:random(60,height-60),w:13*SCALE,h:13*SCALE}; }
+function spawnBoss(){ bossActive=true; boss={x:camX+width+140,y:height/2-50,w:110*SCALE,h:80*SCALE,hp:50+15*level,dir:1,cd:0}; }
+function nextLevel(){ level++; stageLen+=LEVEL_LEN; bossActive=false; boss=null; }
+
+/* ===== Update ===== */
+function updateEntities(){ bullets.forEach((b,i)=>{b.x+=b.vx; b.y+=b.vy; if(off(b)) bullets.splice(i,1);}); enemies.forEach((e,i)=>{const s=4+level*0.3; if(e.type===0) e.x-=s; else if(e.type===1){e.x-=s*0.9; e.y=e.base+45*sin(e.x*0.015);} else {e.x-=s*0.8; e.y+=(player.y-e.y)*0.04;} if(e.x<camX-80) enemies.splice(i,1);}); enemyBul.forEach((b,i)=>{b.x-=b.v; b.y+=b.vy; if(off(b)) enemyBul.splice(i,1);}); powerups.forEach((p,i)=>{p.x-=3; if(p.x<camX-80) powerups.splice(i,1);}); particles.forEach((pt,i)=>{pt.x+=pt.vx; pt.y+=pt.vy; pt.life--; if(pt.life<=0) particles.splice(i,1);}); function off(o){return o.x<camX-100||o.x>camX+width+100||o.y<0||o.y>height;} }
+function bossAI(){ if(!boss) return; boss.x-=2; boss.y+=boss.dir*1.6; if(boss.y<60||boss.y>height-140) boss.dir*=-1; if(boss.cd<=0){ [-2,0,2].forEach(vy=>enemyBul.push({x:boss.x,y:boss.y+boss.h/2,v:8+level*0.4,vy})); boss.cd=50-level*2; } else boss.cd--; if(boss.x<camX+width-220) boss.x=camX+width-220; }
+
+/* ===== Collisions ===== */
+function collisions(){ if(gameOver) return; bullets.forEach((b,bi)=>{ enemies.forEach((e,ei)=>{ if(hit(b,e)){ explode(e.x,e.y); enemies.splice(ei,1); bullets.splice(bi,1); score+=10; } }); if(bossActive&&boss&&hit(b,boss)){ boss.hp--; explode(b.x,b.y); bullets.splice(bi,1); if(boss.hp<=0){ explode(boss.x,boss.y); nextLevel(); } } }); enemies.forEach((e,ei)=>{ if(hit(playerRect(),e)){ explode(e.x,e.y); enemies.splice(ei,1); damage(); } }); enemyBul.forEach((b,bi)=>{ if(hit(playerRect(),{x:b.x,y:b.y,w:5,h:5})){ enemyBul.splice(bi,1); damage(); } }); powerups.forEach((p,pi)=>{ if(hit(playerRect(),p)){ applyPower(p.kind); powerups.splice(pi,1); } }); }
+function damage(){ if(player.shield) return; if(--player.lives<=0) gameOver=true; }
+function applyPower(k){ if(k==='triple'){ player.triple=true; setTimeout(()=>player.triple=false,15000);} if(k==='shield') player.shield=480; if(k==='rapid') player.rapid=480; }
+function hit(a,b){ return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y; }
+function playerRect(){ return {x:playerWorldX()-9*SCALE,y:player.y-8*SCALE,w:18*SCALE,h:16*SCALE}; }
+function explode(x,y){ for(let i=0;i<10;i++) particles.push({x,y,vx:random(-2,2),vy:random(-2,2),life:18}); }
+
+/* ===== Render components ===== */
+function worldX(x){ return x-camX; }
+function drawNebula(){ loadPixels(); const w=width/REZ|0, h=height/REZ|0, z=frameCount*0.002; for(let y=0;y<h;y++) for(let x=0;x<w;x++){ const n=noise((x+camX*0.02)*0.03,y*0.03,z)*255|0; const thr=bayer[y&3][x&3]; const col=n>thr?n:0; for(let dy=0;dy<REZ;dy++){ const line=(y*REZ+dy)*width+x*REZ; for(let dx=0;dx<REZ;dx++){ const idx=4*(line+dx); pixels[idx]=pixels[idx+1]=pixels[idx+2]=col; pixels[idx+3]=255; } } } updatePixels(); }
+function drawWorld(){ // entities
+ noStroke(); fill(255,70,70); enemies.forEach(e=>rect(worldX(e.x),e.y,e.w,e.h)); powerups.forEach(p=>{fill(p.kind==='triple'?0x00ffff:p.kind==='shield'?0x00ff00:0xffff00); ellipse(worldX
