@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Claude Code GUI</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: #333;
+    }
+    
+    .container {
+      display: flex;
+      height: 100vh;
+    }
+    
+    .sidebar {
+      width: 250px;
+      background-color: #2c2c32;
+      color: white;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      overflow: hidden;
+    }
+    
+    .terminal {
+      flex: 1;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      font-family: 'Consolas', 'Courier New', monospace;
+      padding: 10px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    
+    .input-area {
+      display: flex;
+      padding: 10px;
+      background-color: #f0f0f0;
+      border-top: 1px solid #ddd;
+    }
+    
+    .input-area textarea {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: none;
+      font-family: 'Consolas', 'Courier New', monospace;
+      height: 80px;
+    }
+    
+    .input-area button {
+      margin-left: 10px;
+      padding: 0 20px;
+      background-color: #007acc;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    
+    .input-area button:hover {
+      background-color: #005999;
+    }
+    
+    h1, h2, h3 {
+      margin-top: 0;
+    }
+    
+    .quick-actions {
+      margin-bottom: 20px;
+    }
+    
+    .quick-actions button {
+      display: block;
+      width: 100%;
+      text-align: left;
+      padding: 8px 10px;
+      margin-bottom: 5px;
+      background-color: #3e3e42;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    .quick-actions button:hover {
+      background-color: #007acc;
+    }
+    
+    .project-info {
+      margin-bottom: 20px;
+    }
+    
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 5px 10px;
+      background-color: #007acc;
+      color: white;
+      font-size: 0.8rem;
+    }
+    
+    .config-section {
+      margin-bottom: 20px;
+    }
+    
+    .config-section h3 {
+      border-bottom: 1px solid #3e3e42;
+      padding-bottom: 5px;
+    }
+    
+    .config-item {
+      margin-bottom: 10px;
+    }
+    
+    .config-item label {
+      display: block;
+      margin-bottom: 3px;
+      opacity: 0.8;
+    }
+    
+    .config-item select,
+    .config-item input {
+      width: 100%;
+      padding: 5px;
+      background-color: #3e3e42;
+      color: white;
+      border: 1px solid #555;
+      border-radius: 3px;
+    }
+    
+    .file-browser {
+      margin-bottom: 20px;
+    }
+    
+    .file-item {
+      padding: 3px 5px;
+      cursor: pointer;
+      border-radius: 3px;
+    }
+    
+    .file-item:hover {
+      background-color: #3e3e42;
+    }
+    
+    .folder {
+      color: #e6db74;
+    }
+    
+    .file {
+      color: #a6e22e;
+    }
+    
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255,255,255,.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .thinking {
+      color: #ffd700;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="sidebar">
+      <h2>Claude Code GUI</h2>
+      
+      <div class="project-info">
+        <h3>Current Project</h3>
+        <div id="project-path">/path/to/project</div>
+      </div>
+      
+      <div class="quick-actions">
+        <h3>Quick Actions</h3>
+        <button id="summarize">Summarize Project</button>
+        <button id="init">/init - Generate CLAUDE.md</button>
+        <button id="help">/help - Show Commands</button>
+        <button id="clear">/clear - Clear History</button>
+        <button id="cost">/cost - Show Usage</button>
+        <button id="config">/config - Settings</button>
+      </div>
+      
+      <div class="config-section">
+        <h3>Settings</h3>
+        <div class="config-item">
+          <label for="theme">Theme</label>
+          <select id="theme">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+            <option value="dark-daltonized">Dark (Colorblind)</option>
+            <option value="light-daltonized">Light (Colorblind)</option>
+          </select>
+        </div>
+        <div class="config-item">
+          <label for="auto-update">Auto Update</label>
+          <select id="auto-update">
+            <option value="enabled">Enabled</option>
+            <option value="disabled">Disabled</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="file-browser">
+        <h3>Files</h3>
+        <div id="file-list">
+          <div class="file-item folder">src/</div>
+          <div class="file-item folder">public/</div>
+          <div class="file-item file">package.json</div>
+          <div class="file-item file">README.md</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="main">
+      <div class="terminal" id="terminal-output">
+        Starting Claude Code GUI...
+        Connected to WSL instance.
+        
+        Claude Code (3.7 Sonnet) is ready. What would you like to do?
+      </div>
+      
+      <div class="input-area">
+        <textarea id="user-input" placeholder="Ask Claude Code to help or type a command..."></textarea>
+        <button id="send-button">Send</button>
+      </div>
+      
+      <div class="status-bar">
+        <span id="connection-status">Connected to WSL</span>
+        <span id="token-usage">Tokens: 0 / 0</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const terminalOutput = document.getElementById('terminal-output');
+      const userInput = document.getElementById('user-input');
+      const sendButton = document.getElementById('send-button');
+      const quickActionButtons = document.querySelectorAll('.quick-actions button');
+      
+      // Handle Enter key in textarea
+      userInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendUserInput();
+        }
+      });
+      
+      // Handle send button click
+      sendButton.addEventListener('click', sendUserInput);
+      
+      // Handle quick action buttons
+      quickActionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+          let command = '';
+          
+          switch(this.id) {
+            case 'summarize':
+              command = 'summarize this project';
+              break;
+            case 'init':
+              command = '/init';
+              break;
+            case 'help':
+              command = '/help';
+              break;
+            case 'clear':
+              command = '/clear';
+              break;
+            case 'cost':
+              command = '/cost';
+              break;
+            case 'config':
+              command = '/config';
+              break;
+          }
+          
+          userInput.value = command;
+          sendUserInput();
+        });
+      });
+      
+      function sendUserInput() {
+        const text = userInput.value.trim();
+        if (text === '') return;
+        
+        // Add user input to terminal
+        terminalOutput.innerHTML += `\n\n> ${text}\n`;
+        
+        // Start thinking animation
+        terminalOutput.innerHTML += `<span class="thinking">Claude is thinking...</span>`;
+        terminalOutput.scrollTop = terminalOutput.scrollHeight;
+        
+        // Simulate Claude response (would be replaced with actual API call)
+        setTimeout(() => {
+          // Remove thinking indicator
+          terminalOutput.innerHTML = terminalOutput.innerHTML.replace('<span class="thinking">Claude is thinking...</span>', '');
+          
+          // Add simulated response based on input
+          let response = '';
+          
+          if (text === '/help') {
+            response = `Available Commands:
+/bug       Report bugs (sends conversation to Anthropic)
+/clear     Clear conversation history
+/compact   Compact conversation with optional focus instructions
+/config    View/modify configuration
+/cost      Show token usage statistics
+/doctor    Checks the health of your Claude Code installation
+/help      Get usage help
+/init      Initialize project with CLAUDE.md guide
+/login     Switch Anthropic accounts
+/logout    Sign out from your Anthropic account
+/memory    Edit CLAUDE.md memory files
+/pr_comments View pull request comments
+/review    Request code review
+/terminal-setup Install Shift+Enter key binding for newlines`;
+          } else if (text === '/cost') {
+            response = `Token Usage:
+Current Session: 1,543 tokens
+Input: 567 tokens
+Output: 976 tokens
+Estimated Cost: $0.08`;
+          } else if (text === 'summarize this project') {
+            response = `I'll summarize your project by examining the files and structure.
+
+Based on my analysis, this appears to be a React-based web application for controlling Claude Code running in WSL from Windows. The project has the following structure:
+
+- Frontend UI built with React
+- Backend Node.js server that communicates with WSL
+- WebSocket connection for real-time updates
+- Configuration for Claude Code integration
+
+The main functionality allows you to:
+1. Send commands to Claude Code running in WSL
+2. View responses in a terminal-like interface
+3. Manage project files and settings
+4. Execute common Claude Code operations through a GUI
+
+Would you like me to provide more details about any specific aspect of the project?`;
+          } else {
+            response = `I've received your request: "${text}". Let me process that for you.
+
+This would connect to the actual Claude Code instance running in your WSL environment. In a real implementation, I would execute this command and stream back the results to you.
+
+For now, this is a prototype UI. The next step would be to implement the backend service that bridges Windows and WSL.`;
+          }
+          
+          terminalOutput.innerHTML += response;
+          terminalOutput.scrollTop = terminalOutput.scrollHeight;
+          
+          // Clear input after sending
+          userInput.value = '';
+          
+          // Update token usage in status bar (simulated)
+          document.getElementById('token-usage').textContent = 'Tokens: 1,543 / 200,000';
+        }, 1500);
+      }
+    });
+  </script>
+</body>
+</html>
