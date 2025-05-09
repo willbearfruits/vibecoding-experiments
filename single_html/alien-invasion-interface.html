@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alien Invasion Combat Simulator - Military Training Interface</title>
+    <style>
+        :root {
+            --primary: #1a2a3a;
+            --secondary: #2c3e50;
+            --accent: #3498db;
+            --danger: #e74c3c;
+            --success: #2ecc71;
+            --warning: #f39c12;
+            --text: #ecf0f1;
+            --dark-text: #2c3e50;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', 'Arial', sans-serif;
+            background-color: #0a0a0a;
+            color: var(--text);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background-color: var(--primary);
+            padding: 15px 0;
+            border-bottom: 3px solid var(--accent);
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .logo h1 {
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-left: 15px;
+        }
+        
+        .logo img {
+            height: 40px;
+        }
+        
+        .military-banner {
+            background-color: #000;
+            color: var(--warning);
+            text-align: center;
+            padding: 8px;
+            font-weight: bold;
+            letter-spacing: 1px;
+            font-size: 14px;
+            text-transform: uppercase;
+            border-top: 1px solid var(--warning);
+            border-bottom: 1px solid var(--warning);
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            padding: 20px 0;
+        }
+        
+        .simulation-view {
+            background-color: var(--secondary);
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            aspect-ratio: 16/9;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .simulation-screen {
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            background-image: 
+                linear-gradient(rgba(0,20,40,0.7), rgba(0,0,0,0.9)),
+                url('/api/placeholder/800/450');
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            position: relative;
+        }
+        
+        .simulation-hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            padding: 20px;
+        }
+        
+        .hud-item {
+            background-color: rgba(0, 0, 0, 0.6);
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            padding: 10px;
+            margin-bottom: 10px;
+            max-width: 200px;
+        }
+        
+        .health-bar, .ammo-bar {
+            height: 10px;
+            background-color: #333;
+            border-radius: 5px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        
+        .health-bar > div {
+            height: 100%;
+            background-color: var(--danger);
+            width: 80%;
+        }
+        
+        .ammo-bar > div {
+            height: 100%;
+            background-color: var(--warning);
+            width: 60%;
+        }
+        
+        .crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 20px;
+            height: 20px;
+            pointer-events: none;
+        }
+        
+        .crosshair::before, .crosshair::after {
+            content: "";
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .crosshair::before {
+            width: 2px;
+            height: 20px;
+            left: 9px;
+            top: 0;
+        }
+        
+        .crosshair::after {
+            width: 20px;
+            height: 2px;
+            left: 0;
+            top: 9px;
+        }
+        
+        .controls-panel {
+            background-color: var(--primary);
+            border-radius: 5px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .panel-title {
+            font-size: 18px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--accent);
+            color: var(--accent);
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: var(--warning);
+        }
+        
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 4px;
+            background-color: var(--accent);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger);
+        }
+        
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .btn-success {
+            background-color: var(--success);
+        }
+        
+        .btn-success:hover {
+            background-color: #27ae60;
+        }
+        
+        .btn-warning {
+            background-color: var(--warning);
+        }
+        
+        .btn-warning:hover {
+            background-color: #d35400;
+        }
+        
+        .settings-group {
+            margin-bottom: 15px;
+        }
+        
+        .settings-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+        }
+        
+        .slider {
+            flex: 1;
+            height: 5px;
+            border-radius: 5px;
+            background: #d3d3d3;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+        }
+        
+        .slider-value {
+            min-width: 40px;
+            text-align: right;
+            margin-left: 10px;
+        }
+        
+        .select-container {
+            margin-bottom: 15px;
+        }
+        
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 4px;
+            background-color: #2c3e50;
+            color: white;
+            border: 1px solid var(--accent);
+        }
+        
+        .alien-stats {
+            margin-top: 20px;
+        }
+        
+        .stat-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #bbb;
+        }
+        
+        .stat-value {
+            font-weight: bold;
+        }
+        
+        .action-log {
+            background-color: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 14px;
+            color: #0f0;
+        }
+        
+        .action-log p {
+            margin-bottom: 5px;
+            line-height: 1.3;
+        }
+        
+        .action-log .timestamp {
+            color: var(--warning);
+            margin-right: 5px;
+        }
+        
+        .weapon-selection {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .weapon-btn {
+            flex: 1;
+            padding: 8px;
+            background-color: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .weapon-btn.active {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+        
+        .weapon-btn:hover {
+            background-color: #444;
+        }
+        
+        .weapon-btn.active:hover {
+            background-color: #2980b9;
+        }
+        
+        footer {
+            background-color: var(--primary);
+            padding: 20px 0;
+            text-align: center;
+            margin-top: 30px;
+            border-top: 3px solid var(--accent);
+        }
+        
+        .classified-stamp {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-30deg);
+            font-size: 80px;
+            font-weight: bold;
+            color: rgba(231, 76, 60, 0.7);
+            border: 10px solid rgba(231, 76, 60, 0.7);
+            padding: 10px 20px;
+            text-transform: uppercase;
+            pointer-events: none;
+            letter-spacing: 5px;
+            display: none;
+        }
+        
+        /* Keyframes for flashing buttons */
+        @keyframes flash {
+            0% { box-shadow: 0 0 5px var(--warning); }
+            50% { box-shadow: 0 0 20px var(--warning), 0 0 30px var(--warning); }
+            100% { box-shadow: 0 0 5px var(--warning); }
+        }
+        
+        .flashing {
+            animation: flash 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="logo">
+                <img src="/api/placeholder/40/40" alt="Military Logo">
+                <h1>Alien Invasion Combat Simulator</h1>
+            </div>
+        </div>
+    </header>
+    
+    <div class="military-banner">
+        Restricted Access - Military Training Software - Authorized Personnel Only
+    </div>
+    
+    <div class="container">
+        <div class="main-content">
+            <div class="simulation-section">
+                <div class="simulation-view">
+                    <div class="simulation-screen">
+                        <div class="classified-stamp" id="classifiedStamp">CLASSIFIED</div>
+                        <div id="startPrompt">Click "Initialize Simulation" to begin</div>
+                    </div>
+                    <div class="simulation-hud" id="simulationHud" style="display: none;">
+                        <div class="hud-item">
+                            <strong>Health:</strong>
+                            <div class="health-bar"><div id="healthBarFill"></div></div>
+                        </div>
+                        <div class="hud-item">
+                            <strong>Ammo:</strong>
+                            <div class="ammo-bar"><div id="ammoBarFill"></div></div>
+                        </div>
+                        <div class="crosshair"></div>
+                    </div>
+                </div>
+                
+                <div class="alien-stats">
+                    <div class="panel-title">Threat Analysis</div>
+                    
+                    <div class="stat-container">
+                        <span class="stat-label">Active Alien Units:</span>
+                        <span class="stat-value" id="alienCount">0</span>
+                    </div>
+                    
+                    <div class="stat-container">
+                        <span class="stat-label">Eliminated Threats:</span>
+                        <span class="stat-value" id="killCount">0</span>
+                    </div>
+                    
+                    <div class="stat-container">
+                        <span class="stat-label">Current Score:</span>
+                        <span class="stat-value" id="playerScore">0</span>
+                    </div>
+                    
+                    <div class="action-log" id="actionLog">
+                        <p><span class="timestamp">[00:00:00]</span> System initialized. Awaiting command.</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls-panel">
+                <div class="panel-title">Command Center</div>
+                
+                <div class="control-group">
+                    <h3>Simulation Controls</h3>
+                    <button class="btn btn-success" id="initBtn">Initialize Simulation</button>
+                    <button class="btn" id="pauseBtn" disabled>Pause Simulation</button>
+                    <button class="btn btn-danger" id="terminateBtn" disabled>Terminate Simulation</button>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Weapon Selection</h3>
+                    <div class="weapon-selection">
+                        <div class="weapon-btn active" data-weapon="rifle">Rifle</div>
+                        <div class="weapon-btn" data-weapon="plasma">Plasma Cannon</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Difficulty Settings</h3>
+                    
+                    <div class="settings-group">
+                        <label for="spawnRateSlider">Alien Spawn Rate</label>
+                        <div class="slider-container">
+                            <input type="range" min="5" max="60" value="20" class="slider" id="spawnRateSlider">
+                            <span class="slider-value" id="spawnRateValue">20/min</span>
+                        </div>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="alienTypeSelect">Dominant Alien Type</label>
+                        <select id="alienTypeSelect">
+                            <option value="balanced">Balanced Mix</option>
+                            <option value="grunt">Mostly Grunts</option>
+                            <option value="flyer">Mostly Flyers</option>
+                            <option value="brute">Mostly Brutes</option>
+                        </select>
+                    </div>
+                    
+                    <div class="settings-group">
+                        <label for="environmentSelect">Combat Environment</label>
+                        <select id="environmentSelect">
+                            <option value="urban">Urban Ruins</option>
+                            <option value="forest">Forest Clearing</option>
+                            <option value="facility">Military Facility</option>
+                            <option value="underground">Underground Bunker</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <h3>Performance Data</h3>
+                    <div class="stat-container">
+                        <span class="stat-label">FPS:</span>
+                        <span class="stat-value" id="fpsCounter">60</span>
+                    </div>
+                    <div class="stat-container">
+                        <span class="stat-label">Simulation Time:</span>
+                        <span class="stat-value" id="simulationTime">00:00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container">
+            <p>© 2025 Military Training Division - Alien Defense Program</p>
+            <p>Version 1.0.5 - CLASSIFIED MATERIAL</p>
+        </div>
+    </footer>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Elements
+            const initBtn = document.getElementById('initBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const terminateBtn = document.getElementById('terminateBtn');
+            const simulationHud = document.getElementById('simulationHud');
+            const startPrompt = document.getElementById('startPrompt');
+            const classifiedStamp = document.getElementById('classifiedStamp');
+            const actionLog = document.getElementById('actionLog');
+            const spawnRateSlider = document.getElementById('spawnRateSlider');
+            const spawnRateValue = document.getElementById('spawnRateValue');
+            const alienCount = document.getElementById('alienCount');
+            const killCount = document.getElementById('killCount');
+            const playerScore = document.getElementById('playerScore');
+            const healthBarFill = document.getElementById('healthBarFill');
+            const ammoBarFill = document.getElementById('ammoBarFill');
+            const simulationTime = document.getElementById('simulationTime');
+            const fpsCounter = document.getElementById('fpsCounter');
+            const weaponBtns = document.querySelectorAll('.weapon-btn');
+            
+            // Simulation state
+            let simulationRunning = false;
+            let simulationPaused = false;
+            let elapsedTime = 0;
+            let killCounter = 0;
+            let scoreTotal = 0;
+            let activeAliens = 0;
+            let health = 100;
+            let ammo = 30;
+            let fps = 60;
+            let simulationInterval;
+            
+            // Initialize event listeners
+            initBtn.addEventListener('click', startSimulation);
+            pauseBtn.addEventListener('click', togglePause);
+            terminateBtn.addEventListener('click', endSimulation);
+            spawnRateSlider.addEventListener('input', updateSpawnRate);
+            
+            weaponBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    // Remove active class from all buttons
+                    weaponBtns.forEach(b => b.classList.remove('active'));
+                    // Add active class to clicked button
+                    this.classList.add('active');
+                    
+                    const weapon = this.dataset.weapon;
+                    log(`Switching to ${weapon === 'rifle' ? 'Standard Rifle' : 'Plasma Cannon'}`);
+                    
+                    // Update ammo display based on weapon
+                    if (weapon === 'rifle') {
+                        ammo = 30;
+                    } else {
+                        ammo = 5;
+                    }
+                    updateAmmoDisplay();
+                });
+            });
+            
+            function startSimulation() {
+                simulationRunning = true;
+                simulationPaused = false;
+                
+                // Update UI
+                initBtn.disabled = true;
+                pauseBtn.disabled = false;
+                pauseBtn.textContent = 'Pause Simulation';
+                terminateBtn.disabled = false;
+                simulationHud.style.display = 'block';
+                startPrompt.style.display = 'none';
+                
+                // Reset stats
+                elapsedTime = 0;
+                killCounter = 0;
+                scoreTotal = 0;
+                activeAliens = 0;
+                health = 100;
+                ammo = 30;
+                
+                // Update displays
+                updateHealthDisplay();
+                updateAmmoDisplay();
+                
+                // Clear log and add initialization message
+                actionLog.innerHTML = '';
+                log('Simulation initialized');
+                log('Combat protocols engaged');
+                log('Alien presence detected in the vicinity');
+                
+                // Start simulation loop
+                simulationInterval = setInterval(updateSimulation, 1000);
+                
+                // Simulate FPS counter fluctuation
+                setInterval(() => {
+                    fps = 55 + Math.floor(Math.random() * 10);
+                    fpsCounter.textContent = fps;
+                }, 2000);
+            }
+            
+            function togglePause() {
+                if (simulationRunning) {
+                    simulationPaused = !simulationPaused;
+                    pauseBtn.textContent = simulationPaused ? 'Resume Simulation' : 'Pause Simulation';
+                    classifiedStamp.style.display = simulationPaused ? 'block' : 'none';
+                    
+                    if (simulationPaused) {
+                        log('Simulation paused');
+                    } else {
+                        log('Simulation resumed');
+                    }
+                }
+            }
+            
+            function endSimulation() {
+                simulationRunning = false;
+                simulationPaused = false;
+                clearInterval(simulationInterval);
+                
+                // Update UI
+                initBtn.disabled = false;
+                pauseBtn.disabled = true;
+                terminateBtn.disabled = true;
+                simulationHud.style.display = 'none';
+                startPrompt.style.display = 'block';
+                startPrompt.textContent = 'Simulation terminated. Click "Initialize Simulation" to begin a new session.';
+                classifiedStamp.style.display = 'none';
+                
+                log('Simulation terminated');
+                log('Combat data recorded for analysis');
+                log('Final score: ' + scoreTotal);
+            }
+            
+            function updateSimulation() {
+                if (simulationRunning && !simulationPaused) {
+                    // Increment time
+                    elapsedTime++;
+                    
+                    // Format time as MM:SS
+                    const minutes = Math.floor(elapsedTime / 60);
+                    const seconds = elapsedTime % 60;
+                    simulationTime.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                    
+                    // Randomly spawn aliens
+                    if (Math.random() < 0.7) {
+                        const spawnAmount = Math.floor(Math.random() * 3) + 1;
+                        activeAliens += spawnAmount;
+                        
+                        const alienTypes = ['Grunt', 'Flyer', 'Brute'];
+                        const alienType = alienTypes[Math.floor(Math.random() * alienTypes.length)];
+                        
+                        log(`${spawnAmount} ${alienType} alien${spawnAmount > 1 ? 's' : ''} detected`);
+                        alienCount.textContent = activeAliens;
+                    }
+                    
+                    // Simulate combat events
+                    simulateCombatEvents();
+                    
+                    // Check simulation end conditions
+                    if (health <= 0) {
+                        log('CRITICAL: Operative down. Vital signs negative.');
+                        log('Simulation terminated due to operative casualty.');
+                        endSimulation();
+                    }
+                }
+            }
+            
+            function simulateCombatEvents() {
+                // Simulate taking damage
+                if (activeAliens > 0 && Math.random() < 0.3) {
+                    const damage = Math.floor(Math.random() * 10) + 5;
+                    health = Math.max(0, health - damage);
+                    log(`Taking damage: -${damage} health`);
+                    updateHealthDisplay();
+                }
+                
+                // Simulate ammo usage
+                if (Math.random() < 0.5) {
+                    const ammoUsed = Math.floor(Math.random() * 3) + 1;
+                    ammo = Math.max(0, ammo - ammoUsed);
+                    updateAmmoDisplay();
+                }
+                
+                // Simulate reloading
+                if (ammo < 5 && Math.random() < 0.7) {
+                    log('Reloading weapon');
+                    const weaponType = document.querySelector('.weapon-btn.active').dataset.weapon;
+                    ammo = weaponType === 'rifle' ? 30 : 5;
+                    updateAmmoDisplay();
+                }
+                
+                // Simulate killing aliens
+                if (activeAliens > 0 && Math.random() < 0.4) {
+                    const killed = Math.floor(Math.random() * Math.min(3, activeAliens)) + 1;
+                    activeAliens -= killed;
+                    killCounter += killed;
+                    
+                    const points = killed * (Math.floor(Math.random() * 100) + 50);
+                    scoreTotal += points;
+                    
+                    log(`Eliminated ${killed} alien${killed > 1 ? 's' : ''}. +${points} points`);
+                    
+                    alienCount.textContent = activeAliens;
+                    killCount.textContent = killCounter;
+                    playerScore.textContent = scoreTotal;
+                }
+            }
+            
+            function updateSpawnRate() {
+                const rate = spawnRateSlider.value;
+                spawnRateValue.textContent = `${rate}/min`;
+                log(`Alien spawn rate adjusted to ${rate} per minute`);
+            }
+            
+            function updateHealthDisplay() {
+                healthBarFill.style.width = `${health}%`;
+                
+                // Change color based on health level
+                if (health < 30) {
+                    healthBarFill.style.backgroundColor = '#e74c3c'; // red
+                } else if (health < 60) {
+                    healthBarFill.style.backgroundColor = '#f39c12'; // orange
+                } else {
+                    healthBarFill.style.backgroundColor = '#2ecc71'; // green
+                }
+            }
+            
+            function updateAmmoDisplay() {
+                const weaponType = document.querySelector('.weapon-btn.active').dataset.weapon;
+                const maxAmmo = weaponType === 'rifle' ? 30 : 5;
+                const percentage = (ammo / maxAmmo) * 100;
+                
+                ammoBarFill.style.width = `${percentage}%`;
+                
+                // Low ammo warning
+                if (percentage < 25) {
+                    ammoBarFill.style.backgroundColor = '#e74c3c'; // red
+                } else {
+                    ammoBarFill.style.backgroundColor = '#f39c12'; // yellow
+                }
+            }
+            
+            function log(message) {
+                const now = new Date();
+                const timeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                
+                const logEntry = document.createElement('p');
+                logEntry.innerHTML = `<span class="timestamp">[${timeString}]</span> ${message}`;
+                
+                actionLog.appendChild(logEntry);
+                actionLog.scrollTop = actionLog.scrollHeight; // Auto-scroll to bottom
+            }
+        });
+    </script>
+</body>
+</html>
