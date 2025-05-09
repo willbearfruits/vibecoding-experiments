@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HYPERCITY — single‑file HTML POC</title>
+  <style>
+    html,body{margin:0;height:100%;overflow:hidden;background:#000;color:#0f0;font-family:monospace}
+    #hud{position:fixed;top:10px;left:10px;z-index:10}
+    button{background:#111;border:1px solid #0f0;color:#0f0;padding:4px 8px;font-size:14px;cursor:pointer}
+    button.active{background:#0f0;color:#000}
+  </style>
+  <!-- CDN libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.164.0/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.164.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+</head>
+<body>
+  <div id="hud"><button id="play">Play</button></div>
+  <!-- Main logic -->
+  <script type="module">
+    // ──────────────────────────────────────────────────────────────────────
+    //  Hypercity 3D‑LSDJ tracker — HTML proof‑of‑concept (phase‑0)
+    //  Click empties to place voxel‑notes, Play button to hear 16‑step loop
+    // ──────────────────────────────────────────────────────────────────────
+
+    // Three.js scene
+    const scene   = new THREE.Scene();
+    const camera  = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+    camera.position.set(0,25,40);
+
+    const renderer= new THREE.WebGLRenderer({antialias:false});
+    renderer.setSize(innerWidth, innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enablePan   = true;
+    controls.enableRotate= true;
+    controls.maxPolarAngle = Math.PI/2.05;
+    controls.target.set(0,0,0);
+
+    // Grid reference
+    const grid = new THREE.GridHelper(260,260,0x222222,0x111111);
+    grid.rotation.x = Math.PI/2;
+    scene.add(grid);
+
+    // Lights
+    scene.add(new THREE.AmbientLight(0xffffff,0.5));
+    const dir = new THREE.DirectionalLight(0xffffff,0.8);
+    dir.position.set(10,20,10); scene.add(dir);
+
+    // Data store
+    const notes=[]; // {lane,step,mesh}
+    const laneColors=[0xff3caa,0x61f2ff,0xffe23c,0x9dff3c,0xbd3cff,0xff3c61,0x3cffa8,0xff873c];
+    const geo = new THREE.BoxGeometry(1,1,1);
+
+    // ── Tone.js setup ────────────────────────────────────────────────────
+    const player = new Tone.Player("https://tonejs.github.io/audio/drum-samples/CR78/kick.mp3").toDestination();
+    await Tone.loaded();
+    Tone.Transport.bpm.value = 150;
+    Tone.Transport.scheduleRepeat(time=>{
+      const step = Math.floor(Tone.Transport.ticks/96)%16; // 16‑step bar
+      notes.forEach(n=>{ if(n.step%16===step) player.start(time); });
+    }, "16n");
+
+    // ── Interaction: place voxels on grid click ─────────────────────────
+    renderer.domElement.addEventListener('pointerdown', e=>{
+      const rect = renderer.domElement.getBoundingClientRect();
+      const mouse = new THREE.Vector2(
+        (e.clientX-rect.left)/rect.width*2-1,
+        -(e.clientY-rect.top)/rect.height*2+1
+      );
+      const ray = new THREE.Raycaster();
+      ray.setFromCamera(mouse, camera);
+      const hits = ray.intersectObject(grid,true);
+      if(!hits.length) return;
+      const p = hits[0].point;
+      const lane = Math.round(p.x)+4;  // lanes 0‑7
+      const step = Math.round(p.z)+128; // steps 0‑255
+      if(lane<0||lane>7||step<0||step>255) return;
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:laneColors[lane]}));
+      mesh.position.set(lane-3.5,0.5,step-128);
+      scene.add(mesh);
+      notes.push({lane,step,mesh});
+    });
+
+    // ── Animation loop ──────────────────────────────────────────────────
+    function loop(){
+      requestAnimationFrame(loop);
+      controls.update();
+      renderer.render(scene,camera);
+    }
+    loop();
+
+    // ── Play/Stop UI ────────────────────────────────────────────────────
+    const btn = document.getElementById('play');
+    let playing=false;
+    btn.addEventListener('click', async ()=>{
+      if(!playing){
+        await Tone.start();
+        Tone.Transport.start();
+        playing=true; btn.classList.add('active'); btn.textContent='Stop';
+      }else{
+        Tone.Transport.stop();
+        playing=false; btn.classList.remove('active'); btn.textContent='Play';
+      }
+    });
+
+    // ── Handle resize ───────────────────────────────────────────────────
+    addEventListener('resize',()=>{
+      camera.aspect = innerWidth/innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth,innerHeight);
+    });
+  </script>
+</body>
+</html>
