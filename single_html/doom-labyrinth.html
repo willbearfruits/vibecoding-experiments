@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doom-Style Labyrinth</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            image-rendering: pixelated; /* For that classic pixelated look */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Set resolution to match classic Doom (320x200 aspect ratio but larger)
+        const RESOLUTION_SCALE = 3;
+        const WIDTH = 320 * RESOLUTION_SCALE;
+        const HEIGHT = 200 * RESOLUTION_SCALE;
+        canvas.width = WIDTH;
+        canvas.height = HEIGHT;
+
+        // Player settings
+        const player = {
+            x: 2.5,
+            y: 2.5,
+            angle: 0,
+            speed: 0.05,
+            turnSpeed: 0.03,
+            moving: false,
+            bobOffset: 0
+        };
+
+        // Map settings
+        const mapWidth = 16;
+        const mapHeight = 16;
+        const map = [
+            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+            1,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,
+            1,0,1,1,1,0,1,0,1,1,1,1,1,1,0,1,
+            1,0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,
+            1,0,1,0,1,0,0,0,1,0,1,1,0,1,0,1,
+            1,0,1,0,1,1,1,1,1,0,1,0,0,1,0,1,
+            1,0,0,0,0,0,0,0,0,0,1,0,1,1,0,1,
+            1,1,1,1,1,1,0,1,1,1,1,0,1,0,0,1,
+            1,0,0,0,0,0,0,0,0,0,0,0,1,0,1,1,
+            1,0,1,1,1,1,1,1,1,1,1,0,1,0,0,1,
+            1,0,1,0,0,0,0,0,0,0,1,0,1,1,0,1,
+            1,0,1,0,1,1,1,1,1,0,1,0,0,0,0,1,
+            1,0,1,0,1,0,0,0,1,0,1,1,1,1,0,1,
+            1,0,1,0,1,0,1,0,1,0,0,0,0,1,0,1,
+            1,0,0,0,1,0,1,0,0,0,1,1,0,0,0,1,
+            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+        ];
+
+        // Get map cell at position
+        function getMapCell(x, y) {
+            const mapX = Math.floor(x);
+            const mapY = Math.floor(y);
+            if (mapX < 0 || mapX >= mapWidth || mapY < 0 || mapY >= mapHeight) {
+                return 1; // Wall outside map boundaries
+            }
+            return map[mapY * mapWidth + mapX];
+        }
+
+        // Textures (simplified)
+        const TEXTURE_SIZE = 64;
+        const NUM_TEXTURES = 5;
+        const textures = [];
+
+        // Create textures
+        function createTextures() {
+            // Create offscreen canvases for each texture
+            for (let i = 0; i < NUM_TEXTURES; i++) {
+                const textureCanvas = document.createElement('canvas');
+                textureCanvas.width = TEXTURE_SIZE;
+                textureCanvas.height = TEXTURE_SIZE;
+                const textureCtx = textureCanvas.getContext('2d');
+                
+                // Generate different textures
+                if (i === 0) {
+                    // Brick texture
+                    textureCtx.fillStyle = '#8B4513'; // Brown base
+                    textureCtx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+                    
+                    // Draw bricks
+                    textureCtx.fillStyle = '#A52A2A'; // Brick color
+                    for (let y = 0; y < TEXTURE_SIZE; y += 16) {
+                        const offset = (y % 32 === 0) ? 0 : 8;
+                        for (let x = offset; x < TEXTURE_SIZE; x += 16) {
+                            textureCtx.fillRect(x, y, 14, 14);
+                        }
+                    }
+                } else if (i === 1) {
+                    // Stone wall
+                    textureCtx.fillStyle = '#708090'; // Slate gray
+                    textureCtx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+                    
+                    // Add stone texture
+                    textureCtx.fillStyle = '#778899';
+                    for (let y = 0; y < TEXTURE_SIZE; y += 16) {
+                        for (let x = 0; x < TEXTURE_SIZE; x += 16) {
+                            if ((x + y) % 32 === 0) {
+                                textureCtx.fillRect(x, y, 16, 16);
+                            }
+                        }
+                    }
+                } else if (i === 2) {
+                    // Computer panel
+                    textureCtx.fillStyle = '#333';
+                    textureCtx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+                    
+                    // Add tech details
+                    textureCtx.fillStyle = '#007';
+                    textureCtx.fillRect(4, 4, TEXTURE_SIZE - 8, TEXTURE_SIZE - 8);
+                    
+                    // Add blinking lights
+                    for (let y = 8; y < TEXTURE_SIZE; y += 12) {
+                        textureCtx.fillStyle = y % 24 === 0 ? '#0F0' : '#F00';
+                        textureCtx.fillRect(8, y, 4, 4);
+                        textureCtx.fillRect(TEXTURE_SIZE - 12, y, 4, 4);
+                    }
+                    
+                    // Add panel lines
+                    textureCtx.fillStyle = '#555';
+                    textureCtx.fillRect(TEXTURE_SIZE / 2 - 2, 0, 4, TEXTURE_SIZE);
+                    for (let y = 16; y < TEXTURE_SIZE; y += 16) {
+                        textureCtx.fillRect(0, y, TEXTURE_SIZE, 2);
+                    }
+                } else if (i === 3) {
+                    // Warning stripes
+                    for (let y = 0; y < TEXTURE_SIZE; y += 8) {
+                        textureCtx.fillStyle = y % 16 === 0 ? '#FF0' : '#000';
+                        textureCtx.fillRect(0, y, TEXTURE_SIZE, 8);
+                    }
+                } else if (i === 4) {
+                    // Blood wall
+                    textureCtx.fillStyle = '#8B0000'; // Dark red
+                    textureCtx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+                    
+                    // Add blood splatters
+                    textureCtx.fillStyle = '#D00';
+                    for (let i = 0; i < 20; i++) {
+                        const splatterX = Math.random() * TEXTURE_SIZE;
+                        const splatterY = Math.random() * TEXTURE_SIZE;
+                        const splatterSize = 4 + Math.random() * 8;
+                        textureCtx.beginPath();
+                        textureCtx.arc(splatterX, splatterY, splatterSize, 0, Math.PI * 2);
+                        textureCtx.fill();
+                    }
+                    
+                    // Add some drips
+                    for (let i = 0; i < 5; i++) {
+                        const dripX = Math.random() * TEXTURE_SIZE;
+                        const dripHeight = 10 + Math.random() * 30;
+                        textureCtx.fillRect(dripX, 0, 3, dripHeight);
+                    }
+                }
+                
+                // Add some noise for texture
+                const imageData = textureCtx.getImageData(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    const noise = Math.random() * 20 - 10;
+                    data[i] = Math.max(0, Math.min(255, data[i] + noise));
+                    data[i+1] = Math.max(0, Math.min(255, data[i+1] + noise));
+                    data[i+2] = Math.max(0, Math.min(255, data[i+2] + noise));
+                }
+                textureCtx.putImageData(imageData, 0, 0);
+                
+                textures.push(textureCanvas);
+            }
+        }
+
+        // Create floor/ceiling textures
+        const floorTexture = document.createElement('canvas');
+        floorTexture.width = TEXTURE_SIZE;
+        floorTexture.height = TEXTURE_SIZE;
+        const floorCtx = floorTexture.getContext('2d');
+
+        function createFloorTexture() {
+            floorCtx.fillStyle = '#333';
+            floorCtx.fillRect(0, 0, TEXTURE_SIZE, TEXTURE_SIZE);
+            
+            // Checkerboard pattern
+            floorCtx.fillStyle = '#555';
+            const tileSize = 16;
+            for (let y = 0; y < TEXTURE_SIZE; y += tileSize) {
+                for (let x = 0; x < TEXTURE_SIZE; x += tileSize) {
+                    if ((x / tileSize + y / tileSize) % 2 === 0) {
+                        floorCtx.fillRect(x, y, tileSize, tileSize);
+                    }
+                }
+            }
+        }
+
+        // Mouse handling
+        let mouseX = 0;
+        let keys = {};
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const relativeX = e.clientX - rect.left;
+            const centerX = rect.width / 2;
+            const delta = (relativeX - centerX) / rect.width;
+            
+            // Turn player based on mouse X position
+            player.angle += delta * 0.05;
+        });
+
+        // Lock/hide cursor when canvas is clicked
+        canvas.addEventListener('click', () => {
+            canvas.requestPointerLock();
+        });
+
+        // Keyboard handling
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === 'w' || e.key === 'ArrowUp' || 
+                e.key === 's' || e.key === 'ArrowDown' ||
+                e.key === 'a' || e.key === 'ArrowLeft' ||
+                e.key === 'd' || e.key === 'ArrowRight') {
+                player.moving = true;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+            if (e.key === 'w' || e.key === 'ArrowUp' || 
+                e.key === 's' || e.key === 'ArrowDown' ||
+                e.key === 'a' || e.key === 'ArrowLeft' ||
+                e.key === 'd' || e.key === 'ArrowRight') {
+                // Check if any movement keys are still pressed
+                player.moving = keys['w'] || keys['ArrowUp'] || 
+                               keys['s'] || keys['ArrowDown'] ||
+                               keys['a'] || keys['ArrowLeft'] ||
+                               keys['d'] || keys['ArrowRight'];
+            }
+        });
+
+        // Movement function
+        function movePlayer() {
+            // Calculate movement direction
+            let dx = 0;
+            let dy = 0;
+            
+            if (keys['w'] || keys['ArrowUp']) {
+                dx += Math.cos(player.angle) * player.speed;
+                dy += Math.sin(player.angle) * player.speed;
+            }
+            if (keys['s'] || keys['ArrowDown']) {
+                dx -= Math.cos(player.angle) * player.speed;
+                dy -= Math.sin(player.angle) * player.speed;
+            }
+            if (keys['a'] || keys['ArrowLeft']) {
+                dx += Math.cos(player.angle - Math.PI/2) * player.speed;
+                dy += Math.sin(player.angle - Math.PI/2) * player.speed;
+            }
+            if (keys['d'] || keys['ArrowRight']) {
+                dx += Math.cos(player.angle + Math.PI/2) * player.speed;
+                dy += Math.sin(player.angle + Math.PI/2) * player.speed;
+            }
+            
+            // Apply view bobbing when moving
+            if (player.moving) {
+                player.bobOffset = Math.sin(Date.now() * 0.01) * 5;
+            } else {
+                player.bobOffset = 0;
+            }
+            
+            // Collision detection
+            const newX = player.x + dx;
+            const newY = player.y + dy;
+            
+            // Check if the new position is inside a wall
+            if (getMapCell(newX, player.y) === 0) {
+                player.x = newX;
+            }
+            
+            if (getMapCell(player.x, newY) === 0) {
+                player.y = newY;
+            }
+        }
+
+        // Draw a column of the wall
+        function drawWallColumn(rayX, rayY, side, textureX, distance, columnX, height) {
+            // Texture selection (vary by position for more interesting maps)
+            const cellX = Math.floor(rayX);
+            const cellY = Math.floor(rayY);
+            
+            // Choose texture based on position in maze
+            let textureIndex = (cellX + cellY) % NUM_TEXTURES;
+            
+            // Darken one side for 3D effect
+            const brightness = side === 0 ? 1.0 : 0.7;
+            
+            // Wall height based on distance
+            const wallHeight = Math.min(HEIGHT, HEIGHT / distance);
+            const drawStart = HEIGHT / 2 - wallHeight / 2 + player.bobOffset;
+            const drawEnd = HEIGHT / 2 + wallHeight / 2 + player.bobOffset;
+            
+            // Draw wall slice
+            const texture = textures[textureIndex];
+            
+            // Draw ceiling
+            ctx.fillStyle = '#111';
+            ctx.fillRect(columnX, 0, 1, drawStart);
+            
+            // Draw wall using texture
+            const scaleFactor = TEXTURE_SIZE / wallHeight;
+            
+            // Draw the wall slice directly with proper scaling
+            ctx.drawImage(
+                texture,
+                Math.floor(textureX * TEXTURE_SIZE), 0, 1, TEXTURE_SIZE,
+                columnX, drawStart, 1, drawEnd - drawStart
+            );
+            
+            // Apply brightness/distance fog
+            ctx.fillStyle = `rgba(0, 0, 0, ${Math.min(0.8, distance / 20 * 0.8)})`;
+            ctx.fillRect(columnX, drawStart, 1, drawEnd - drawStart);
+            
+            // Draw floor
+            ctx.fillStyle = '#222';
+            ctx.fillRect(columnX, drawEnd, 1, HEIGHT - drawEnd);
+        }
+
+        // Cast a ray for one vertical column of the screen
+        function castRay(columnX) {
+            // Convert from screen coordinates to normalized device coordinates (-1 to 1)
+            const cameraX = 2 * columnX / WIDTH - 1;
+            
+            // Ray direction
+            const rayDirX = Math.cos(player.angle) + player.dPlaneX * cameraX;
+            const rayDirY = Math.sin(player.angle) + player.dPlaneY * cameraX;
+            
+            // Current map cell
+            let mapX = Math.floor(player.x);
+            let mapY = Math.floor(player.y);
+            
+            // Length of ray from current position to next x or y-side
+            let sideDistX;
+            let sideDistY;
+            
+            // Length of ray from one x or y-side to next x or y-side
+            const deltaDistX = Math.abs(1 / rayDirX);
+            const deltaDistY = Math.abs(1 / rayDirY);
+            
+            // Direction to step in x or y direction (either +1 or -1)
+            let stepX;
+            let stepY;
+            
+            // Calculate step and initial sideDist
+            if (rayDirX < 0) {
+                stepX = -1;
+                sideDistX = (player.x - mapX) * deltaDistX;
+            } else {
+                stepX = 1;
+                sideDistX = (mapX + 1.0 - player.x) * deltaDistX;
+            }
+            
+            if (rayDirY < 0) {
+                stepY = -1;
+                sideDistY = (player.y - mapY) * deltaDistY;
+            } else {
+                stepY = 1;
+                sideDistY = (mapY + 1.0 - player.y) * deltaDistY;
+            }
+            
+            // Perform DDA (Digital Differential Analysis)
+            let hit = 0; // Was there a wall hit?
+            let side = 0; // Was a NS or a EW wall hit?
+            
+            while (hit === 0) {
+                // Jump to next map square, either in x-direction, or in y-direction
+                if (sideDistX < sideDistY) {
+                    sideDistX += deltaDistX;
+                    mapX += stepX;
+                    side = 0;
+                } else {
+                    sideDistY += deltaDistY;
+                    mapY += stepY;
+                    side = 1;
+                }
+                
+                // Check if ray has hit a wall
+                if (getMapCell(mapX, mapY) > 0) hit = 1;
+            }
+            
+            // Calculate distance projected on camera direction
+            let perpWallDist;
+            if (side === 0) {
+                perpWallDist = (mapX - player.x + (1 - stepX) / 2) / rayDirX;
+            } else {
+                perpWallDist = (mapY - player.y + (1 - stepY) / 2) / rayDirY;
+            }
+            
+            // Calculate exact point where the ray hit the wall
+            let wallX; // Where exactly the wall was hit
+            if (side === 0) {
+                wallX = player.y + perpWallDist * rayDirY;
+            } else {
+                wallX = player.x + perpWallDist * rayDirX;
+            }
+            wallX -= Math.floor(wallX);
+            
+            // Draw the wall column
+            drawWallColumn(mapX, mapY, side, wallX, perpWallDist, columnX, HEIGHT / perpWallDist);
+        }
+
+        // Draw weapons sprite
+        function drawWeapon() {
+            // Draw a simple Doom-style pistol
+            const weaponScale = 0.5;
+            const weaponWidth = 128 * weaponScale;
+            const weaponHeight = 128 * weaponScale;
+            const weaponX = WIDTH / 2 - weaponWidth / 2;
+            const weaponY = HEIGHT - weaponHeight + player.bobOffset * 2;
+            
+            // Create weapon sprite
+            const weaponCanvas = document.createElement('canvas');
+            weaponCanvas.width = 128;
+            weaponCanvas.height = 128;
+            const weaponCtx = weaponCanvas.getContext('2d');
+            
+            // Draw gun barrel
+            weaponCtx.fillStyle = '#444';
+            weaponCtx.fillRect(48, 10, 16, 40);
+            
+            // Draw gun body
+            weaponCtx.fillStyle = '#555';
+            weaponCtx.fillRect(32, 50, 48, 60);
+            
+            // Draw gun handle
+            weaponCtx.fillStyle = '#333';
+            weaponCtx.fillRect(40, 90, 32, 25);
+            
+            // Add highlights
+            weaponCtx.fillStyle = '#777';
+            weaponCtx.fillRect(48, 12, 16, 5);
+            weaponCtx.fillRect(32, 55, 48, 5);
+            
+            // Draw to main canvas with bobbing effect
+            ctx.drawImage(weaponCanvas, weaponX, weaponY, weaponWidth, weaponHeight);
+        }
+
+        // Main render function
+        function render() {
+            // Clear screen
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, WIDTH, HEIGHT);
+            
+            // Update camera plane based on player angle
+            player.dPlaneX = -Math.sin(player.angle) * 0.66;
+            player.dPlaneY = Math.cos(player.angle) * 0.66;
+            
+            // Cast rays and draw walls
+            for (let x = 0; x < WIDTH; x++) {
+                castRay(x);
+            }
+            
+            // Draw weapon sprite
+            drawWeapon();
+            
+            // Draw simple HUD
+            ctx.fillStyle = '#f00';
+            ctx.font = '20px monospace';
+            ctx.fillText('HP: 100', 10, HEIGHT - 40);
+            ctx.fillText('AMMO: 50', 10, HEIGHT - 20);
+            
+            // Optional minimap (comment out if not wanted)
+            drawMinimap();
+        }
+
+        // Draw a simple minimap
+        function drawMinimap() {
+            const mapScale = 10;
+            const mapX = 10;
+            const mapY = 10;
+            
+            // Draw map cells
+            for (let y = 0; y < mapHeight; y++) {
+                for (let x = 0; x < mapWidth; x++) {
+                    const cell = map[y * mapWidth + x];
+                    ctx.fillStyle = cell ? '#555' : '#000';
+                    ctx.fillRect(mapX + x * mapScale, mapY + y * mapScale, mapScale, mapScale);
+                }
+            }
+            
+            // Draw player
+            ctx.fillStyle = '#f00';
+            ctx.beginPath();
+            ctx.arc(mapX + player.x * mapScale, mapY + player.y * mapScale, mapScale / 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw player direction
+            ctx.strokeStyle = '#f00';
+            ctx.beginPath();
+            ctx.moveTo(mapX + player.x * mapScale, mapY + player.y * mapScale);
+            ctx.lineTo(
+                mapX + (player.x + Math.cos(player.angle) * 1) * mapScale, 
+                mapY + (player.y + Math.sin(player.angle) * 1) * mapScale
+            );
+            ctx.stroke();
+        }
+
+        // Game loop
+        function gameLoop() {
+            movePlayer();
+            render();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize the game
+        function init() {
+            createTextures();
+            createFloorTexture();
+            gameLoop();
+        }
+
+        // Start the game
+        init();
+    </script>
+</body>
+</html>
