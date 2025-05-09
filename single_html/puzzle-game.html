@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sliding Puzzle Game</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .puzzle {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            grid-template-rows: repeat(4, 80px);
+            gap: 5px;
+            background-color: #333;
+            padding: 5px;
+            border-radius: 5px;
+        }
+        
+        .tile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #4CAF50;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tile:hover {
+            background-color: #45a049;
+        }
+        
+        .empty {
+            background-color: transparent;
+            cursor: default;
+        }
+        
+        .tile.correct {
+            background-color: #2196F3;
+        }
+        
+        .moves-counter {
+            font-size: 18px;
+            margin-top: 10px;
+        }
+
+        .win-message {
+            color: #4CAF50;
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>Sliding Puzzle Game</h1>
+    
+    <div class="game-container">
+        <div class="controls">
+            <button id="shuffle">Shuffle</button>
+            <button id="reset">Reset</button>
+        </div>
+        
+        <div class="puzzle" id="puzzle"></div>
+        
+        <div class="moves-counter">Moves: <span id="moves">0</span></div>
+        
+        <div class="win-message" id="win-message">You won! 🎉</div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const puzzleContainer = document.getElementById('puzzle');
+            const shuffleButton = document.getElementById('shuffle');
+            const resetButton = document.getElementById('reset');
+            const movesCounter = document.getElementById('moves');
+            const winMessage = document.getElementById('win-message');
+            
+            const size = 4; // 4x4 puzzle
+            let tiles = [];
+            let emptyCell = { row: size - 1, col: size - 1 };
+            let moves = 0;
+            
+            // Create initial tiles
+            function createTiles() {
+                puzzleContainer.innerHTML = '';
+                tiles = [];
+                
+                for (let row = 0; row < size; row++) {
+                    tiles[row] = [];
+                    for (let col = 0; col < size; col++) {
+                        // Skip the last tile (empty space)
+                        if (row === size - 1 && col === size - 1) {
+                            tiles[row][col] = null;
+                            continue;
+                        }
+                        
+                        const tileNumber = row * size + col + 1;
+                        const tile = document.createElement('div');
+                        tile.classList.add('tile');
+                        tile.textContent = tileNumber;
+                        tile.dataset.row = row;
+                        tile.dataset.col = col;
+                        tile.dataset.value = tileNumber;
+                        
+                        tile.addEventListener('click', () => {
+                            moveTile(row, col);
+                        });
+                        
+                        puzzleContainer.appendChild(tile);
+                        tiles[row][col] = tile;
+                    }
+                }
+                
+                // Add empty tile
+                const emptyTile = document.createElement('div');
+                emptyTile.classList.add('tile', 'empty');
+                puzzleContainer.appendChild(emptyTile);
+                
+                // Reset moves counter
+                moves = 0;
+                movesCounter.textContent = '0';
+                
+                // Hide win message
+                winMessage.style.display = 'none';
+                
+                // Update tile positions
+                updateTilePositions();
+            }
+            
+            // Update visual positions of tiles
+            function updateTilePositions() {
+                for (let row = 0; row < size; row++) {
+                    for (let col = 0; col < size; col++) {
+                        const tile = tiles[row][col];
+                        if (tile) {
+                            tile.style.gridRow = row + 1;
+                            tile.style.gridColumn = col + 1;
+                            
+                            // Mark correct tiles
+                            const correctValue = row * size + col + 1;
+                            if (parseInt(tile.dataset.value) === correctValue) {
+                                tile.classList.add('correct');
+                            } else {
+                                tile.classList.remove('correct');
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Move tile if it's adjacent to the empty cell
+            function moveTile(row, col) {
+                // Check if the clicked tile is adjacent to the empty cell
+                if (
+                    (Math.abs(row - emptyCell.row) === 1 && col === emptyCell.col) || 
+                    (Math.abs(col - emptyCell.col) === 1 && row === emptyCell.row)
+                ) {
+                    // Swap the tile with the empty cell
+                    const clickedTile = tiles[row][col];
+                    
+                    // Update the tiles array
+                    tiles[emptyCell.row][emptyCell.col] = clickedTile;
+                    tiles[row][col] = null;
+                    
+                    // Update dataset values
+                    clickedTile.dataset.row = emptyCell.row;
+                    clickedTile.dataset.col = emptyCell.col;
+                    
+                    // Update empty cell position
+                    emptyCell = { row, col };
+                    
+                    // Update move counter
+                    moves++;
+                    movesCounter.textContent = moves;
+                    
+                    // Update tile positions
+                    updateTilePositions();
+                    
+                    // Check for win
+                    checkWin();
+                }
+            }
+            
+            // Shuffle the tiles randomly
+            function shuffleTiles() {
+                // Reset first
+                createTiles();
+                
+                // Make random valid moves
+                for (let i = 0; i < 100; i++) {
+                    const possibleMoves = [];
+                    
+                    // Check all four directions
+                    const directions = [
+                        { row: -1, col: 0 }, // up
+                        { row: 1, col: 0 },  // down
+                        { row: 0, col: -1 }, // left
+                        { row: 0, col: 1 }   // right
+                    ];
+                    
+                    directions.forEach(dir => {
+                        const newRow = emptyCell.row + dir.row;
+                        const newCol = emptyCell.col + dir.col;
+                        
+                        if (newRow >= 0 && newRow < size && newCol >= 0 && newCol < size) {
+                            possibleMoves.push({ row: newRow, col: newCol });
+                        }
+                    });
+                    
+                    // Choose a random move
+                    const randomMove = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+                    moveTile(randomMove.row, randomMove.col);
+                }
+                
+                // Reset move counter after shuffling
+                moves = 0;
+                movesCounter.textContent = '0';
+            }
+            
+            // Check if the puzzle is solved
+            function checkWin() {
+                for (let row = 0; row < size; row++) {
+                    for (let col = 0; col < size; col++) {
+                        // Skip the empty cell
+                        if (row === size - 1 && col === size - 1) continue;
+                        
+                        const tile = tiles[row][col];
+                        if (!tile) return false;
+                        
+                        const correctValue = row * size + col + 1;
+                        if (parseInt(tile.dataset.value) !== correctValue) {
+                            return false;
+                        }
+                    }
+                }
+                
+                // If we get here, the puzzle is solved
+                winMessage.style.display = 'block';
+                return true;
+            }
+            
+            // Event listeners
+            shuffleButton.addEventListener('click', shuffleTiles);
+            resetButton.addEventListener('click', createTiles);
+            
+            // Initialize the puzzle
+            createTiles();
+        });
+    </script>
+</body>
+</html>
