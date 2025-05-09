@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quantum Resonator</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #111;
+      font-family: monospace;
+      color: #0f0;
+    }
+    
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      cursor: crosshair;
+    }
+    
+    #visualizer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+    
+    #controls {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      background-color: rgba(0, 0, 0, 0.7);
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      max-width: 90%;
+      width: 800px;
+    }
+    
+    .control-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      min-width: 120px;
+    }
+    
+    label {
+      margin-bottom: 5px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      background: #333;
+      -webkit-appearance: none;
+      height: 8px;
+      border-radius: 4px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: #0f0;
+      cursor: pointer;
+    }
+    
+    button {
+      padding: 8px 12px;
+      background-color: #222;
+      color: #0f0;
+      border: 1px solid #0f0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: monospace;
+      transition: all 0.2s;
+    }
+    
+    button:hover {
+      background-color: #0f0;
+      color: #000;
+    }
+    
+    .button-row {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .value-display {
+      font-size: 10px;
+      text-align: center;
+      margin-top: 5px;
+    }
+    
+    #node-grid {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    
+    .node {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      background-color: rgba(0, 255, 0, 0.6);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+    }
+    
+    .connection {
+      position: absolute;
+      height: 1px;
+      background-color: rgba(0, 255, 0, 0.3);
+      transform-origin: 0 0;
+      pointer-events: none;
+    }
+    
+    .tutorial {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.7);
+      color: #0f0;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 14px;
+      max-width: 600px;
+      text-align: center;
+      z-index: 3;
+      box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+    }
+    
+    #modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.9);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    
+    .modal-content {
+      background-color: #111;
+      padding: 30px;
+      border-radius: 10px;
+      max-width: 80%;
+      max-height: 80%;
+      overflow-y: auto;
+      border: 1px solid #0f0;
+      box-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
+    }
+    
+    .modal-content h2 {
+      color: #0f0;
+      text-align: center;
+      margin-top: 0;
+    }
+    
+    .modal-content button {
+      display: block;
+      margin: 20px auto 0;
+    }
+    
+    .preset-button {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <canvas id="visualizer"></canvas>
+    <div id="node-grid"></div>
+    
+    <div id="controls">
+      <div class="control-row">
+        <div class="control-group">
+          <label for="density">NODE DENSITY</label>
+          <input type="range" id="density" min="5" max="50" value="20">
+          <div class="value-display" id="density-value">20</div>
+        </div>
+        <div class="control-group">
+          <label for="chaos">CHAOS FACTOR</label>
+          <input type="range" id="chaos" min="0" max="100" value="30">
+          <div class="value-display" id="chaos-value">30%</div>
+        </div>
+        <div class="control-group">
+          <label for="tempo">TEMPO</label>
+          <input type="range" id="tempo" min="10" max="500" value="120">
+          <div class="value-display" id="tempo-value">120 BPM</div>
+        </div>
+      </div>
+      
+      <div class="control-row">
+        <div class="control-group">
+          <label for="resonance">RESONANCE</label>
+          <input type="range" id="resonance" min="0" max="20" value="5">
+          <div class="value-display" id="resonance-value">5</div>
+        </div>
+        <div class="control-group">
+          <label for="decay">DECAY</label>
+          <input type="range" id="decay" min="0.1" max="3" step="0.1" value="0.8">
+          <div class="value-display" id="decay-value">0.8s</div>
+        </div>
+        <div class="control-group">
+          <label for="harmonic">HARMONIC SHIFT</label>
+          <input type="range" id="harmonic" min="0" max="100" value="50">
+          <div class="value-display" id="harmonic-value">50%</div>
+        </div>
+      </div>
+      
+      <div class="control-row">
+        <div class="control-group">
+          <label for="scale">SCALE</label>
+          <select id="scale">
+            <option value="pentatonic">Pentatonic</option>
+            <option value="major">Major</option>
+            <option value="minor">Minor</option>
+            <option value="harmonic">Harmonic Minor</option>
+            <option value="blues">Blues</option>
+            <option value="chromatic">Chromatic</option>
+            <option value="whole-tone">Whole Tone</option>
+            <option value="noise">NOISE</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="root">ROOT NOTE</label>
+          <select id="root">
+            <option value="0">C</option>
+            <option value="1">C#</option>
+            <option value="2">D</option>
+            <option value="3">D#</option>
+            <option value="4">E</option>
+            <option value="5">F</option>
+            <option value="6">F#</option>
+            <option value="7">G</option>
+            <option value="8">G#</option>
+            <option value="9">A</option>
+            <option value="10">A#</option>
+            <option value="11">B</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="octave">OCTAVE</label>
+          <input type="range" id="octave" min="1" max="6" value="3">
+          <div class="value-display" id="octave-value">3</div>
+        </div>
+      </div>
+      
+      <div class="button-row">
+        <button id="play-pause">START</button>
+        <button id="clear">CLEAR ALL</button>
+        <button id="random">RANDOMIZE</button>
+        <button id="presets">PRESETS</button>
+        <button id="help">HELP</button>
+      </div>
+      
+      <div class="button-row">
+        <button class="preset-button" data-preset="beautiful">BEAUTIFUL</button>
+        <button class="preset-button" data-preset="ugly">UGLY</button>
+        <button class="preset-button" data-preset="chaos">CHAOS</button>
+        <button class="preset-button" data-preset="order">ORDER</button>
+        <button class="preset-button" data-preset="glitch">GLITCH</button>
+      </div>
+    </div>
+    
+    <div class="tutorial" id="tutorial">
+      <p>Click anywhere to add resonance points. Drag to connect points and create paths for sound waves.</p>
+      <p>Adjust controls to shape the sound and behavior of the system.</p>
+      <p>(Click this message to dismiss)</p>
+    </div>
+  </div>
+  
+  <div id="modal" style="display: none;">
+    <div class="modal-content">
+      <h2>QUANTUM RESONATOR</h2>
+      <p>This experimental instrument creates sounds through a network of interconnected resonant nodes. The behavior emerges from both deterministic patterns and chaotic elements.</p>
+      
+      <h3>How to use:</h3>
+      <ul>
+        <li><strong>Click</strong> on the canvas to create resonant nodes</li>
+        <li><strong>Drag</strong> between nodes to create connections</li>
+        <li>Sound propagates along these connections, creating complex patterns</li>
+        <li>Use controls to adjust the behavior and sound</li>
+      </ul>
+      
+      <h3>Controls:</h3>
+      <ul>
+        <li><strong>Node Density</strong> - How many nodes appear when randomizing</li>
+        <li><strong>Chaos Factor</strong> - Introduces randomness and unpredictability</li>
+        <li><strong>Tempo</strong> - Speed of the sound propagation</li>
+        <li><strong>Resonance</strong> - How nodes interact and amplify each other</li>
+        <li><strong>Decay</strong> - How long sounds persist</li>
+        <li><strong>Harmonic Shift</strong> - Shifts the harmonic structure of generated tones</li>
+        <li><strong>Scale</strong> - Determines the note set used</li>
+        <li><strong>Root Note</strong> - Sets the fundamental tone</li>
+        <li><strong>Octave</strong> - Shifts the overall pitch range</li>
+      </ul>
+      
+      <h3>Presets:</h3>
+      <ul>
+        <li><strong>Beautiful</strong> - Harmonious and pleasing sounds</li>
+        <li><strong>Ugly</strong> - Dissonant and harsh textures</li>
+        <li><strong>Chaos</strong> - Unpredictable and constantly changing</li>
+        <li><strong>Order</strong> - Structured and pattern-based</li>
+        <li><strong>Glitch</strong> - Digital artifacts and broken sounds</li>
+      </ul>
+      
+      <p>Experiment with different combinations to create your own unique sound worlds!</p>
+      
+      <button id="close-modal">CLOSE</button>
+    </div>
+  </div>
+
+  <script>
+    // Audio Context setup
+    let audioContext;
+    let masterGain;
+    let compressor;
+    let isPlaying = false;
+    let nodeGrid = document.getElementById('node-grid');
+    let nodes = [];
+    let connections = [];
+    let activeNodes = new Set();
+    let lastTime = 0;
+    let animationFrame;
+    
+    // Limit for active sounds to prevent overflow
+    const MAX_ACTIVE_NODES = 12;
+    
+    // Visualization
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+    
+    // Make canvas fullscreen
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    // UI Elements
+    const playPauseBtn = document.getElementById('play-pause');
+    const clearBtn = document.getElementById('clear');
+    const randomBtn = document.getElementById('random');
+    const presetsBtn = document.getElementById('presets');
+    const helpBtn = document.getElementById('help');
+    const tutorial = document.getElementById('tutorial');
+    const modal = document.getElementById('modal');
+    const closeModalBtn = document.getElementById('close-modal');
+    const presetButtons = document.querySelectorAll('.preset-button');
+    
+    // Controls
+    const densityControl = document.getElementById('density');
+    const chaosControl = document.getElementById('chaos');
+    const tempoControl = document.getElementById('tempo');
+    const resonanceControl = document.getElementById('resonance');
+    const decayControl = document.getElementById('decay');
+    const harmonicControl = document.getElementById('harmonic');
+    const scaleControl = document.getElementById('scale');
+    const rootControl = document.getElementById('root');
+    const octaveControl = document.getElementById('octave');
+    
+    // Value displays
+    const densityValue = document.getElementById('density-value');
+    const chaosValue = document.getElementById('chaos-value');
+    const tempoValue = document.getElementById('tempo-value');
+    const resonanceValue = document.getElementById('resonance-value');
+    const decayValue = document.getElementById('decay-value');
+    const harmonicValue = document.getElementById('harmonic-value');
+    const octaveValue = document.getElementById('octave-value');
+    
+    // Update value displays
+    densityControl.addEventListener('input', () => {
+      densityValue.textContent = densityControl.value;
+    });
+    
+    chaosControl.addEventListener('input', () => {
+      chaosValue.textContent = `${chaosControl.value}%`;
+    });
+    
+    tempoControl.addEventListener('input', () => {
+      tempoValue.textContent = `${tempoControl.value} BPM`;
+    });
+    
+    resonanceControl.addEventListener('input', () => {
+      resonanceValue.textContent = resonanceControl.value;
+    });
+    
+    decayControl.addEventListener('input', () => {
+      decayValue.textContent = `${decayControl.value}s`;
+    });
+    
+    harmonicControl.addEventListener('input', () => {
+      harmonicValue.textContent = `${harmonicControl.value}%`;
+    });
+    
+    octaveControl.addEventListener('input', () => {
+      octaveValue.textContent = octaveControl.value;
+    });
+    
+    // Tutorial dismiss
+    tutorial.addEventListener('click', () => {
+      tutorial.style.display = 'none';
+    });
+    
+    // Modal handling
+    helpBtn.addEventListener('click', () => {
+      modal.style.display = 'flex';
+    });
+    
+    closeModalBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+    });
+    
+    // Presets button
+    presetsBtn.addEventListener('click', () => {
+      // Toggle preset buttons visibility
+      const presetRow = document.querySelector('.button-row:last-child');
+      presetRow.style.display = presetRow.style.display === 'none' ? 'flex' : 'none';
+    });
+    
+    // Apply presets
+    presetButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const preset = button.dataset.preset;
+        applyPreset(preset);
+      });
+    });
+    
+    // Musical scales
+    const scales = {
+      pentatonic: [0, 2, 4, 7, 9],
+      major: [0, 2, 4, 5, 7, 9, 11],
+      minor: [0, 2, 3, 5, 7, 8, 10],
+      harmonic: [0, 2, 3, 5, 7, 8, 11],
+      blues: [0, 3, 5, 6, 7, 10],
+      chromatic: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+      'whole-tone': [0, 2, 4, 6, 8, 10],
+      noise: null // Special case for noise
+    };
+    
+    // Create audio context when user interacts
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        // Create master gain node for volume control
+        masterGain = audioContext.createGain();
+        masterGain.gain.value = 0.7; // Lower overall volume
+        
+        // Create compressor to prevent clipping
+        compressor = audioContext.createDynamicsCompressor();
+        compressor.threshold.value = -15;
+        compressor.knee.value = 10;
+        compressor.ratio.value = 12;
+        compressor.attack.value = 0.005;
+        compressor.release.value = 0.25;
+        
+        // Connect master gain to compressor and then to output
+        masterGain.connect(compressor);
+        compressor.connect(audioContext.destination);
+      }
+    }
+    
+    // Initialize UI
+    function init() {
+      document.querySelector('.button-row:last-child').style.display = 'none';
+      
+      // Event listeners for interaction
+      container.addEventListener('click', createNode);
+      playPauseBtn.addEventListener('click', togglePlayback);
+      clearBtn.addEventListener('click', clearAll);
+      randomBtn.addEventListener('click', generateRandom);
+      
+      // Apply initial state
+      generateRandom();
+    }
+    
+    // Node creation and connection
+    let isDragging = false;
+    let startNode = null;
+    
+    function createNode(e) {
+      // Ignore if clicking on controls
+      if (e.target !== container && e.target !== canvas && e.target !== nodeGrid) {
+        return;
+      }
+      
+      initAudio();
+      
+      const x = e.clientX;
+      const y = e.clientY;
+      
+      // Create node element
+      const node = document.createElement('div');
+      node.className = 'node';
+      node.style.left = `${x}px`;
+      node.style.top = `${y}px`;
+      nodeGrid.appendChild(node);
+      
+      // Add to nodes array
+      const nodeObj = {
+        element: node,
+        x,
+        y,
+        active: false,
+        lastActive: 0,
+        connections: [],
+        oscillator: null,
+        gain: null,
+        frequency: getRandomFrequency()
+      };
+      
+      nodes.push(nodeObj);
+      
+      // Add mouse events for connections
+      node.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        isDragging = true;
+        startNode = nodeObj;
+      });
+      
+      return nodeObj;
+    }
+    
+    // Handle mouse events for connections
+    document.addEventListener('mousemove', (e) => {
+      if (isDragging && startNode) {
+        // Draw temporary connection line
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawConnections();
+        
+        ctx.beginPath();
+        ctx.moveTo(startNode.x, startNode.y);
+        ctx.lineTo(e.clientX, e.clientY);
+        ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    });
+    
+    document.addEventListener('mouseup', (e) => {
+      if (isDragging && startNode) {
+        // Find if we're over another node
+        let endNode = null;
+        const threshold = 20; // Distance threshold for connection
+        
+        for (const node of nodes) {
+          if (node !== startNode) {
+            const dx = node.x - e.clientX;
+            const dy = node.y - e.clientY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < threshold) {
+              endNode = node;
+              break;
+            }
+          }
+        }
+        
+        // If we found an end node, create a connection
+        if (endNode) {
+          createConnection(startNode, endNode);
+        }
+        
+        isDragging = false;
+        startNode = null;
+        
+        // Redraw connections
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawConnections();
+      }
+    });
+    
+    function createConnection(nodeA, nodeB) {
+      // Check if connection already exists
+      const exists = connections.some(conn => 
+        (conn.nodeA === nodeA && conn.nodeB === nodeB) || 
+        (conn.nodeA === nodeB && conn.nodeB === nodeA)
+      );
+      
+      if (exists) return;
+      
+      // Create connection
+      const connection = {
+        nodeA,
+        nodeB,
+        active: false,
+        lastActive: 0,
+        direction: Math.random() > 0.5 ? 1 : -1, // Random initial direction
+        pulse: 0
+      };
+      
+      connections.push(connection);
+      
+      // Add to node's connections
+      nodeA.connections.push(connection);
+      nodeB.connections.push(connection);
+      
+      return connection;
+    }
+    
+    function drawConnections() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      for (const connection of connections) {
+        const { nodeA, nodeB, active, pulse } = connection;
+        
+        // Calculate connection properties
+        const dx = nodeB.x - nodeA.x;
+        const dy = nodeB.y - nodeA.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const angle = Math.atan2(dy, dx);
+        
+        // Draw the base connection
+        ctx.beginPath();
+        ctx.moveTo(nodeA.x, nodeA.y);
+        ctx.lineTo(nodeB.x, nodeB.y);
+        
+        // Style based on activity
+        if (active) {
+          ctx.strokeStyle = `rgba(255, ${255 - pulse * 255}, 0, 0.7)`;
+          ctx.lineWidth = 2;
+        } else {
+          ctx.strokeStyle = 'rgba(0, 255, 0, 0.3)';
+          ctx.lineWidth = 1;
+        }
+        
+        ctx.stroke();
+        
+        // Draw pulse effect if active
+        if (active && pulse > 0) {
+          const pulsePosition = pulse * distance;
+          const pulseX = nodeA.x + Math.cos(angle) * pulsePosition;
+          const pulseY = nodeA.y + Math.sin(angle) * pulsePosition;
+          
+          ctx.beginPath();
+          ctx.arc(pulseX, pulseY, 4, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+          ctx.fill();
+        }
+      }
+      
+      // Draw nodes
+      for (const node of nodes) {
+        const { x, y, active, lastActive } = node;
+        
+        // Calculate size based on activity
+        const timeElapsed = performance.now() - lastActive;
+        const decayTime = parseFloat(decayControl.value) * 1000;
+        const activeRatio = Math.max(0, 1 - timeElapsed / decayTime);
+        const baseSize = 5;
+        const maxSize = 15;
+        const size = baseSize + (maxSize - baseSize) * (active ? 1 : activeRatio);
+        
+        // Draw node
+        ctx.beginPath();
+        ctx.arc(x, y, size, 0, Math.PI * 2);
+        
+        if (active) {
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+          ctx.shadowColor = 'rgba(255, 0, 0, 0.8)';
+          ctx.shadowBlur = 10;
+        } else if (activeRatio > 0) {
+          const green = Math.floor(255 * (1 - activeRatio));
+          ctx.fillStyle = `rgba(${255 * activeRatio}, ${green}, 0, 0.8)`;
+          ctx.shadowColor = `rgba(${255 * activeRatio}, ${green}, 0, 0.5)`;
+          ctx.shadowBlur = 5 * activeRatio;
+        } else {
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.6)';
+          ctx.shadowColor = 'rgba(0, 255, 0, 0.3)';
+          ctx.shadowBlur = 5;
+        }
+        
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        // Draw halo if active
+        if (active || activeRatio > 0.3) {
+          ctx.beginPath();
+          ctx.arc(x, y, size + 5 * (active ? 1 : activeRatio), 0, Math.PI * 2);
+          ctx.strokeStyle = active ? 
+                          'rgba(255, 0, 0, 0.3)' : 
+                          `rgba(${255 * activeRatio}, ${Math.floor(255 * (1 - activeRatio))}, 0, ${0.3 * activeRatio})`;
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        }
+      }
+    }
+    
+    // Sound generation
+    function triggerNode(node) {
+      if (!audioContext) return;
+      
+      // Check if we've hit the max active nodes limit
+      if (activeNodes.size >= MAX_ACTIVE_NODES) {
+        // Find the oldest active node and force-deactivate it
+        let oldestTime = Infinity;
+        let oldestNode = null;
+        
+        for (const activeNode of activeNodes) {
+          if (activeNode.lastActive < oldestTime) {
+            oldestTime = activeNode.lastActive;
+            oldestNode = activeNode;
+          }
+        }
+        
+        if (oldestNode) {
+          deactivateNode(oldestNode);
+        }
+      }
+      
+      // Mark node as active
+      node.active = true;
+      node.lastActive = performance.now();
+      activeNodes.add(node);
+      
+      // Dynamically adjust master volume based on number of active nodes
+      if (masterGain) {
+        const volumeScale = Math.max(0.1, 1 - (activeNodes.size / (MAX_ACTIVE_NODES * 1.5)));
+        masterGain.gain.setValueAtTime(volumeScale, audioContext.currentTime);
+      }
+      
+      // Create oscillator and gain node if they don't exist
+      if (!node.oscillator || !node.gain) {
+        node.oscillator = audioContext.createOscillator();
+        node.gain = audioContext.createGain();
+        
+        // Connect oscillator -> gain -> masterGain -> compressor -> destination
+        node.oscillator.connect(node.gain);
+        node.gain.connect(masterGain);
+        
+        // Set oscillator type based on scale
+        const scale = scaleControl.value;
+        if (scale === 'noise') {
+          // For noise, we'll use a different technique
+          const noiseBuffer = createNoiseBuffer();
+          const noiseSource = audioContext.createBufferSource();
+          noiseSource.buffer = noiseBuffer;
+          noiseSource.loop = true;
+          noiseSource.connect(node.gain);
+          noiseSource.start();
+          node.oscillator = noiseSource; // Replace the oscillator with noise source
+        } else {
+          // For normal oscillator, set type and frequency
+          node.oscillator.type = getOscillatorType();
+          node.oscillator.frequency.value = node.frequency;
+          node.oscillator.start();
+        }
+      }
+      
+      // Set gain and decay
+      const decay = parseFloat(decayControl.value);
+      // Force a maximum decay time to prevent sound buildup
+      const actualDecay = Math.min(decay, 3.0);
+      const resonance = parseInt(resonanceControl.value) / 10;
+      
+      node.gain.gain.cancelScheduledValues(audioContext.currentTime);
+      node.gain.gain.setValueAtTime(0, audioContext.currentTime);
+      node.gain.gain.linearRampToValueAtTime(resonance, audioContext.currentTime + 0.01);
+      node.gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + actualDecay);
+      
+      // Force complete silence at the end of decay
+      node.gain.gain.setValueAtTime(0.001, audioContext.currentTime + actualDecay);
+      node.gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + actualDecay + 0.05);
+      
+      // Schedule cleanup
+      // Set a guaranteed max duration for the sound regardless of decay setting
+      const maxDuration = Math.min(decay * 1000, 3000); // Never more than 3 seconds
+      
+      setTimeout(() => {
+        node.active = false;
+        
+        // Clean up audio nodes after decay
+        setTimeout(() => {
+          deactivateNode(node);
+        }, maxDuration);
+      }, 100); // Short active duration for visual feedback
+      
+      // Additional aggressive safety cleanup
+      setTimeout(() => {
+        if (activeNodes.has(node)) {
+          console.log("Safety cleanup triggered");
+          deactivateNode(node);
+        }
+      }, maxDuration + 500); // Safety timeout just after expected natural cleanup
+      
+      // Propagate sound through connections
+      setTimeout(() => {
+        propagateSound(node);
+      }, calculatePropagationTime());
+    }
+    
+    // Track propagation chain to prevent runaway feedback loops
+    const soundPropagationChain = new Map();
+    const MAX_CHAIN_LENGTH = 6;  // Reduce maximum chain length
+    
+    // Add a global audio activity monitor to detect and fix audio issues
+    let audioMonitorInterval;
+    function startAudioMonitor() {
+      if (audioMonitorInterval) clearInterval(audioMonitorInterval);
+      
+      audioMonitorInterval = setInterval(() => {
+        // If we have too many active nodes for too long, force a reset
+        if (activeNodes.size > MAX_ACTIVE_NODES/2) {
+          const now = performance.now();
+          let oldNodesCount = 0;
+          
+          for (const node of activeNodes) {
+            if (now - node.lastActive > 2000) {
+              oldNodesCount++;
+            }
+          }
+          
+          // If more than half of active nodes are old, do a partial reset
+          if (oldNodesCount > MAX_ACTIVE_NODES/4) {
+            console.log("Audio monitor: clearing stale nodes");
+            for (const node of activeNodes) {
+              if (now - node.lastActive > 1500) {
+                deactivateNode(node);
+              }
+            }
+          }
+        }
+      }, 1000);
+    }
+
+    function propagateSound(sourceNode) {
+      const chaos = parseInt(chaosControl.value) / 100;
+      
+      // Initialize or increment chain counter for this node
+      let chainLength = 1;
+      if (soundPropagationChain.has(sourceNode)) {
+        chainLength = soundPropagationChain.get(sourceNode) + 1;
+        if (chainLength > MAX_CHAIN_LENGTH) {
+          // Prevent infinite sound propagation chains
+          return;
+        }
+      }
+      
+      // Clear chain data after a while
+      setTimeout(() => {
+        soundPropagationChain.delete(sourceNode);
+      }, 3000);
+      
+      for (const connection of sourceNode.connections) {
+        // Determine target node
+        const targetNode = connection.nodeA === sourceNode ? connection.nodeB : connection.nodeA;
+        
+        // Skip if target node is in cooldown
+        if (targetNode.cooldown) continue;
+        
+        // Update connection
+        connection.active = true;
+        connection.lastActive = performance.now();
+        connection.pulse = 0;
+        
+        // Animate pulse
+        const animatePulse = () => {
+          connection.pulse += 0.05;
+          
+          if (connection.pulse >= 1) {
+            connection.active = false;
+            return;
+          }
+          
+          requestAnimationFrame(animatePulse);
+        };
+        
+        animatePulse();
+        
+        // Only propagate with a certain probability (reduced by chain length)
+        const propagationChance = Math.max(0.4, 1 - (chaos * 0.5) - (chainLength * 0.1));
+        if (Math.random() < propagationChance) {
+          // Record chain length for this node
+          soundPropagationChain.set(targetNode, chainLength);
+          
+          setTimeout(() => {
+            // Apply chaos to frequency
+            if (Math.random() < chaos) {
+              const harmonicShift = parseInt(harmonicControl.value) / 100;
+              targetNode.frequency = shiftFrequency(targetNode.frequency, harmonicShift);
+            }
+            
+            // Only trigger if node isn't already active (prevents retriggering)
+            if (!targetNode.active && !targetNode.cooldown) {
+              triggerNode(targetNode);
+            }
+          }, calculatePropagationTime() * connection.pulse);
+        }
+      }
+    }
+    
+    function calculatePropagationTime() {
+      const tempo = parseInt(tempoControl.value);
+      return 60000 / tempo; // Convert BPM to milliseconds
+    }
+    
+    function getRandomFrequency() {
+      const scale = scaleControl.value;
+      const root = parseInt(rootControl.value);
+      const octave = parseInt(octaveControl.value);
+      
+      if (scale === 'noise') {
+        return 440; // Dummy value, not used for noise
+      }
+      
+      const scaleNotes = scales[scale];
+      const note = scaleNotes[Math.floor(Math.random() * scaleNotes.length)];
+      
+      // Calculate frequency using A4 = 440Hz as reference
+      const midiNote = root + note + (octave * 12);
+      return 440 * Math.pow(2, (midiNote - 69) / 12);
+    }
+    
+    function shiftFrequency(freq, harmonicShift) {
+      // Shift the frequency by various harmonic intervals
+      const shifts = [
+        0.5,    // Octave down
+        0.75,   // Perfect fifth down
+        1,      // Unison
+        1.25,   // Major third up
+        1.5,    // Perfect fifth up
+        2,      // Octave up
+        3,      // Octave + fifth up
+        4       // Two octaves up
+      ];
+      
+      const chaosLevel = parseInt(chaosControl.value) / 100;
+      
+      // Choose a shift based on the harmonic shift parameter
+      let shiftIndex;
+      if (harmonicShift < 0.2) {
+        shiftIndex = 0; // Favor lower harmonics
+      } else if (harmonicShift < 0.4) {
+        shiftIndex = Math.floor(Math.random() * 3); // Lower range
+      } else if (harmonicShift < 0.6) {
+        shiftIndex = Math.floor(Math.random() * 5); // Middle range
+      } else if (harmonicShift < 0.8) {
+        shiftIndex = 2 + Math.floor(Math.random() * 4); // Higher middle
+      } else {
+        shiftIndex = 4 + Math.floor(Math.random() * 4); // Higher range
+      }
+      
+      // Apply chaos by potentially using a random shift
+      if (Math.random() < chaosLevel) {
+        shiftIndex = Math.floor(Math.random() * shifts.length);
+      }
+      
+      // Apply microtonal shift if high chaos
+      let microtonalShift = 1;
+      if (Math.random() < chaosLevel) {
+        microtonalShift = 0.98 + (Math.random() * 0.04); // ±2% shift
+      }
+      
+      return freq * shifts[shiftIndex] * microtonalShift;
+    }
+    
+    function getOscillatorType() {
+      const harmonicShift = parseInt(harmonicControl.value) / 100;
+      const chaosLevel = parseInt(chaosControl.value) / 100;
+      
+      // Base oscillator types
+      const types = ['sine', 'triangle', 'sawtooth', 'square'];
+      
+      // Choose type based on harmonic shift
+      let typeIndex;
+      if (harmonicShift < 0.25) {
+        typeIndex = 0; // Sine - smoother
+      } else if (harmonicShift < 0.5) {
+        typeIndex = 1; // Triangle - still smooth but more harmonics
+      } else if (harmonicShift < 0.75) {
+        typeIndex = 2; // Sawtooth - rich in harmonics
+      } else {
+        typeIndex = 3; // Square - harsh with odd harmonics
+      }
+      
+      // Apply chaos by potentially using a random type
+      if (Math.random() < chaosLevel) {
+        typeIndex = Math.floor(Math.random() * types.length);
+      }
+      
+      return types[typeIndex];
+    }
+    
+    function createNoiseBuffer() {
+      const bufferSize = audioContext.sampleRate * 2; // 2 seconds of noise
+      const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+      const output = buffer.getChannelData(0);
+      
+      const chaosLevel = parseInt(chaosControl.value) / 100;
+      const harmonicShift = parseInt(harmonicControl.value) / 100;
+      
+      // Generate noise with varying characteristics
+      for (let i = 0; i < bufferSize; i++) {
+        // Base noise
+        let noise = Math.random() * 2 - 1;
+        
+        // Apply filtering based on harmonic shift
+        if (harmonicShift < 0.3) {
+          // Softer noise (low-pass filtered)
+          if (i > 0) {
+            noise = (noise + output[i - 1] * 0.8) / 1.8;
+          }
+        } else if (harmonicShift > 0.7) {
+          // Harsher noise (high-pass filtered)
+          if (i > 1) {
+            noise = noise - output[i - 1] * 0.5;
+          }
+        }
+        
+        // Apply chaos by adding bursts of noise
+        if (Math.random() < chaosLevel * 0.1) {
+          noise *= 1.5;
+        }
+        
+        output[i] = noise;
+      }
+      
+      return buffer;
+    }
+    
+    // Animation and main loop
+    function update(currentTime) {
+      if (!lastTime) lastTime = currentTime;
+      const deltaTime = currentTime - lastTime;
+      lastTime = currentTime;
+      
+      // Update visuals
+      drawConnections();
+      
+      // Check for auto-triggering
+      if (isPlaying && Math.random() < 0.01) {
+        const chaosLevel = parseInt(chaosControl.value) / 100;
+        if (Math.random() < chaosLevel * 0.5) {
+          // Trigger a random node
+          const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+          if (randomNode) {
+            triggerNode(randomNode);
+          }
+        }
+      }
+      
+      animationFrame = requestAnimationFrame(update);
+    }
+    
+    function togglePlayback() {
+      initAudio();
+      
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      isPlaying = !isPlaying;
+      playPauseBtn.textContent = isPlaying ? 'STOP' : 'START';
+      
+      if (isPlaying) {
+        // Start the animation loop
+        if (!animationFrame) {
+          animationFrame = requestAnimationFrame(update);
+        }
+        
+        // Start audio monitoring
+        startAudioMonitor();
+        
+        // Trigger a random node to start
+        if (nodes.length > 0) {
+          const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+          triggerNode(randomNode);
+        }
+      } else {
+        // Stop all active sounds
+        if (audioContext) {
+          stopAllSounds();
+        }
+        
+        // Stop audio monitoring
+        if (audioMonitorInterval) {
+          clearInterval(audioMonitorInterval);
+        }
+      }
+    }
+    
+    // Helper function to properly deactivate a node
+    function deactivateNode(node) {
+      if (!node) return;
+      
+      // Handle the audio nodes
+      if (node.oscillator) {
+        try {
+          // Immediately silence the node
+          if (node.gain) {
+            node.gain.gain.cancelScheduledValues(audioContext.currentTime);
+            node.gain.gain.setValueAtTime(node.gain.gain.value, audioContext.currentTime);
+            node.gain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.02);
+          }
+          
+          // Stop and disconnect everything immediately
+          setTimeout(() => {
+            try {
+              if (node.oscillator) {
+                // Disconnect from the audio graph first
+                if (node.gain) {
+                  node.oscillator.disconnect(node.gain);
+                }
+                
+                // Only stop traditional oscillators (not noise sources)
+                const scale = scaleControl.value;
+                if (scale !== 'noise') {
+                  node.oscillator.stop();
+                } else {
+                  // For noise, we need to disconnect
+                  node.oscillator.disconnect();
+                }
+                
+                // Disconnect gain node
+                if (node.gain) {
+                  node.gain.disconnect(masterGain);
+                }
+              }
+            } catch (e) {
+              console.log('Error stopping oscillator:', e);
+            }
+            
+            // Clean up references
+            node.oscillator = null;
+            node.gain = null;
+          }, 30);
+        } catch (e) {
+          console.log('Error deactivating node:', e);
+        }
+      }
+      
+      // Update state
+      node.active = false;
+      activeNodes.delete(node);
+      
+      // Set a cooldown period before this node can be triggered again
+      node.cooldown = true;
+      setTimeout(() => {
+        node.cooldown = false;
+      }, 100);
+    }
+    
+    function stopAllSounds() {
+      // Create a copy of the set to avoid modification during iteration
+      const nodesToStop = [...activeNodes];
+      
+      for (const node of nodesToStop) {
+        deactivateNode(node);
+      }
+      
+      // Ensure the set is cleared
+      activeNodes.clear();
+      
+      // Clear connection pulses
+      for (const connection of connections) {
+        connection.active = false;
+        connection.pulse = 0;
+      }
+      
+      // Reset master gain
+      if (masterGain) {
+        masterGain.gain.cancelScheduledValues(audioContext.currentTime);
+        masterGain.gain.setValueAtTime(0.7, audioContext.currentTime);
+      }
+    }
+    
+    function clearAll() {
+      // Stop all sounds
+      stopAllSounds();
+      
+      // Clear nodes and connections
+      while (nodeGrid.firstChild) {
+        nodeGrid.removeChild(nodeGrid.firstChild);
+      }
+      
+      nodes = [];
+      connections = [];
+      
+      // Clear propagation chains and other tracking
+      soundPropagationChain.clear();
+      
+      // Reset audio context in case of issues
+      if (audioContext && audioContext.state === 'running') {
+        // Create a new master gain with silence
+        if (masterGain) {
+          masterGain.gain.setValueAtTime(0, audioContext.currentTime);
+          setTimeout(() => {
+            if (masterGain) masterGain.gain.setValueAtTime(0.7, audioContext.currentTime);
+          }, 100);
+        }
+      }
+      
+      // Redraw
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    
+    function generateRandom() {
+      clearAll();
+      
+      initAudio();
+      
+      // Create random nodes
+      const nodeCount = parseInt(densityControl.value);
+      const nodeObjects = [];
+      
+      for (let i = 0; i < nodeCount; i++) {
+        // Generate random position (with padding from edges)
+        const padding = 100;
+        const x = padding + Math.random() * (window.innerWidth - padding * 2);
+        const y = padding + Math.random() * (window.innerHeight - padding * 2);
+        
+        // Create fake event for createNode
+        const fakeEvent = { 
+          clientX: x, 
+          clientY: y,
+          target: container,
+          stopPropagation: () => {}
+        };
+        
+        const node = createNode(fakeEvent);
+        nodeObjects.push(node);
+      }
+      
+      // Create random connections
+      const maxConnections = nodeCount * 2;
+      const connectionCount = Math.min(maxConnections, Math.floor(nodeCount * (1 + Math.random())));
+      
+      for (let i = 0; i < connectionCount; i++) {
+        const nodeA = nodeObjects[Math.floor(Math.random() * nodeObjects.length)];
+        let nodeB = nodeObjects[Math.floor(Math.random() * nodeObjects.length)];
+        
+        // Make sure nodeB is different from nodeA
+        while (nodeB === nodeA) {
+          nodeB = nodeObjects[Math.floor(Math.random() * nodeObjects.length)];
+        }
+        
+        createConnection(nodeA, nodeB);
+      }
+      
+      // Redraw
+      drawConnections();
+    }
+    
+    // Presets
+    function applyPreset(preset) {
+      // First stop any playing sounds
+      if (isPlaying) {
+        togglePlayback();
+      }
+      
+      switch (preset) {
+        case 'beautiful':
+          scaleControl.value = 'pentatonic';
+          chaosControl.value = 10;
+          tempoControl.value = 90;
+          resonanceControl.value = 5;
+          decayControl.value = 2.5;
+          harmonicControl.value = 20;
+          densityControl.value = 15;
+          octaveControl.value = 4;
+          break;
+          
+        case 'ugly':
+          scaleControl.value = 'chromatic';
+          chaosControl.value = 60;
+          tempoControl.value = 180;
+          resonanceControl.value = 20;
+          decayControl.value = 0.5;
+          harmonicControl.value = 80;
+          densityControl.value = 25;
+          octaveControl.value = 2;
+          break;
+          
+        case 'chaos':
+          scaleControl.value = 'noise';
+          chaosControl.value = 90;
+          tempoControl.value = 300;
+          resonanceControl.value = 15;
+          decayControl.value = 1;
+          harmonicControl.value = 70;
+          densityControl.value = 30;
+          octaveControl.value = 3;
+          break;
+          
+        case 'order':
+          scaleControl.value = 'major';
+          chaosControl.value = 5;
+          tempoControl.value = 120;
+          resonanceControl.value = 3;
+          decayControl.value = 1.5;
+          harmonicControl.value = 30;
+          densityControl.value = 12;
+          octaveControl.value = 3;
+          break;
+          
+        case 'glitch':
+          scaleControl.value = 'whole-tone';
+          chaosControl.value = 75;
+          tempoControl.value = 240;
+          resonanceControl.value = 10;
+          decayControl.value = 0.2;
+          harmonicControl.value = 90;
+          densityControl.value = 20;
+          octaveControl.value = 5;
+          break;
+      }
+      
+      // Update UI displays
+      densityValue.textContent = densityControl.value;
+      chaosValue.textContent = `${chaosControl.value}%`;
+      tempoValue.textContent = `${tempoControl.value} BPM`;
+      resonanceValue.textContent = resonanceControl.value;
+      decayValue.textContent = `${decayControl.value}s`;
+      harmonicValue.textContent = `${harmonicControl.value}%`;
+      octaveValue.textContent = octaveControl.value;
+      
+      // Generate new pattern
+      generateRandom();
+    }
+    
+    // Start the application
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
