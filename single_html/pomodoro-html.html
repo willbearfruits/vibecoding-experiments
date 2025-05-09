@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FocusFlow - Advanced Pomodoro Timer</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --work-color: #ef4444;
+            --short-break-color: #3b82f6;
+            --long-break-color: #22c55e;
+            --bg-light: #f9fafb;
+            --bg-dark: #111827;
+            --card-light: #ffffff;
+            --card-dark: #1f2937;
+            --text-light: #1f2937;
+            --text-dark: #f3f4f6;
+            --muted-light: #6b7280;
+            --muted-dark: #9ca3af;
+            --border-light: #e5e7eb;
+            --border-dark: #374151;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode {
+            background-color: var(--bg-dark);
+            color: var(--text-dark);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Navigation */
+        nav {
+            background-color: var(--card-light);
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        body.dark-mode nav {
+            background-color: var(--card-dark);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-text {
+            font-weight: bold;
+            font-size: 20px;
+        }
+
+        .pro-badge {
+            background-color: var(--primary-color);
+            color: white;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--muted-light);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode .btn-icon {
+            color: var(--muted-dark);
+        }
+
+        .btn-icon:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        body.dark-mode .btn-icon:hover {
+            background-color: rgba(255,255,255,0.05);
+        }
+
+        .btn-icon.active {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: var(--primary-color);
+        }
+
+        .btn-theme {
+            color: #6b7280;
+        }
+
+        body.dark-mode .btn-theme {
+            color: #fbbf24;
+        }
+
+        /* Main layout */
+        .main-container {
+            display: flex;
+            flex-direction: column;
+            min-height: calc(100vh - 72px);
+        }
+
+        @media (min-width: 768px) {
+            .main-container {
+                flex-direction: row;
+            }
+        }
+
+        /* Timer section */
+        .timer-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .timer-tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .timer-tab {
+            padding: 8px 16px;
+            border-radius: 9999px;
+            background-color: #e5e7eb;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        body.dark-mode .timer-tab {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+
+        .timer-tab.active-work {
+            background-color: var(--work-color);
+            color: white;
+        }
+
+        .timer-tab.active-short {
+            background-color: var(--short-break-color);
+            color: white;
+        }
+
+        .timer-tab.active-long {
+            background-color: var(--long-break-color);
+            color: white;
+        }
+
+        .timer-display {
+            position: relative;
+            margin: 32px 0;
+        }
+
+        .timer-circle-bg {
+            fill: none;
+            stroke: var(--border-light);
+            stroke-width: 8;
+        }
+
+        body.dark-mode .timer-circle-bg {
+            stroke: var(--border-dark);
+        }
+
+        .timer-circle-progress {
+            fill: none;
+            stroke-width: 8;
+            stroke-linecap: round;
+            transform: rotate(-90deg);
+            transform-origin: center;
+            transition: stroke-dashoffset 1s;
+        }
+
+        .timer-circle-progress.work {
+            stroke: var(--work-color);
+        }
+
+        .timer-circle-progress.short-break {
+            stroke: var(--short-break-color);
+        }
+
+        .timer-circle-progress.long-break {
+            stroke: var(--long-break-color);
+        }
+
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .timer-time {
+            font-size: 48px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .timer-mode {
+            font-size: 18px;
+            margin-top: 8px;
+            text-transform: capitalize;
+        }
+
+        .timer-controls {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .btn-timer {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.3s;
+        }
+
+        .btn-start {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-start:hover {
+            background-color: #2563eb;
+        }
+
+        .btn-pause {
+            background-color: #eab308;
+            color: white;
+        }
+
+        .btn-pause:hover {
+            background-color: #ca8a04;
+        }
+
+        .btn-skip {
+            background-color: #e5e7eb;
+        }
+
+        .btn-skip:hover {
+            background-color: #d1d5db;
+        }
+
+        body.dark-mode .btn-skip {
+            background-color: #374151;
+            color: #d1d5db;
+        }
+
+        body.dark-mode .btn-skip:hover {
+            background-color: #4b5563;
+        }
+
+        .break-suggestion {
+            margin-top: 24px;
+            padding: 16px;
+            background-color: var(--card-light);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        body.dark-mode .break-suggestion {
+            background-color: var(--card-dark);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .stats-summary {
+            margin-top: 24px;
+            text-align: center;
+        }
+
+        .stats-summary p {
+            margin: 4px 0;
+        }
+
+        .streak {
+            font-weight: bold;
+            margin-top: 8px;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--card-light);
+            overflow-y: auto;
+        }
+
+        @media (min-width: 768px) {
+            .sidebar {
+                width: 320px;
+                box-shadow: -1px 0 3px rgba(0,0,0,0.1);
+            }
+        }
+
+        body.dark-mode .sidebar {
+            background-color: var(--card-dark);
+            box-shadow: -1px 0 3px rgba(0,0,0,0.3);
+        }
+
+        .sidebar-section {
+            display: none;
+        }
+
+        .sidebar-section.active {
+            display: block;
+        }
+
+        .sidebar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .sidebar-title {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        /* Tasks */
+        .task-form {
+            margin-bottom: 16px;
+        }
+
+        .task-input-group {
+            display: flex;
+        }
+
+        .task-input {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border-light);
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+            background-color: var(--card-light);
+            color: var(--text-light);
+        }
+
+        body.dark-mode .task-input {
+            border-color: var(--border-dark);
+            background-color: var(--card-dark);
+            color: var(--text-dark);
+        }
+
+        .task-input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .btn-add-task {
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+
+        .btn-add-task:hover {
+            background-color: #2563eb;
+        }
+
+        .empty-tasks {
+            text-align: center;
+            padding: 16px;
+            color: var(--muted-light);
+        }
+
+        body.dark-mode .empty-tasks {
+            color: var(--muted-dark);
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .task-item {
+            padding: 12px;
+            border-radius: 4px;
+            background-color: #f3f4f6;
+            transition: background-color 0.3s;
+        }
+
+        body.dark-mode .task-item {
+            background-color: #374151;
+        }
+
+        .task-item.completed {
+            opacity: 0.5;
+        }
+
+        .task-item.current {
+            background-color: #dbeafe;
+            border: 1px solid #93c5fd;
+        }
+
+        body.dark-mode .task-item.current {
+            background-color: #1e40af;
+            border: 1px solid #3b82f6;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .task-name {
+            word-break: break-word;
+        }
+
+        .task-item.completed .task-name {
+            text-decoration: line-through;
+        }
+
+        .btn-delete-task {
+            background: none;
+            border: none;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .task-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .task-pomodoros {
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-pomodoro-count {
+            background: none;
+            border: none;
+            padding: 0 8px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-select-task {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            background-color: #e5e7eb;
+            border: none;
+            cursor: pointer;
+        }
+
+        body.dark-mode .btn-select-task {
+            background-color: #4b5563;
+        }
+
+        .btn-select-task:hover {
+            background-color: #d1d5db;
+        }
+
+        body.dark-mode .btn-select-task:hover {
+            background-color: #6b7280;
+        }
+
+        .btn-select-task.selected {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* Stats */
+        .stats-chart {
+            height: 160px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 24px;
+        }
+
+        .chart-column {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 32px;
+        }
+
+        .chart-bar {
+            width: 100%;
+            background-color: var(--primary-color);
+            border-radius: 4px 4px 0 0;
+            min-height: 4px;
+        }
+
+        .chart-label {
+            margin-top: 8px;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .chart-value {
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .history-list {
+            background-color: #f3f4f6;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        body.dark-mode .history-list {
+            background-color: #374151;
+        }
+
+        .history-item {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        body.dark-mode .history-item {
+            border-bottom-color: var(--border-dark);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        .history-details {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .history-task-name {
+            font-weight: 500;
+        }
+
+        .history-date {
+            font-size: 12px;
+            color: var(--muted-light);
+        }
+
+        body.dark-mode .history-date {
+            color: var(--muted-dark);
+        }
+
+        .history-duration {
+            display: flex;
+            align-items: center;
+        }
+
+        .empty-history {
+            text-align: center;
+            padding: 16px;
+            color: var(--muted-light);
+        }
+
+        body.dark-mode .empty-history {
+            color: var(--muted-dark);
+        }
+
+        /* Settings */
+        .settings-form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            margin-bottom: 4px;
+        }
+
+        .form-control {
+            padding: 8px;
+            border: 1px solid var(--border-light);
+            border-radius: 4px;
+            background-color: var(--card-light);
+            color: var(--text-light);
+        }
+
+        body.dark-mode .form-control {
+            border-color: var(--border-dark);
+            background-color: var(--card-dark);
+            color: var(--text-dark);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-check {
+            display: flex;
+            align-items: center;
+        }
+
+        .form-check input {
+            margin-right: 8px;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Icons */
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+        }
+
+        .icon-sm {
+            width: 16px;
+            height: 16px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="logo">
+            <div class="logo-text">FocusFlow</div>
+            <div class="pro-badge">PRO</div>
+        </div>
+        <div class="nav-buttons">
+            <button id="btn-tasks" class="btn-icon active" title="Tasks">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+            </button>
+            <button id="btn-stats" class="btn-icon" title="Statistics">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"></line>
+                    <line x1="12" y1="20" x2="12" y2="4"></line>
+                    <line x1="6" y1="20" x2="6" y2="14"></line>
+                </svg>
+            </button>
+            <button id="btn-settings" class="btn-icon" title="Settings">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+            </button>
+            <button id="btn-theme" class="btn-icon btn-theme" title="Toggle Theme">
+                <svg class="icon icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                </svg>
+                <svg class="icon icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                </svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="main-container">
+        <div class="timer-section">
+            <div class="timer-tabs">
+                <button id="tab-work" class="timer-tab active-work">Focus</button>
+                <button id="tab-short" class="timer-tab">Short Break</button>
+                <button id="tab-long" class="timer-tab">Long Break</button>
+            </div>
+
+            <div class="timer-display">
+                <svg width="256" height="256" viewBox="0 0 256 256">
+                    <circle cx="128" cy="128" r="120" class="timer-circle-bg" />
+                    <circle cx="128" cy="128" r="120" class="timer-circle-progress work" stroke-dasharray="753.98" stroke-dashoffset="0" />
+                </svg>
+                <div class="timer-text">
+                    <div id="timer-time" class="timer-time">25:00</div>
+                    <div id="timer-mode" class="timer-mode">Focus</div>
+                </div>
+            </div>
+
+            <div class="timer-controls">
+                <button id="btn-start" class="btn-timer btn-start">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                    </svg>
+                </button>
+                <button id="btn-skip" class="btn-timer btn-skip">
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="5 4 15 12 5 20 5 4"></polygon>
+                        <line x1="19" y1="5" x2="19" y2="19"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="break-suggestion" class="break-suggestion" style="display: none;">
+                <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                    <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                    <line x1="6" y1="1" x2="6" y2="4"></line>
+                    <line x1="10" y1="1" x2="10" y2="4"></line>
+                    <line x1="14" y1="1" x2="14" y2="4"></line>
+                </svg>
+                <span id="suggestion-text">Grab a glass of water</span>
+            </div>
+
+            <div class="stats-summary">
+                <p>Today: <span id="today-count">0</span> pomodoros</p>
+                <p>Total time: <span id="today-time">0</span> min</p>
+                <p id="streak" class="streak" style="display: none;">🔥 <span id="streak-count">0</span> day streak!</p>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <!-- Tasks Section -->
+            <div id="section-tasks" class="sidebar-section active">
+                <div class="sidebar-header">
+                    <h2 class="sidebar-title">Tasks</h2>
+                    <div id="task-counter">0/0 completed</div>
+                </div>
+
+                <form id="task-form" class="task-form">
+                    <div class="task-input-group">
+                        <input 
+                            type="text" 
+                            id="task-input" 
+                            class="task-input" 
+                            placeholder="Add a task..."
+                        >
+                        <button type="submit" class="btn-add-task">Add</button>
+                    </div>
+                </form>
+
+                <div id="task-list" class="task-list">
+                    <div class="empty-tasks">No tasks yet. Add one!</div>
+                </div>
+            </div>
+
+            <!-- Stats Section -->
+            <div id="section-stats" class="sidebar-section">
+                <h2 class="sidebar-title">Stats</h2>
+                
+                <div>
+                    <h3>This Week</h3>
+                    <div id="weekly-chart" class="stats-chart">
+                        <!-- Will be populated by JS -->
+                    </div>
+                </div>
+                
+                <div>
+                    <h3>Recent Sessions</h3>
+                    <div id="session-history" class="history-list">
+                        <div class="empty-history">No completed sessions yet</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="section-settings" class="sidebar-section">
+                <h2 class="sidebar-title">Settings</h2>
+                
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label for="work-time">Work Time (minutes)</label>
+                        <input 
+                            type="number" 
+                            id="work-time" 
+                            class="form-control" 
+                            min="1" 
+                            max="120" 
+                            value="25"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="short-break-time">Short Break (minutes)</label>
+                        <input 
+                            type="number" 
+                            id="short-break-time" 
+                            class="form-control" 
+                            min="1" 
+                            max="30" 
+                            value="5"
+                        >
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="long-break-time">Long Break (minutes)</label>
+                        <input 
+                            type="number" 
+                            id="long-break-time" 
+                            class="form-control" 
+                            min="1" 
+                            max="60" 
+                            value="15"
+                        >
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="auto-start-breaks" checked>
+                        <label for="auto-start-breaks">Auto-start breaks</label>
+                    </div>
+                    
+                    <div class="form-check">
+                        <input type="checkbox" id="auto-start-pomodoros">
+                        <label for="auto-start-pomodoros">Auto-start work sessions</label>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="ambient-sound">Ambient Sound</label>
+                        <select id="ambient-sound" class="form-control">
+                            <option value="none">None</option>
+                            <option value="rain">Rainfall</option>
+                            <option value="cafe">Cafe</option>
+                            <option value="lofi">Lo-Fi</option>
+                            <option value="whitenoise">White Noise</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="volume">Volume</label>
+                        <div class="volume-control">
+                            <svg class="icon icon-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+                            </svg>
+                            <input 
+                                type="range" 
+                                id="volume" 
+                                min="0" 
+                                max="1" 
+                                step="0.01" 
+                                value="0.7"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sounds -->
+    <audio id="alarm-sound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Timer settings
+            let workTime = 25;
+            let shortBreakTime = 5;
+            let longBreakTime = 15;
+            let autoStartBreaks = true;
+            let autoStartPomodoros = false;
+            let volume = 0.7;
+            let darkMode = false;
+            let ambientSound = 'none';
+            
+            // Timer state
+            let timeLeft = workTime * 60;
+            let isActive = false;
+            let timerInterval = null;
+            let mode = 'work'; // 'work', 'shortBreak', 'longBreak'
+            let completedPomodoros = 0;
+            let totalWorkToday = 0;
+            let currentTask = null;
+            
+            // Break suggestions
+            const breakSuggestions = [
+                { icon: "coffee", text: "Grab a glass of water" },
+                { icon: "eye", text: "Look at something 20 feet away for 20 seconds" },
+                { icon: "brain", text: "Take 5 deep breaths" }
+            ];
+            
+            // Task management
+            let tasks = [];
+            
+            // Stats tracking
+            let dailyStats = {};
+            let history = [];
+            let streak = { count: 0, lastDate: null };
+            
+            // DOM Elements
+            const timerDisplay = document.getElementById('timer-time');
+            const timerMode = document.getElementById('timer-mode');
+            const timerProgress = document.querySelector('.timer-circle-progress');
+            const btnStart = document.getElementById('btn-start');
+            const btnSkip = document.getElementById('btn-skip');
+            const breakSuggestion = document.getElementById('break-suggestion');
+            const suggestionText = document.getElementById('suggestion-text');
+            const todayCount = document.getElementById('today-count');
+            const todayTime = document.getElementById('today-time');
+            const streakElement = document.getElementById('streak');
+            const streakCount = document.getElementById('streak-count');
+            
+            // Sidebar tabs
+            const btnTasks = document.getElementById('btn-tasks');
+            const btnStats = document.getElementById('btn-stats');
+            const btnSettings = document.getElementById('btn-settings');
+            const btnTheme = document.getElementById('btn-theme');
+            
+            const sectionTasks = document.getElementById('section-tasks');
+            const sectionStats = document.getElementById('section-stats');
+            const sectionSettings = document.getElementById('section-settings');
+            
+            // Task elements
+            const taskForm = document.getElementById('task-form');
+            const taskInput = document.getElementById('task-input');
+            const taskList = document.getElementById('task-list');
+            const taskCounter = document.getElementById('task-counter');
+            
+            // Stats elements
+            const weeklyChart = document.getElementById('weekly-chart');
+            const sessionHistory = document.getElementById('session-history');
+            
+            // Settings elements
+            const workTimeInput = document.getElementById('work-time');
+            const shortBreakTimeInput = document.getElementById('short-break-time');
+            const longBreakTimeInput = document.getElementById('long-break-time');
+            const autoStartBreaksCheckbox = document.getElementById('auto-start-breaks');
+            const autoStartPomodorosCheckbox = document.getElementById('auto-start-pomodoros');
+            const ambientSoundSelect = document.getElementById('ambient-sound');
+            const volumeInput = document.getElementById('volume');
+            
+            // Timer tabs
+            const tabWork = document.getElementById('tab-work');
+            const tabShort = document.getElementById('tab-short');
+            const tabLong = document.getElementById('tab-long');
+            
+            // Audio elements
+            const alarmSound = document.getElementById('alarm-sound');
+            
+            // Calculate the circumference of progress circle
+            const radius = 120;
+            const circumference = 2 * Math.PI * radius;
+            timerProgress.setAttribute('stroke-dasharray', circumference);
+            
+            // Format time as MM:SS
+            function formatTime(seconds) {
+                const mins = Math.floor(seconds / 60);
+                const secs = seconds % 60;
+                return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+            
+            // Update timer display
+            function updateTimerDisplay() {
+                timerDisplay.textContent = formatTime(timeLeft);
+                document.title = `${formatTime(timeLeft)} - ${mode === 'work' ? 'Focus' : 'Break'}`;
+                
+                // Update progress circle
+                const progress = getProgress();
+                const offset = circumference - (progress / 100) * circumference;
+                timerProgress.setAttribute('stroke-dashoffset', offset);
+            }
+            
+            // Calculate progress percentage
+            function getProgress() {
+                let totalTime;
+                
+                if (mode === 'work') {
+                    totalTime = workTime * 60;
+                } else if (mode === 'shortBreak') {
+                    totalTime = shortBreakTime * 60;
+                } else {
+                    totalTime = longBreakTime * 60;
+                }
+                
+                return ((totalTime - timeLeft) / totalTime) * 100;
+            }
+            
+            // Start timer
+            function startTimer() {
+                if (isActive) return;
+                
+                isActive = true;
+                btnStart.innerHTML = `
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="10" y1="15" x2="10" y2="9"></line>
+                        <line x1="14" y1="15" x2="14" y2="9"></line>
+                    </svg>
+                `;
+                btnStart.classList.remove('btn-start');
+                btnStart.classList.add('btn-pause');
+                
+                timerInterval = setInterval(function() {
+                    if (timeLeft > 0) {
+                        timeLeft--;
+                        
+                        // If in work mode, increment total work time
+                        if (mode === 'work') {
+                            totalWorkToday++;
+                        }
+                        
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        timerComplete();
+                    }
+                }, 1000);
+                
+                playAmbientSound();
+            }
+            
+            // Pause timer
+            function pauseTimer() {
+                if (!isActive) return;
+                
+                isActive = false;
+                clearInterval(timerInterval);
+                btnStart.innerHTML = `
+                    <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                    </svg>
+                `;
+                btnStart.classList.remove('btn-pause');
+                btnStart.classList.add('btn-start');
+                
+                stopAmbientSound();
+            }
+            
+            // Timer complete
+            function timerComplete() {
+                playAlarm();
+                
+                if (mode === 'work') {
+                    // Mark current task as completed if there is one
+                    if (currentTask !== null) {
+                        completeCurrentTask();
+                    }
+                    
+                    // Increment completed pomodoros
+                    completedPomodoros++;
+                    todayCount.textContent = completedPomodoros;
+                    
+                    // Track in history
+                    const newHistoryItem = {
+                        date: new Date().toISOString(),
+                        duration: workTime * 60,
+                        task: currentTask !== null ? tasks[currentTask].name : 'Unnamed task'
+                    };
+                    history.push(newHistoryItem);
+                    localStorage.setItem('pomodoroHistory', JSON.stringify(history));
+                    
+                    // Update streak
+                    updateStreak();
+                    
+                    // Determine if we need a long break or short break
+                    if (completedPomodoros % 4 === 0) {
+                        setMode('longBreak');
+                    } else {
+                        setMode('shortBreak');
+                    }
+                    
+                    // Show random break suggestion
+                    const randomSuggestion = breakSuggestions[Math.floor(Math.random() * breakSuggestions.length)];
+                    suggestionText.textContent = randomSuggestion.text;
+                    breakSuggestion.style.display = 'flex';
+                    
+                    // Auto start break if enabled
+                    if (autoStartBreaks) {
+                        startTimer();
+                    } else {
+                        isActive = false;
+                        btnStart.innerHTML = `
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                            </svg>
+                        `;
+                        btnStart.classList.remove('btn-pause');
+                        btnStart.classList.add('btn-start');
+                    }
+                } else {
+                    // Break is over, start a new work session
+                    setMode('work');
+                    
+                    // Hide break suggestion
+                    breakSuggestion.style.display = 'none';
+                    
+                    // Auto start work if enabled
+                    if (autoStartPomodoros) {
+                        startTimer();
+                    } else {
+                        isActive = false;
+                        btnStart.innerHTML = `
+                            <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polygon points="10 8 16 12 10 16 10 8"></polygon>
+                            </svg>
+                        `;
+                        btnStart.classList.remove('btn-pause');
+                        btnStart.classList.add('btn-start');
+                    }
+                }
+                
+                // Update daily stats
+                updateDailyStats();
+                updateHistoryDisplay();
+            }
+            
+            // Skip to next mode
+            function skipToNext() {
+                pauseTimer();
+                
+                if (mode === 'work') {
+                    // Skip to break
+                    if ((completedPomodoros + 1) % 4 === 0) {
+                        setMode('longBreak');
+                    } else {
+                        setMode('shortBreak');
+                    }
+                    
+                    // Show random break suggestion
+                    const randomSuggestion = breakSuggestions[Math.floor(Math.random() * breakSuggestions.length)];
+                    suggestionText.textContent = randomSuggestion.text;
+                    breakSuggestion.style.display = 'flex';
+                } else {
+                    // Skip to work
+                    setMode('work');
+                    
+                    // Hide break suggestion
+                    breakSuggestion.style.display = 'none';
+                }
+            }
+            
+            // Set timer mode
+            function setMode(newMode) {
+                mode = newMode;
+                
+                // Update timer mode display
+                if (mode === 'work') {
+                    timerMode.textContent = 'Focus';
+                    timeLeft = workTime * 60;
+                    
+                    // Update tab active states
+                    tabWork.classList.add('active-work');
+                    tabShort.classList.remove('active-short');
+                    tabLong.classList.remove('active-long');
+                    
+                    // Update progress circle color
+                    timerProgress.classList.remove('short-break', 'long-break');
+                    timerProgress.classList.add('work');
+                } else if (mode === 'shortBreak') {
+                    timerMode.textContent = 'Short Break';
+                    timeLeft = shortBreakTime * 60;
+                    
+                    // Update tab active states
+                    tabWork.classList.remove('active-work');
+                    tabShort.classList.add('active-short');
+                    tabLong.classList.remove('active-long');
+                    
+                    // Update progress circle color
+                    timerProgress.classList.remove('work', 'long-break');
+                    timerProgress.classList.add('short-break');
+                } else {
+                    timerMode.textContent = 'Long Break';
+                    timeLeft = longBreakTime * 60;
+                    
+                    // Update tab active states
+                    tabWork.classList.remove('active-work');
+                    tabShort.classList.remove('active-short');
+                    tabLong.classList.add('active-long');
+                    
+                    // Update progress circle color
+                    timerProgress.classList.remove('work', 'short-break');
+                    timerProgress.classList.add('long-break');
+                }
+                
+                updateTimerDisplay();
+            }
+            
+            // Play alarm sound
+            function playAlarm() {
+                alarmSound.volume = volume;
+                alarmSound.play();
+            }
+            
+            // Play ambient sound
+            function playAmbientSound() {
+                if (ambientSound === 'none' || mode !== 'work') return;
+                
+                // In a real implementation, this would play actual audio files
+                console.log(`Playing ambient sound: ${ambientSound}`);
+            }
+            
+            // Stop ambient sound
+            function stopAmbientSound() {
+                if (ambientSound === 'none') return;
+                
+                // In a real implementation, this would stop the audio
+                console.log(`Stopped ambient sound`);
+            }
+            
+            // Add task
+            function addTask(e) {
+                e.preventDefault();
+                
+                const taskName = taskInput.value.trim();
+                if (taskName === '') return;
+                
+                const newTask = {
+                    id: Date.now(),
+                    name: taskName,
+                    completed: false,
+                    estimatedPomodoros: 1,
+                    actualPomodoros: 0
+                };
+                
+                tasks.push(newTask);
+                taskInput.value = '';
+                
+                updateTaskDisplay();
+                saveTasks();
+            }
+            
+            // Mark current task as completed
+            function completeCurrentTask() {
+                if (currentTask === null) return;
+                
+                tasks[currentTask].actualPomodoros += 1;
+                
+                if (tasks[currentTask].actualPomodoros >= tasks[currentTask].estimatedPomodoros) {
+                    tasks[currentTask].completed = true;
+                }
+                
+                updateTaskDisplay();
+                saveTasks();
+            }
+            
+            // Delete task
+            function deleteTask(id) {
+                tasks = tasks.filter(task => task.id !== id);
+                
+                if (currentTask !== null && tasks.length === 0) {
+                    currentTask = null;
+                } else if (currentTask !== null) {
+                    // Find the index of the current task after filtering
+                    const taskIds = tasks.map(task => task.id);
+                    const currentTaskId = tasks[currentTask]?.id;
+                    
+                    if (currentTaskId) {
+                        currentTask = taskIds.indexOf(currentTaskId);
+                        if (currentTask === -1) currentTask = null;
+                    } else {
+                        currentTask = null;
+                    }
+                }
+                
+                updateTaskDisplay();
+                saveTasks();
+            }
+            
+            // Increase estimated pomodoros
+            function increasePomodoros(taskId) {
+                const taskIndex = tasks.findIndex(task => task.id === taskId);
+                if (taskIndex !== -1) {
+                    tasks[taskIndex].estimatedPomodoros += 1;
+                    updateTaskDisplay();
+                    saveTasks();
+                }
+            }
+            
+            // Decrease estimated pomodoros
+            function decreasePomodoros(taskId) {
+                const taskIndex = tasks.findIndex(task => task.id === taskId);
+                if (taskIndex !== -1 && tasks[taskIndex].estimatedPomodoros > 1) {
+                    tasks[taskIndex].estimatedPomodoros -= 1;
+                    updateTaskDisplay();
+                    saveTasks();
+                }
+            }
+            
+            // Select task for current focus session
+            function selectTask(taskId) {
+                const taskIndex = tasks.findIndex(task => task.id === taskId);
+                if (taskIndex !== -1 && !tasks[taskIndex].completed) {
+                    currentTask = taskIndex;
+                    updateTaskDisplay();
+                    localStorage.setItem('currentTask', currentTask);
+                }
+            }
+            
+            // Update task display
+            function updateTaskDisplay() {
+                const completedCount = tasks.filter(task => task.completed).length;
+                taskCounter.textContent = `${completedCount}/${tasks.length} completed`;
+                
+                if (tasks.length === 0) {
+                    taskList.innerHTML = '<div class="empty-tasks">No tasks yet. Add one!</div>';
+                    return;
+                }
+                
+                taskList.innerHTML = '';
+                
+                tasks.forEach((task, index) => {
+                    const taskItem = document.createElement('div');
+                    taskItem.className = `task-item ${task.completed ? 'completed' : ''} ${currentTask === index ? 'current' : ''}`;
+                    
+                    taskItem.innerHTML = `
+                        <div class="task-header">
+                            <div class="task-name">${task.name}</div>
+                            <button class="btn-delete-task" data-id="${task.id}">&times;</button>
+                        </div>
+                        <div class="task-footer">
+                            <div class="task-pomodoros">
+                                <button class="btn-pomodoro-count" data-action="decrease" data-id="${task.id}">-</button>
+                                <span>${task.actualPomodoros}/${task.estimatedPomodoros} 🍅</span>
+                                <button class="btn-pomodoro-count" data-action="increase" data-id="${task.id}">+</button>
+                            </div>
+                            ${!task.completed ? `
+                                <button class="btn-select-task ${currentTask === index ? 'selected' : ''}" data-id="${task.id}">
+                                    ${currentTask === index ? 'Selected' : 'Select'}
+                                </button>
+                            ` : ''}
+                        </div>
+                    `;
+                    
+                    taskList.appendChild(taskItem);
+                });
+                
+                // Add event listeners for task actions
+                document.querySelectorAll('.btn-delete-task').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        deleteTask(parseInt(btn.dataset.id));
+                    });
+                });
+                
+                document.querySelectorAll('.btn-pomodoro-count').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const action = btn.dataset.action;
+                        const taskId = parseInt(btn.dataset.id);
+                        
+                        if (action === 'increase') {
+                            increasePomodoros(taskId);
+                        } else if (action === 'decrease') {
+                            decreasePomodoros(taskId);
+                        }
+                    });
+                });
+                
+                document.querySelectorAll('.btn-select-task').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        selectTask(parseInt(btn.dataset.id));
+                    });
+                });
+            }
+            
+            // Update daily stats
+            function updateDailyStats() {
+                const today = new Date().toISOString().slice(0, 10);
+                
+                if (!dailyStats[today]) {
+                    dailyStats[today] = {
+                        pomodoros: 0,
+                        totalWorkSeconds: 0
+                    };
+                }
+                
+                if (mode === 'work') {
+                    dailyStats[today].pomodoros += 1;
+                }
+                
+                dailyStats[today].totalWorkSeconds = totalWorkToday;
+                
+                localStorage.setItem('pomodoroStats', JSON.stringify(dailyStats));
+                todayTime.textContent = Math.floor(totalWorkToday / 60);
+                
+                // Update weekly chart
+                updateWeeklyChart();
+            }
+            
+            // Update streak
+            function updateStreak() {
+                const today = new Date().toISOString().slice(0, 10);
+                
+                if (streak.lastDate === today) {
+                    // Already counted today
+                    return;
+                } else if (streak.lastDate) {
+                    // Check if yesterday
+                    const lastDate = new Date(streak.lastDate);
+                    const oneDayBefore = new Date();
+                    oneDayBefore.setDate(oneDayBefore.getDate() - 1);
+                    
+                    if (lastDate.toISOString().slice(0, 10) === oneDayBefore.toISOString().slice(0, 10)) {
+                        // Streak continues
+                        streak.count += 1;
+                    } else {
+                        // Streak broken
+                        streak.count = 1;
+                    }
+                } else {
+                    // First day
+                    streak.count = 1;
+                }
+                
+                streak.lastDate = today;
+                
+                // Update UI
+                if (streak.count > 0) {
+                    streakElement.style.display = 'block';
+                    streakCount.textContent = streak.count;
+                } else {
+                    streakElement.style.display = 'none';
+                }
+                
+                localStorage.setItem('pomodoroStreak', JSON.stringify(streak));
+            }
+            
+            // Generate data for weekly chart
+            function generateWeeklyStats() {
+                const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                const data = [];
+                
+                // Get dates for the last 7 days
+                for (let i = 6; i >= 0; i--) {
+                    const date = new Date();
+                    date.setDate(date.getDate() - i);
+                    const dateKey = date.toISOString().slice(0, 10);
+                    const dayName = days[date.getDay()];
+                    
+                    const stats = dailyStats[dateKey] || { pomodoros: 0, totalWorkSeconds: 0 };
+                    data.push({
+                        name: dayName,
+                        pomodoros: stats.pomodoros,
+                        hours: Math.round(stats.totalWorkSeconds / 360) / 10
+                    });
+                }
+                
+                return data;
+            }
+            
+            // Update weekly chart display
+            function updateWeeklyChart() {
+                const weeklyData = generateWeeklyStats();
+                
+                // Find max for scaling
+                const maxPomodoros = Math.max(...weeklyData.map(d => d.pomodoros), 1);
+                
+                weeklyChart.innerHTML = '';
+                
+                weeklyData.forEach(day => {
+                    const height = (day.pomodoros / maxPomodoros) * 100;
+                    
+                    const column = document.createElement('div');
+                    column.className = 'chart-column';
+                    
+                    column.innerHTML = `
+                        <div class="chart-bar" style="height: ${height}%"></div>
+                        <div class="chart-label">${day.name}</div>
+                        <div class="chart-value">${day.pomodoros}</div>
+                    `;
+                    
+                    weeklyChart.appendChild(column);
+                });
+            }
+            
+            // Update history display
+            function updateHistoryDisplay() {
+                if (history.length === 0) {
+                    sessionHistory.innerHTML = '<div class="empty-history">No completed sessions yet</div>';
+                    return;
+                }
+                
+                sessionHistory.innerHTML = '';
+                
+                // Display last 5 sessions, most recent first
+                const recentHistory = history.slice(-5).reverse();
+                
+                recentHistory.forEach(item => {
+                    const date = new Date(item.date);
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'history-item';
+                    
+                    historyItem.innerHTML = `
+                        <div class="history-details">
+                            <div class="history-task-name">${item.task}</div>
+                            <div class="history-date">
+                                ${date.toLocaleDateString()} ${date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            </div>
+                        </div>
+                        <div class="history-duration">
+                            <span>${Math.floor(item.duration / 60)}</span> min
+                        </div>
+                    `;
+                    
+                    sessionHistory.appendChild(historyItem);
+                });
+            }
+            
+            // Save tasks to localStorage
+            function saveTasks() {
+                localStorage.setItem('pomodoroTasks', JSON.stringify(tasks));
+            }
+            
+            // Save settings to localStorage
+            function saveSettings() {
+                localStorage.setItem('pomodoroSettings', JSON.stringify({
+                    workTime,
+                    shortBreakTime,
+                    longBreakTime,
+                    autoStartBreaks,
+                    autoStartPomodoros,
+                    volume,
+                    darkMode,
+                    ambientSound
+                }));
+            }
+            
+            // Apply dark mode
+            function applyDarkMode() {
+                if (darkMode) {
+                    document.body.classList.add('dark-mode');
+                    document.querySelector('.icon-moon').style.display = 'none';
+                    document.querySelector('.icon-sun').style.display = 'inline-block';
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    document.querySelector('.icon-moon').style.display = 'inline-block';
+                    document.querySelector('.icon-sun').style.display = 'none';
+                }
+            }
+            
+            // Event Listeners
+            btnStart.addEventListener('click', function() {
+                if (isActive) {
+                    pauseTimer();
+                } else {
+                    startTimer();
+                }
+            });
+            
+            btnSkip.addEventListener('click', skipToNext);
+            
+            // Timer tab buttons
+            tabWork.addEventListener('click', function() {
+                pauseTimer();
+                setMode('work');
+                breakSuggestion.style.display = 'none';
+            });
+            
+            tabShort.addEventListener('click', function() {
+                pauseTimer();
+                setMode('shortBreak');
+                const randomSuggestion = breakSuggestions[Math.floor(Math.random() * breakSuggestions.length)];
+                suggestionText.textContent = randomSuggestion.text;
+                breakSuggestion.style.display = 'flex';
+            });
+            
+            tabLong.addEventListener('click', function() {
+                pauseTimer();
+                setMode('longBreak');
+                const randomSuggestion = breakSuggestions[Math.floor(Math.random() * breakSuggestions.length)];
+                suggestionText.textContent = randomSuggestion.text;
+                breakSuggestion.style.display = 'flex';
+            });
+            
+            // Sidebar tab buttons
+            btnTasks.addEventListener('click', function() {
+                btnTasks.classList.add('active');
+                btnStats.classList.remove('active');
+                btnSettings.classList.remove('active');
+                
+                sectionTasks.classList.add('active');
+                sectionStats.classList.remove('active');
+                sectionSettings.classList.remove('active');
+            });
+            
+            btnStats.addEventListener('click', function() {
+                btnTasks.classList.remove('active');
+                btnStats.classList.add('active');
+                btnSettings.classList.remove('active');
+                
+                sectionTasks.classList.remove('active');
+                sectionStats.classList.add('active');
+                sectionSettings.classList.remove('active');
+                
+                updateWeeklyChart();
+            });
+            
+            btnSettings.addEventListener('click', function() {
+                btnTasks.classList.remove('active');
+                btnStats.classList.remove('active');
+                btnSettings.classList.add('active');
+                
+                sectionTasks.classList.remove('active');
+                sectionStats.classList.remove('active');
+                sectionSettings.classList.add('active');
+            });
+            
+            btnTheme.addEventListener('click', function() {
+                darkMode = !darkMode;
+                applyDarkMode();
+                saveSettings();
+            });
+            
+            // Task form
+            taskForm.addEventListener('submit', addTask);
+            
+            // Settings form
+            workTimeInput.addEventListener('change', function() {
+                workTime = parseInt(this.value) || 1;
+                if (mode === 'work') {
+                    timeLeft = workTime * 60;
+                    updateTimerDisplay();
+                }
+                saveSettings();
+            });
+            
+            shortBreakTimeInput.addEventListener('change', function() {
+                shortBreakTime = parseInt(this.value) || 1;
+                if (mode === 'shortBreak') {
+                    timeLeft = shortBreakTime * 60;
+                    updateTimerDisplay();
+                }
+                saveSettings();
+            });
+            
+            longBreakTimeInput.addEventListener('change', function() {
+                longBreakTime = parseInt(this.value) || 1;
+                if (mode === 'longBreak') {
+                    timeLeft = longBreakTime * 60;
+                    updateTimerDisplay();
+                }
+                saveSettings();
+            });
+            
+            autoStartBreaksCheckbox.addEventListener('change', function() {
+                autoStartBreaks = this.checked;
+                saveSettings();
+            });
+            
+            autoStartPomodorosCheckbox.addEventListener('change', function() {
+                autoStartPomodoros = this.checked;
+                saveSettings();
+            });
+            
+            ambientSoundSelect.addEventListener('change', function() {
+                ambientSound = this.value;
+                saveSettings();
+                
+                if (isActive && mode === 'work') {
+                    stopAmbientSound();
+                    playAmbientSound();
+                }
+            });
+            
+            volumeInput.addEventListener('input', function() {
+                volume = parseFloat(this.value);
+                saveSettings();
+            });
+            
+            // Initialize application
+            function init() {
+                // Load settings from localStorage
+                const savedSettings = localStorage.getItem('pomodoroSettings');
+                if (savedSettings) {
+                    const settings = JSON.parse(savedSettings);
+                    workTime = settings.workTime;
+                    shortBreakTime = settings.shortBreakTime;
+                    longBreakTime = settings.longBreakTime;
+                    autoStartBreaks = settings.autoStartBreaks;
+                    autoStartPomodoros = settings.autoStartPomodoros;
+                    volume = settings.volume;
+                    darkMode = settings.darkMode;
+                    ambientSound = settings.ambientSound;
+                    
+                    // Update form values
+                    workTimeInput.value = workTime;
+                    shortBreakTimeInput.value = shortBreakTime;
+                    longBreakTimeInput.value = longBreakTime;
+                    autoStartBreaksCheckbox.checked = autoStartBreaks;
+                    autoStartPomodorosCheckbox.checked = autoStartPomodoros;
+                    volumeInput.value = volume;
+                    ambientSoundSelect.value = ambientSound;
+                }
+                
+                // Apply dark mode
+                applyDarkMode();
+                
+                // Load tasks from localStorage
+                const savedTasks = localStorage.getItem('pomodoroTasks');
+                if (savedTasks) {
+                    tasks = JSON.parse(savedTasks);
+                }
+                
+                // Load current task
+                const savedCurrentTask = localStorage.getItem('currentTask');
+                if (savedCurrentTask && tasks.length > 0) {
+                    currentTask = parseInt(savedCurrentTask);
+                    // Make sure current task index is valid
+                    if (currentTask >= tasks.length) {
+                        currentTask = null;
+                    }
+                }
+                
+                // Load stats from localStorage
+                const savedStats = localStorage.getItem('pomodoroStats');
+                if (savedStats) {
+                    dailyStats = JSON.parse(savedStats);
+                }
+                
+                // Load history from localStorage
+                const savedHistory = localStorage.getItem('pomodoroHistory');
+                if (savedHistory) {
+                    history = JSON.parse(savedHistory);
+                }
+                
+                // Load streak from localStorage
+                const savedStreak = localStorage.getItem('pomodoroStreak');
+                if (savedStreak) {
+                    streak = JSON.parse(savedStreak);
+                    
+                    if (streak.count > 0) {
+                        streakElement.style.display = 'block';
+                        streakCount.textContent = streak.count;
+                    }
+                }
+                
+                // Set initial timer display
+                updateTimerDisplay();
+                
+                // Update task display
+                updateTaskDisplay();
+                
+                // Update history display
+                updateHistoryDisplay();
+                
+                // Set work time
+                setMode('work');
+                
+                // Update total count
+                todayCount.textContent = completedPomodoros;
+                todayTime.textContent = Math.floor(totalWorkToday / 60);
+            }
+            
+            // Initialize the app
+            init();
+        });
+    </script>
+</body>
+</html>
