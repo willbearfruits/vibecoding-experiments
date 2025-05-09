@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Guitar Simulation</title>
+    <style>
+        :root {
+            --primary-color: #3a86ff;
+            --secondary-color: #8338ec;
+            --accent-color: #ff006e;
+            --background-color: #001233;
+            --surface-color: #001845;
+            --text-color: #fffbfc;
+            --string-light: #ffbe0b;
+            --string-metal: #a2a2a2;
+            --wood-color: #774936;
+            --wood-dark: #5e3023;
+            --fretboard-color: #422006;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .guitar-container {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            height: 400px;
+            background: var(--surface-color);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        #guitar-canvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            cursor: pointer;
+            border-radius: 12px;
+        }
+
+        .controls {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: var(--surface-color);
+            border-radius: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+
+        .control-group h3 {
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            color: var(--primary-color);
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 8px 0;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .slider-value {
+            font-weight: bold;
+            color: var(--string-light);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 8px;
+            background: var(--background-color);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--accent-color);
+            border-radius: 50%;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            background: var(--primary-color);
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            background: var(--primary-color);
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+
+        button:hover {
+            background: var(--secondary-color);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .toggle-group {
+            display: flex;
+            gap: 10px;
+            margin: 8px 0;
+        }
+
+        .toggle-btn {
+            flex: 1;
+            padding: 8px;
+            min-width: auto;
+            text-align: center;
+            background: var(--background-color);
+            opacity: 0.7;
+        }
+
+        .toggle-btn.active {
+            background: var(--primary-color);
+            opacity: 1;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 30px;
+            opacity: 0.7;
+            font-size: 0.9rem;
+        }
+
+        .keyboard-shortcuts {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .keyboard-shortcuts kbd {
+            background: var(--surface-color);
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin: 0 2px;
+        }
+
+        /* String glow effects */
+        .string-glow {
+            position: absolute;
+            height: 5px;
+            border-radius: 50%;
+            filter: blur(8px);
+            animation: glow-fade 1s forwards;
+            pointer-events: none;
+        }
+
+        @keyframes glow-fade {
+            0% { opacity: 1; transform: scaleY(1); }
+            100% { opacity: 0; transform: scaleY(3); }
+        }
+
+        /* Accessibility improvements */
+        .visually-hidden {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border-width: 0;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                gap: 15px;
+            }
+            
+            .guitar-container {
+                height: 300px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .control-group {
+                width: 100%;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Virtual Guitar</h1>
+            <p class="subtitle">Strum with your mouse or touch. Experience realistic string synthesis with interactive controls.</p>
+        </header>
+
+        <div class="guitar-container" aria-label="Interactive guitar simulation">
+            <canvas id="guitar-canvas"></canvas>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>String Properties</h3>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <label for="tension">String Tension</label>
+                        <span class="slider-value" id="tension-value">5.0</span>
+                    </div>
+                    <input type="range" id="tension" min="1" max="10" step="0.1" value="5.0" 
+                        aria-label="Adjust string tension from loose to tight">
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <label for="decay">Decay Speed</label>
+                        <span class="slider-value" id="decay-value">5.0</span>
+                    </div>
+                    <input type="range" id="decay" min="1" max="10" step="0.1" value="5.0"
+                        aria-label="Adjust how quickly the string sound fades">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Effects</h3>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="clean">Clean</button>
+                    <button class="toggle-btn" id="reverb">Reverb</button>
+                    <button class="toggle-btn" id="delay">Delay</button>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">
+                        <label for="effect-level">Effect Level</label>
+                        <span class="slider-value" id="effect-value">3.0</span>
+                    </div>
+                    <input type="range" id="effect-level" min="0" max="10" step="0.1" value="3.0"
+                        aria-label="Adjust effect intensity">
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Tuning</h3>
+                <div class="toggle-group">
+                    <button class="toggle-btn active" id="standard">Standard</button>
+                    <button class="toggle-btn" id="drop-d">Drop D</button>
+                    <button class="toggle-btn" id="open-g">Open G</button>
+                </div>
+                <button id="strum-all" class="mt-3">Strum All Strings</button>
+            </div>
+        </div>
+
+        <p class="keyboard-shortcuts">
+            Keyboard Shortcuts: Press <kbd>1</kbd>-<kbd>6</kbd> to pluck individual strings, 
+            <kbd>Space</kbd> to strum all strings, <kbd>R</kbd> to toggle reverb.
+        </p>
+    </div>
+
+    <footer>
+        <p>Created with Web Audio API and Canvas. Use headphones for best experience.</p>
+    </footer>
+
+    <script>
+        // Create Audio Context
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        let audioCtx;
+        let initialized = false;
+
+        // Main audio components
+        let masterGain;
+        let reverbNode;
+        let delayNode;
+        let analyser;
+
+        // String parameters
+        const stringCount = 6;
+        let stringTension = 5.0;
+        let decayFactor = 5.0;
+        let effectLevel = 3.0;
+        let currentTuning = 'standard';
+        let activeEffect = 'clean';
+
+        // Standard tuning frequencies (E2, A2, D3, G3, B3, E4)
+        const tunings = {
+            'standard': [82.41, 110.00, 146.83, 196.00, 246.94, 329.63],
+            'drop-d': [73.42, 110.00, 146.83, 196.00, 246.94, 329.63],
+            'open-g': [73.42, 110.00, 146.83, 196.00, 246.94, 392.00]
+        };
+
+        // String colors
+        const stringColors = [
+            '#a2a2a2', // E - silver
+            '#a2a2a2', // A - silver
+            '#a2a2a2', // D - silver
+            '#ffbe0b', // G - gold
+            '#ffbe0b', // B - gold
+            '#ffbe0b'  // E - gold
+        ];
+
+        // Canvas and animations
+        const canvas = document.getElementById('guitar-canvas');
+        const ctx = canvas.getContext('2d');
+        let strings = [];
+        let animationId;
+        let mouseDown = false;
+        let lastMouseY = 0;
+
+        // UI elements
+        const tensionSlider = document.getElementById('tension');
+        const tensionValue = document.getElementById('tension-value');
+        const decaySlider = document.getElementById('decay');
+        const decayValue = document.getElementById('decay-value');
+        const effectSlider = document.getElementById('effect-level');
+        const effectValue = document.getElementById('effect-value');
+        const tuningButtons = {
+            'standard': document.getElementById('standard'),
+            'drop-d': document.getElementById('drop-d'),
+            'open-g': document.getElementById('open-g')
+        };
+        const effectButtons = {
+            'clean': document.getElementById('clean'),
+            'reverb': document.getElementById('reverb'),
+            'delay': document.getElementById('delay')
+        };
+        const strumAllButton = document.getElementById('strum-all');
+
+        // Initialize the app
+        function init() {
+            // Set up canvas
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            // Create strings
+            createStrings();
+
+            // Initialize audio context on user interaction
+            document.addEventListener('click', initAudio, { once: true });
+            document.addEventListener('keydown', initAudio, { once: true });
+
+            // Add event listeners for interacting with the guitar
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('mouseleave', handleMouseUp);
+            canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            canvas.addEventListener('touchend', handleTouchEnd);
+
+            // UI control listeners
+            tensionSlider.addEventListener('input', updateTension);
+            decaySlider.addEventListener('input', updateDecay);
+            effectSlider.addEventListener('input', updateEffectLevel);
+            strumAllButton.addEventListener('click', strumAllStrings);
+
+            // Tuning button listeners
+            for (const tuning in tuningButtons) {
+                tuningButtons[tuning].addEventListener('click', () => {
+                    setTuning(tuning);
+                });
+            }
+
+            // Effect button listeners
+            for (const effect in effectButtons) {
+                effectButtons[effect].addEventListener('click', () => {
+                    setEffect(effect);
+                });
+            }
+
+            // Keyboard controls
+            document.addEventListener('keydown', handleKeyDown);
+
+            // Start animation
+            animate();
+        }
+
+        function resizeCanvas() {
+            // Get the display size of the canvas
+            const containerWidth = canvas.parentElement.clientWidth;
+            const containerHeight = canvas.parentElement.clientHeight;
+            
+            // Set canvas size with higher resolution for retina displays
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = containerWidth * dpr;
+            canvas.height = containerHeight * dpr;
+            
+            // Set the display size
+            canvas.style.width = `${containerWidth}px`;
+            canvas.style.height = `${containerHeight}px`;
+            
+            // Scale the context
+            ctx.scale(dpr, dpr);
+            
+            // Recreate strings when resizing
+            if (strings.length > 0) {
+                createStrings();
+            }
+        }
+
+        function createStrings() {
+            strings = [];
+            
+            const startX = 100;
+            const endX = canvas.width - 100;
+            const stringLength = endX - startX;
+            const spacing = canvas.height / (stringCount + 1);
+            
+            // Create each string
+            for (let i = 0; i < stringCount; i++) {
+                const y = spacing * (i + 1);
+                const thickness = 6 - i * 0.6; // Thicker for bass strings
+                
+                strings.push({
+                    y,
+                    startX,
+                    endX,
+                    thickness,
+                    color: stringColors[i],
+                    frequency: tunings[currentTuning][i],
+                    segments: Array(50).fill(0), // Displacement for animation
+                    isPlucked: false,
+                    amplitude: 0,
+                    pluckPos: 0,
+                    time: 0,
+                    glowOpacity: 0
+                });
+            }
+        }
+
+        function initAudio() {
+            if (initialized) return;
+            
+            try {
+                audioCtx = new AudioContext();
+                
+                // Create master gain node
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.7;
+                
+                // Create reverb effect
+                reverbNode = audioCtx.createConvolver();
+                createReverb(2, 0.8).then(buffer => {
+                    reverbNode.buffer = buffer;
+                });
+                
+                // Create delay effect
+                delayNode = audioCtx.createDelay(1.0);
+                delayNode.delayTime.value = 0.3;
+                
+                const delayFeedback = audioCtx.createGain();
+                delayFeedback.gain.value = 0.4;
+                
+                delayNode.connect(delayFeedback);
+                delayFeedback.connect(delayNode);
+                
+                // Create analyzer for visualization
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 2048;
+                
+                // Connect everything
+                masterGain.connect(analyser);
+                analyser.connect(audioCtx.destination);
+                
+                initialized = true;
+                
+                // Initial setup of effect
+                setEffect('clean');
+            } catch (e) {
+                console.error("Web Audio API Error:", e);
+                alert("Sorry, Web Audio couldn't be initialized. Please try a different browser.");
+            }
+        }
+
+        // Karplus-Strong string synthesis algorithm
+        function pluckString(stringIndex, velocity = 1.0) {
+            if (!initialized) {
+                initAudio();
+                return;
+            }
+            
+            const string = strings[stringIndex];
+            const freq = string.frequency;
+            
+            // Create buffer for Karplus-Strong algorithm
+            const sampleRate = audioCtx.sampleRate;
+            const bufferSize = Math.floor(sampleRate / freq);
+            const buffer = audioCtx.createBuffer(1, bufferSize, sampleRate);
+            const data = buffer.getChannelData(0);
+            
+            // Fill buffer with white noise
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+            
+            // Create noise source
+            const noiseSource = audioCtx.createBufferSource();
+            noiseSource.buffer = buffer;
+            
+            // Create feedback loop with delay and lowpass filter
+            const delay = audioCtx.createDelay();
+            delay.delayTime.value = 1 / freq;
+            
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = "lowpass";
+            filter.frequency.value = 8000 - (stringIndex * 1000); // Lower frequencies for bass strings
+            filter.Q.value = 0.5;
+            
+            // Create gain for feedback and decay
+            const feedbackGain = audioCtx.createGain();
+            feedbackGain.gain.value = 0.98 - (decayFactor / 100); // Faster decay for higher values
+            
+            // Connect the feedback loop
+            noiseSource.connect(delay);
+            delay.connect(filter);
+            filter.connect(feedbackGain);
+            feedbackGain.connect(delay);
+            
+            // Output gain
+            const outputGain = audioCtx.createGain();
+            outputGain.gain.value = 0.5 * velocity;
+            
+            // Create envelope for natural decay
+            const decayTime = 3 - (decayFactor * 0.25); // Shorter for faster decay
+            outputGain.gain.setValueAtTime(velocity, audioCtx.currentTime);
+            outputGain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + decayTime);
+            
+            // Connect to the right effect chain
+            delay.connect(outputGain);
+            
+            if (activeEffect === 'clean') {
+                outputGain.connect(masterGain);
+            } else if (activeEffect === 'reverb') {
+                const reverbGain = audioCtx.createGain();
+                reverbGain.gain.value = effectLevel / 10;
+                
+                outputGain.connect(masterGain); // Direct signal
+                outputGain.connect(reverbGain);
+                reverbGain.connect(reverbNode);
+                reverbNode.connect(masterGain);
+            } else if (activeEffect === 'delay') {
+                const delayGain = audioCtx.createGain();
+                delayGain.gain.value = effectLevel / 10;
+                
+                outputGain.connect(masterGain); // Direct signal
+                outputGain.connect(delayGain);
+                delayGain.connect(delayNode);
+                delayNode.connect(masterGain);
+            }
+            
+            // Start the sound
+            noiseSource.start();
+            noiseSource.stop(audioCtx.currentTime + decayTime);
+            
+            // Animate the string pluck
+            strings[stringIndex].isPlucked = true;
+            strings[stringIndex].amplitude = 20 * velocity;
+            strings[stringIndex].time = 0;
+            
+            // Add visual glow effect
+            addGlowEffect(string.y, string.color);
+        }
+
+        // Create an impulse response for reverb
+        async function createReverb(duration, decay) {
+            const sampleRate = audioCtx.sampleRate;
+            const length = sampleRate * duration;
+            const impulse = audioCtx.createBuffer(2, length, sampleRate);
+            const left = impulse.getChannelData(0);
+            const right = impulse.getChannelData(1);
+            
+            for (let i = 0; i < length; i++) {
+                const n = i / length;
+                // Decay curve
+                const amplitude = Math.pow(1 - n, decay);
+                // Random sample with progressive filtering
+                left[i] = (Math.random() * 2 - 1) * amplitude;
+                right[i] = (Math.random() * 2 - 1) * amplitude;
+            }
+            
+            return impulse;
+        }
+
+        function addGlowEffect(y, color) {
+            const glowElement = document.createElement('div');
+            glowElement.classList.add('string-glow');
+            glowElement.style.top = `${y}px`;
+            glowElement.style.left = `${canvas.offsetLeft + canvas.offsetWidth / 2}px`;
+            glowElement.style.width = `${canvas.offsetWidth / 2}px`;
+            glowElement.style.backgroundColor = color;
+            document.body.appendChild(glowElement);
+            
+            // Remove after animation completes
+            setTimeout(() => {
+                glowElement.remove();
+            }, 1000);
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw guitar body
+            drawGuitar();
+            
+            // Update and draw strings
+            for (let i = 0; i < strings.length; i++) {
+                const string = strings[i];
+                
+                // Update string animation if plucked
+                if (string.isPlucked) {
+                    string.time += 1;
+                    
+                    // Calculate string segment positions
+                    for (let j = 0; j < string.segments.length; j++) {
+                        const x = j / (string.segments.length - 1);
+                        
+                        // String physics simulation
+                        const tension = stringTension / 5; // Scale the effect
+                        const a = Math.PI * tension;
+                        
+                        // Calculate displacement with proper decay and wave equation
+                        const displacement = string.amplitude * 
+                            Math.sin(Math.PI * x) * 
+                            Math.cos(a * string.time / 5) * 
+                            Math.exp(-string.time * (0.003 * decayFactor));
+                        
+                        string.segments[j] = displacement;
+                    }
+                    
+                    // Stop animation when amplitude gets small enough
+                    const midIndex = Math.floor(string.segments.length / 2);
+                    if (Math.abs(string.segments[midIndex]) < 0.2) {
+                        string.isPlucked = false;
+                    }
+                }
+                
+                // Draw the string
+                drawString(string);
+            }
+            
+            // Continue animation
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function drawGuitar() {
+            // Guitar neck
+            const neckWidth = canvas.width * 0.7;
+            const neckLeft = (canvas.width - neckWidth) / 2;
+            
+            // Create gradient for neck
+            const neckGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            neckGradient.addColorStop(0, '#422006');
+            neckGradient.addColorStop(0.5, '#5e3023');
+            neckGradient.addColorStop(1, '#422006');
+            
+            ctx.fillStyle = neckGradient;
+            ctx.fillRect(neckLeft, 50, neckWidth, canvas.height - 100);
+            
+            // Draw frets
+            ctx.strokeStyle = '#d0d0d0';
+            ctx.lineWidth = 2;
+            
+            const fretCount = 12;
+            let lastFretX = neckLeft;
+            
+            for (let i = 0; i < fretCount; i++) {
+                // Logarithmic fret spacing (like a real guitar)
+                const fretPosition = i / fretCount;
+                const fretX = neckLeft + neckWidth * (1 - Math.pow(2, -fretPosition));
+                
+                ctx.beginPath();
+                ctx.moveTo(fretX, 50);
+                ctx.lineTo(fretX, canvas.height - 50);
+                ctx.stroke();
+                
+                // Draw fret markers (dots) at traditional positions
+                if ([2, 4, 6, 8, 11].includes(i)) {
+                    const dotX = (lastFretX + fretX) / 2;
+                    const dotY = canvas.height / 2;
+                    
+                    ctx.fillStyle = '#d6d6d6';
+                    ctx.beginPath();
+                    ctx.arc(dotX, dotY, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                
+                lastFretX = fretX;
+            }
+            
+            // Draw nut
+            ctx.fillStyle = '#f0f0f0';
+            ctx.fillRect(neckLeft - 5, 50, 5, canvas.height - 100);
+            
+            // Draw bridge
+            ctx.fillStyle = '#c0c0c0';
+            const bridgeX = neckLeft + neckWidth + 5;
+            ctx.fillRect(bridgeX, 50, 5, canvas.height - 100);
+        }
+
+        function drawString(string) {
+            ctx.beginPath();
+            ctx.strokeStyle = string.color;
+            ctx.lineWidth = string.thickness;
+            
+            // Draw string with segments for vibration
+            const segmentLength = (string.endX - string.startX) / (string.segments.length - 1);
+            
+            for (let i = 0; i < string.segments.length; i++) {
+                const x = string.startX + i * segmentLength;
+                const y = string.y + string.segments[i];
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            
+            ctx.stroke();
+            
+            // Add glow effect if string was recently plucked
+            if (string.isPlucked) {
+                ctx.shadowColor = string.color;
+                ctx.shadowBlur = 10;
+                ctx.strokeStyle = string.color;
+                ctx.lineWidth = string.thickness + 3;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function handleMouseDown(e) {
+            mouseDown = true;
+            const rect = canvas.getBoundingClientRect();
+            lastMouseY = e.clientY - rect.top;
+        }
+
+        function handleMouseMove(e) {
+            if (!mouseDown) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseY = e.clientY - rect.top;
+            
+            // Check if mouse crossed any strings
+            for (let i = 0; i < strings.length; i++) {
+                const stringY = strings[i].y;
+                
+                // Check if mouse path crossed this string
+                if ((lastMouseY <= stringY && mouseY >= stringY) || 
+                    (lastMouseY >= stringY && mouseY <= stringY)) {
+                    
+                    // Calculate plucking velocity based on mouse speed
+                    const speed = Math.abs(mouseY - lastMouseY);
+                    const velocity = Math.min(1.0, speed / 30);
+                    
+                    // Pluck the string with calculated velocity
+                    pluckString(i, 0.1 + velocity * 0.9);
+                }
+            }
+            
+            lastMouseY = mouseY;
+        }
+
+        function handleMouseUp() {
+            mouseDown = false;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            mouseDown = true;
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            lastMouseY = touch.clientY - rect.top;
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!mouseDown) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const touch = e.touches[0];
+            const touchY = touch.clientY - rect.top;
+            
+            // Check if touch crossed any strings
+            for (let i = 0; i < strings.length; i++) {
+                const stringY = strings[i].y;
+                
+                // Check if touch path crossed this string
+                if ((lastMouseY <= stringY && touchY >= stringY) || 
+                    (lastMouseY >= stringY && touchY <= stringY)) {
+                    
+                    // Calculate plucking velocity based on touch speed
+                    const speed = Math.abs(touchY - lastMouseY);
+                    const velocity = Math.min(1.0, speed / 30);
+                    
+                    // Pluck the string with calculated velocity
+                    pluckString(i, 0.1 + velocity * 0.9);
+                }
+            }
+            
+            lastMouseY = touchY;
+        }
+
+        function handleTouchEnd() {
+            mouseDown = false;
+        }
+
+        function handleKeyDown(e) {
+            // Check for number keys 1-6 to pluck individual strings
+            if (e.key >= '1' && e.key <= '6') {
+                const stringIndex = parseInt(e.key) - 1;
+                pluckString(stringIndex, 0.8);
+            }
+            
+            // Space to strum all strings
+            if (e.key === ' ') {
+                e.preventDefault();
+                strumAllStrings();
+            }
+            
+            // R to toggle reverb
+            if (e.key.toLowerCase() === 'r') {
+                setEffect(activeEffect === 'reverb' ? 'clean' : 'reverb');
+            }
+        }
+
+        function updateTension() {
+            stringTension = parseFloat(tensionSlider.value);
+            tensionValue.textContent = stringTension.toFixed(1);
+        }
+
+        function updateDecay() {
+            decayFactor = parseFloat(decaySlider.value);
+            decayValue.textContent = decayFactor.toFixed(1);
+        }
+
+        function updateEffectLevel() {
+            effectLevel = parseFloat(effectSlider.value);
+            effectValue.textContent = effectLevel.toFixed(1);
+        }
+
+        function setTuning(tuning) {
+            currentTuning = tuning;
+            
+            // Update UI
+            for (const t in tuningButtons) {
+                tuningButtons[t].classList.toggle('active', t === tuning);
+            }
+            
+            // Update string frequencies
+            for (let i = 0; i < strings.length; i++) {
+                strings[i].frequency = tunings[tuning][i];
+            }
+        }
+
+        function setEffect(effect) {
+            activeEffect = effect;
+            
+            // Update UI
+            for (const e in effectButtons) {
+                effectButtons[e].classList.toggle('active', e === effect);
+            }
+        }
+
+        function strumAllStrings() {
+            // Strum from lowest to highest with small delay
+            for (let i = 0; i < strings.length; i++) {
+                setTimeout(() => {
+                    pluckString(i, 0.8);
+                }, i * 80);
+            }
+        }
+
+        // Initialize the app
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
