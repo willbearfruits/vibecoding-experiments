@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Interactive Liquid Heart in Space</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        canvas {
+            display: block;
+        }
+        #controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            z-index: 100;
+            max-width: 250px;
+        }
+        #instructions {
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #ff3b3b;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #ff0000;
+        }
+        input[type="range"] {
+            width: 100%;
+            margin: 5px 0;
+        }
+        #fileUpload {
+            margin: 10px 0;
+        }
+        #textControls {
+            margin-top: 10px;
+        }
+        label {
+            display: block;
+            margin: 5px 0;
+        }
+        #collisionMessage {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 24px;
+            text-align: center;
+            display: none;
+            z-index: 1000;
+        }
+        #redirectUrl {
+            width: 90%;
+            margin: 5px 0;
+            padding: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="controls">
+        <div id="instructions">
+            <h3>Controls:</h3>
+            <p>WASD - Move around</p>
+            <p>Mouse - Look around</p>
+            <p>Space - Float up</p>
+            <p>Shift - Float down</p>
+        </div>
+        
+        <div id="audioControls">
+            <h3>Music</h3>
+            <button id="playMusic">Play Music</button>
+            <button id="stopMusic">Stop Music</button>
+            <label>Volume: <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.5"></label>
+        </div>
+        
+        <div id="textControls">
+            <h3>3D Text</h3>
+            <input type="file" id="fileUpload" accept=".txt">
+            <label>Text Size: <input type="range" id="textSizeSlider" min="0.05" max="0.3" step="0.01" value="0.1"></label>
+            <label>Text Rotation: <input type="range" id="textRotationSlider" min="0" max="6.28" step="0.01" value="0"></label>
+        </div>
+        
+        <div id="collisionControls">
+            <h3>Collision Settings</h3>
+            <label>Redirect URL:
+                <input type="text" id="redirectUrl" placeholder="https://example.com" value="https://example.com">
+            </label>
+            <label>Enable Collision: <input type="checkbox" id="enableCollision" checked></label>
+        </div>
+    </div>
+    
+    <div id="collisionMessage">
+        <p>Heart touched!</p>
+        <p>Redirecting...</p>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Scene setup
+        const scene = new THREE.Scene();
+        
+        // Camera setup
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 0, 5);
+        camera.lookAt(0, 0, 0);
+        
+        // Create renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setClearColor(0x000000);
+        document.body.appendChild(renderer.domElement);
+        
+        // Font loader for 3D text
+        const fontLoader = new THREE.FontLoader();
+        
+        // Default font
+        let font;
+        
+        // Load font for 3D text
+        fontLoader.load('https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/fonts/helvetiker_regular.typeface.json', function(loadedFont) {
+            font = loadedFont;
+            
+            // Check if there's already a file to display
+            const fileInput = document.getElementById('fileUpload');
+            if (fileInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    displayTextIn3D(e.target.result);
+                };
+                reader.readAsText(fileInput.files[0]);
+            }
+        });
+        
+        // Control variables
+        const controls = {
+            moveSpeed: 0.1,
+            moveForward: false,
+            moveBackward: false,
+            moveLeft: false,
+            moveRight: false,
+            moveUp: false,
+            moveDown: false,
+            lookSpeed: 0.002,
+            pointerLocked: false
+        };
+        
+        // Set up movement controls
+        document.addEventListener('keydown', (event) => {
+            switch (event.code) {
+                case 'KeyW': controls.moveForward = true; break;
+                case 'KeyS': controls.moveBackward = true; break;
+                case 'KeyA': controls.moveLeft = true; break;
+                case 'KeyD': controls.moveRight = true; break;
+                case 'Space': controls.moveUp = true; break;
+                case 'ShiftLeft': controls.moveDown = true; break;
+            }
+        });
+        
+        document.addEventListener('keyup', (event) => {
+            switch (event.code) {
+                case 'KeyW': controls.moveForward = false; break;
+                case 'KeyS': controls.moveBackward = false; break;
+                case 'KeyA': controls.moveLeft = false; break;
+                case 'KeyD': controls.moveRight = false; break;
+                case 'Space': controls.moveUp = false; break;
+                case 'ShiftLeft': controls.moveDown = false; break;
+            }
+        });
+        
+        // Mouse look
+        renderer.domElement.addEventListener('click', () => {
+            if (!controls.pointerLocked) {
+                renderer.domElement.requestPointerLock();
+            }
+        });
+        
+        document.addEventListener('pointerlockchange', () => {
+            controls.pointerLocked = document.pointerLockElement === renderer.domElement;
+        });
+        
+        document.addEventListener('mousemove', (event) => {
+            if (controls.pointerLocked) {
+                camera.rotation.y -= event.movementX * controls.lookSpeed;
+                camera.rotation.x -= event.movementY * controls.lookSpeed;
+                
+                // Limit vertical looking
+                camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+            }
+        });
+        
+        // Add space environment - stars
+        const starGeometry = new THREE.BufferGeometry();
+        const starMaterial = new THREE.PointsMaterial({
+            color: 0xffffff,
+            size: 0.05,
+            transparent: true
+        });
+        
+        const starVertices = [];
+        for (let i = 0; i < 5000; i++) {
+            const x = (Math.random() - 0.5) * 2000;
+            const y = (Math.random() - 0.5) * 2000;
+            const z = (Math.random() - 0.5) * 2000;
+            starVertices.push(x, y, z);
+        }
+        
+        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+        const stars = new THREE.Points(starGeometry, starMaterial);
+        scene.add(stars);
+        
+        // Add a distant moon
+        const moonGeometry = new THREE.SphereGeometry(15, 32, 32);
+        const moonMaterial = new THREE.MeshStandardMaterial({
+            color: 0x888888,
+            roughness: 0.9,
+            metalness: 0.1
+        });
+        const moon = new THREE.Mesh(moonGeometry, moonMaterial);
+        moon.position.set(-50, 20, -100);
+        scene.add(moon);
+        
+        // Add lights
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        sunLight.position.set(10, 10, 10);
+        scene.add(sunLight);
+        
+        const earthLight = new THREE.PointLight(0x4477ff, 0.5);
+        earthLight.position.set(-10, -5, 5);
+        scene.add(earthLight);
+        
+        const ambientLight = new THREE.AmbientLight(0x111111);
+        scene.add(ambientLight);
+        
+        // Create heart shape
+        function createHeartShape(size = 1) {
+            const heartShape = new THREE.Shape();
+            
+            const x = 0, y = 0;
+            heartShape.moveTo(x, y + size * 0.25);
+            heartShape.bezierCurveTo(
+                x, y + size * 0.25, 
+                x - size * 0.4, y, 
+                x - size * 0.4, y - size * 0.3
+            );
+            heartShape.bezierCurveTo(
+                x - size * 0.4, y - size * 0.65, 
+                x, y - size * 0.8, 
+                x, y - size * 0.8
+            );
+            heartShape.bezierCurveTo(
+                x, y - size * 0.8, 
+                x + size * 0.4, y - size * 0.65, 
+                x + size * 0.4, y - size * 0.3
+            );
+            heartShape.bezierCurveTo(
+                x + size * 0.4, y, 
+                x, y + size * 0.25, 
+                x, y + size * 0.25
+            );
+            
+            return heartShape;
+        }
+        
+        // Use heart shape to create geometry
+        const heartShape = createHeartShape(1);
+        const extrudeSettings = {
+            depth: 0.8,
+            bevelEnabled: true,
+            bevelSegments: 32,
+            bevelSize: 0.2,
+            bevelThickness: 0.1,
+            curveSegments: 128
+        };
+        
+        const heartGeometry = new THREE.ExtrudeBufferGeometry(heartShape, extrudeSettings);
+        
+        // Heart shader material
+        const heartMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                time: { value: 0 },
+                color: { value: new THREE.Color(0xff0505) },
+                lightPos: { value: new THREE.Vector3(10, 10, 10) },
+                resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) },
+                cameraPos: { value: camera.position },
+            },
+            vertexShader: `
+                uniform float time;
+                
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                varying vec2 vUv;
+                
+                // Fixed Simplex noise functions
+                vec3 mod289vec3(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 mod289vec4(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+                vec4 permute(vec4 x) { return mod289vec4(((x*34.0)+1.0)*x); }
+                vec3 permute3(vec3 x) { return mod289vec3(((x*34.0)+1.0)*x); }
+                
+                float snoise(vec3 v) {
+                    const vec2 C = vec2(1.0/6.0, 1.0/3.0);
+                    const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+                    
+                    // First corner
+                    vec3 i  = floor(v + dot(v, C.yyy));
+                    vec3 x0 = v - i + dot(i, C.xxx);
+                    
+                    // Other corners
+                    vec3 g = step(x0.yzx, x0.xyz);
+                    vec3 l = 1.0 - g;
+                    vec3 i1 = min(g.xyz, l.zxy);
+                    vec3 i2 = max(g.xyz, l.zxy);
+                    
+                    vec3 x1 = x0 - i1 + C.xxx;
+                    vec3 x2 = x0 - i2 + C.yyy;
+                    vec3 x3 = x0 - D.yyy;
+                    
+                    // Permutations
+                    i = mod289vec3(i); 
+                    
+                    // Fixed: Create vec4 from vec3 inputs
+                    vec4 p = permute(permute(permute(
+                        vec4(i.z + vec3(0.0, i1.z, i2.z), 1.0)) +
+                        vec4(i.y + vec3(0.0, i1.y, i2.y), 1.0)) +
+                        vec4(i.x + vec3(0.0, i1.x, i2.x), 1.0));
+                        
+                    // Gradients
+                    float n_ = 1.0/7.0; // N=7
+                    vec3 ns = n_ * D.wyz - D.xzx;
+                    
+                    vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+                    
+                    vec4 x_ = floor(j * ns.z);
+                    vec4 y_ = floor(j - 7.0 * x_);
+                    
+                    vec4 x = x_ * ns.x + ns.yyyy;
+                    vec4 y = y_ * ns.x + ns.yyyy;
+                    vec4 h = 1.0 - abs(x) - abs(y);
+                    
+                    vec4 b0 = vec4(x.xy, y.xy);
+                    vec4 b1 = vec4(x.zw, y.zw);
+                    
+                    vec4 s0 = floor(b0) * 2.0 + 1.0;
+                    vec4 s1 = floor(b1) * 2.0 + 1.0;
+                    vec4 sh = -step(h, vec4(0.0));
+                    
+                    vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+                    vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+                    
+                    vec3 p0 = vec3(a0.xy, h.x);
+                    vec3 p1 = vec3(a0.zw, h.y);
+                    vec3 p2 = vec3(a1.xy, h.z);
+                    vec3 p3 = vec3(a1.zw, h.w);
+                    
+                    // Normalise gradients
+                    vec4 norm = 1.79284291400159 - 0.85373472095314 * vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3));
+                    p0 *= norm.x;
+                    p1 *= norm.y;
+                    p2 *= norm.z;
+                    p3 *= norm.w;
+                    
+                    // Mix final noise value
+                    vec4 m = max(0.6 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+                    m = m * m;
+                    return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
+                }
+                
+                void main() {
+                    vNormal = normal;
+                    vPosition = position;
+                    vUv = uv;
+                    
+                    // Create bumpy surface
+                    float noiseScale = 6.0;
+                    float noiseTime = time * 0.5;
+                    
+                    // Multiple layers of noise for bumpiness
+                    float noise1 = snoise(vec3(position.x * noiseScale, position.y * noiseScale, position.z * noiseScale + noiseTime)) * 0.05;
+                    float noise2 = snoise(vec3(position.x * noiseScale * 2.0, position.y * noiseScale * 2.0, position.z * noiseScale * 2.0 + noiseTime * 1.2)) * 0.025;
+                    float noise3 = snoise(vec3(position.x * noiseScale * 4.0, position.y * noiseScale * 4.0, position.z * noiseScale * 4.0 + noiseTime * 0.7)) * 0.0125;
+                    
+                    // Combine noise layers
+                    float combinedNoise = noise1 + noise2 + noise3;
+                    
+                    // Pulsating heart effect
+                    float heartbeat = (sin(time * 1.5) * 0.5 + 0.5) * 0.1;
+                    float pulseFactor = 1.0 + heartbeat;
+                    
+                    // Low-gravity fluid wobble effect
+                    float wobble = sin(time * 0.3 + position.y * 2.0) * 0.05 * sin(time * 0.7 + position.x * 2.0);
+                    
+                    // Apply deformations
+                    vec3 newPosition = position * (pulseFactor + wobble);
+                    newPosition += normal * combinedNoise;
+                    
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform float time;
+                uniform vec3 color;
+                uniform vec3 lightPos;
+                uniform vec3 cameraPos;
+                
+                varying vec3 vNormal;
+                varying vec3 vPosition;
+                varying vec2 vUv;
+                
+                void main() {
+                    // Normal, view and light directions
+                    vec3 normal = normalize(vNormal);
+                    vec3 viewDir = normalize(cameraPos - vPosition);
+                    vec3 lightDir = normalize(lightPos - vPosition);
+                    
+                    // Liquid red color with variations
+                    vec3 baseColor = vec3(0.8, 0.05, 0.05);
+                    
+                    // Add color variation
+                    float colorVariation = sin(vPosition.x * 5.0 + time) * 0.1 + sin(vPosition.y * 7.0 + time * 0.7) * 0.1;
+                    vec3 liquidColor = baseColor + vec3(colorVariation, colorVariation * 0.2, 0.0);
+                    
+                    // Basic lighting
+                    float diffuse = max(dot(normal, lightDir), 0.0);
+                    vec3 halfwayDir = normalize(lightDir + viewDir);
+                    float specular = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+                    
+                    // Rim lighting effect
+                    float rim = 1.0 - max(dot(viewDir, normal), 0.0);
+                    rim = pow(rim, 3.0);
+                    
+                    // Subsurface scattering simulation
+                    float sss = pow(max(dot(viewDir, -lightDir), 0.0), 2.0) * 0.5;
+                    
+                    // Combine lighting effects
+                    vec3 finalColor = liquidColor * (0.2 + diffuse * 0.6) + vec3(1.0, 0.3, 0.2) * specular * 0.5;
+                    
+                    // Add rim lighting
+                    finalColor += vec3(0.8, 0.1, 0.1) * rim * 0.8;
+                    
+                    // Add subsurface scattering
+                    finalColor += vec3(0.8, 0.1, 0.0) * sss;
+                    
+                    // Depth-based transparency
+                    float depth = length(vPosition - cameraPos);
+                    float alpha = min(1.0, max(0.7, depth * 0.1));
+                    
+                    // Pulsating glow based on heartbeat
+                    float heartbeatGlow = pow(sin(time * 1.5) * 0.5 + 0.5, 2.0) * 0.3;
+                    finalColor += vec3(0.8, 0.0, 0.0) * heartbeatGlow;
+                    
+                    gl_FragColor = vec4(finalColor, alpha);
+                }
+            `,
+            transparent: true,
+            side: THREE.DoubleSide
+        });
+        
+        // Create the heart
+        const heart = new THREE.Mesh(heartGeometry, heartMaterial);
+        heart.rotation.x = -Math.PI / 2;
+        heart.rotation.z = Math.PI;
+        heart.scale.set(1.2, 1.2, 1.2);
+        scene.add(heart);
+        
+        // Create invisible collision sphere
+        const collisionGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+        const collisionMaterial = new THREE.MeshBasicMaterial({
+            color: 0xff0000,
+            transparent: true,
+            opacity: 0.0
+        });
+        const collisionSphere = new THREE.Mesh(collisionGeometry, collisionMaterial);
+        scene.add(collisionSphere);
+        
+        // 3D Text Group
+        const textGroup = new THREE.Group();
+        scene.add(textGroup);
+        
+        // Add lunar dust particles
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlesCnt = 1000;
+        const posArray = new Float32Array(particlesCnt * 3);
+        
+        for(let i = 0; i < particlesCnt * 3; i += 3) {
+            const radius = 2 + Math.random() * 3;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.random() * Math.PI;
+            
+            posArray[i] = radius * Math.sin(phi) * Math.cos(theta);
+            posArray[i+1] = radius * Math.sin(phi) * Math.sin(theta);
+            posArray[i+2] = radius * Math.cos(phi);
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+            size: 0.01,
+            color: 0xaaaaaa,
+            transparent: true,
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const particleMesh = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particleMesh);
+        
+        // Audio setup
+        let audioContext;
+        let audioSource;
+        let gainNode;
+        
+        // Create audio context on user interaction
+        document.getElementById('playMusic').addEventListener('click', initAudio);
+        
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create gain node for volume control
+                gainNode = audioContext.createGain();
+                gainNode.gain.value = document.getElementById('volumeSlider').value;
+                gainNode.connect(audioContext.destination);
+                
+                // Create ambient sounds
+                const oscillator1 = audioContext.createOscillator();
+                oscillator1.type = 'sine';
+                oscillator1.frequency.setValueAtTime(196.00, audioContext.currentTime); // G3
+                
+                const oscillator2 = audioContext.createOscillator();
+                oscillator2.type = 'sine';
+                oscillator2.frequency.setValueAtTime(293.66, audioContext.currentTime); // D4
+                
+                const oscillator3 = audioContext.createOscillator();
+                oscillator3.type = 'sine';
+                oscillator3.frequency.setValueAtTime(392.00, audioContext.currentTime); // G4
+                
+                // Create LFO for wobble effect
+                const lfo = audioContext.createOscillator();
+                lfo.type = 'sine';
+                lfo.frequency.value = 0.2;
+                
+                const lfoGain = audioContext.createGain();
+                lfoGain.gain.value = 5;
+                lfo.connect(lfoGain);
+                
+                // Connect LFO to oscillator frequencies for wobble
+                lfoGain.connect(oscillator1.frequency);
+                lfoGain.connect(oscillator2.frequency);
+                lfoGain.connect(oscillator3.frequency);
+                
+                // Add reverb effect
+                const convolver = audioContext.createConvolver();
+                
+                // Create reverb impulse
+                const impulseLength = 2 * audioContext.sampleRate;
+                const impulse = audioContext.createBuffer(2, impulseLength, audioContext.sampleRate);
+                
+                const impulseL = impulse.getChannelData(0);
+                const impulseR = impulse.getChannelData(1);
+                
+                for (let i = 0; i < impulseLength; i++) {
+                    impulseL[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impulseLength, 3);
+                    impulseR[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / impulseLength, 3);
+                }
+                
+                convolver.buffer = impulse;
+                
+                // Create mixer
+                const oscillatorGain1 = audioContext.createGain();
+                oscillatorGain1.gain.value = 0.2;
+                const oscillatorGain2 = audioContext.createGain();
+                oscillatorGain2.gain.value = 0.2;
+                const oscillatorGain3 = audioContext.createGain();
+                oscillatorGain3.gain.value = 0.2;
+                
+                // Connect oscillators to their gain nodes
+                oscillator1.connect(oscillatorGain1);
+                oscillator2.connect(oscillatorGain2);
+                oscillator3.connect(oscillatorGain3);
+                
+                // Connect gain nodes to convolver for reverb
+                oscillatorGain1.connect(convolver);
+                oscillatorGain2.connect(convolver);
+                oscillatorGain3.connect(convolver);
+                
+                // Connect convolver to main gain node
+                convolver.connect(gainNode);
+                
+                // Start oscillators and LFO
+                lfo.start();
+                oscillator1.start();
+                oscillator2.start();
+                oscillator3.start();
+                
+                // Store references for stopping
+                audioSource = [oscillator1, oscillator2, oscillator3, lfo];
+            } else {
+                // If audio was previously stopped, create new oscillators
+                if (!audioSource) {
+                    initAudio();
+                }
+            }
+        }
+        
+        // Stop music function
+        document.getElementById('stopMusic').addEventListener('click', () => {
+            if (audioSource) {
+                audioSource.forEach(osc => osc.stop());
+                audioSource = null;
+            }
+        });
+        
+        // Volume control
+        document.getElementById('volumeSlider').addEventListener('input', (event) => {
+            if (gainNode) {
+                gainNode.gain.value = event.target.value;
+            }
+        });
+        
+        // File upload handler for 3D Text
+        document.getElementById('fileUpload').addEventListener('change', handleFileUpload);
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const text = e.target.result;
+                displayTextIn3D(text);
+            };
+            reader.readAsText(file);
+        }
+        
+        // Display text in 3D with proper font
+        function displayTextIn3D(text) {
+            // Clear previous text
+            while(textGroup.children.length > 0) {
+                const child = textGroup.children[0];
+                textGroup.remove(child);
+                if (child.geometry) child.geometry.dispose();
+                if (child.material) child.material.dispose();
+            }
+            
+            // Check if font is loaded
+            if (!font) {
+                console.log("Font not loaded yet, retrying in 1 second...");
+                setTimeout(() => displayTextIn3D(text), 1000);
+                return;
+            }
+            
+            // Split text into lines
+            const lines = text.split('\n');
+            const textSize = parseFloat(document.getElementById('textSizeSlider').value);
+            
+            // Create text material
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ffff,
+                emissive: 0x006666,
+                metalness: 0.5,
+                roughness: 0.2
+            });
+            
+            let yOffset = 0;
+            const textObjs = [];
+            const spacing = textSize * 1.2;
+            
+            // Create 3D text
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (line.length === 0) {
+                    yOffset -= spacing;
+                    continue;
+                }
+                
+                const lineGroup = new THREE.Group();
+                
+                // Create TextGeometry for the whole line
+                const textGeometry = new THREE.TextGeometry(line, {
+                    font: font,
+                    size: textSize,
+                    height: textSize * 0.2,
+                    curveSegments: 12,
+                    bevelEnabled: true,
+                    bevelThickness: textSize * 0.05,
+                    bevelSize: textSize * 0.02,
+                    bevelOffset: 0,
+                    bevelSegments: 5
+                });
+                
+                // Center the text
+                textGeometry.computeBoundingBox();
+                const textWidth = textGeometry.boundingBox.max.x - textGeometry.boundingBox.min.x;
+                
+                const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+                textMesh.position.set(-textWidth / 2, yOffset, 0);
+                
+                lineGroup.add(textMesh);
+                textGroup.add(lineGroup);
+                textObjs.push(textMesh);
+                
+                yOffset -= spacing;
+            }
+            
+            // Position the text in a circular pattern around the heart
+            const radius = 4;
+            const totalTextObjs = textObjs.length;
+            
+            textObjs.forEach((obj, index) => {
+                // Calculate position in a spiral
+                const angle = (index / totalTextObjs) * Math.PI * 2;
+                const x = Math.cos(angle) * radius;
+                const z = Math.sin(angle) * radius;
+                const y = (Math.random() - 0.5) * 4;
+                
+                // Create a container to hold the text and position it
+                const container = new THREE.Object3D();
+                container.position.set(x, y, z);
+                
+                // Make text look at the heart
+                container.lookAt(0, 0, 0);
+                
+                // Add random tilt
+                container.rotation.z = Math.random() * 0.5 - 0.25;
+                
+                // Move the text from textGroup to the container
+                textGroup.remove(obj);
+                obj.position.set(0, 0, 0); // Reset position relative to container
+                container.add(obj);
+                
+                // Add container to text group
+                textGroup.add(container);
+            });
+        }
+        
+        // Text controls handlers
+        document.getElementById('textSizeSlider').addEventListener('input', (event) => {
+            const fileInput = document.getElementById('fileUpload');
+            if (fileInput.files.length > 0) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    displayTextIn3D(e.target.result);
+                };
+                reader.readAsText(fileInput.files[0]);
+            }
+        });
+        
+        document.getElementById('textRotationSlider').addEventListener('input', (event) => {
+            const rotation = parseFloat(event.target.value);
+            textGroup.rotation.y = rotation;
+        });
+        
+        // Collision detection variables
+        let isColliding = false;
+        let collisionTime = 0;
+        const collisionDelay = 2000; // ms before redirecting
+        
+        // Handle collision with heart
+        function checkCollision() {
+            // Get camera position (representing the player)
+            const cameraPosition = camera.position.clone();
+            
+            // Get heart position (center of collision sphere)
+            const heartPosition = new THREE.Vector3(0, 0, 0);
+            
+            // Calculate distance between camera and heart
+            const distance = cameraPosition.distanceTo(heartPosition);
+            
+            // Check if collision occurs - 1.5 is the radius of the collision sphere
+            const collisionOccurs = distance < 1.5;
+            
+            // Only trigger if collision is enabled
+            if (collisionOccurs && document.getElementById('enableCollision').checked) {
+                if (!isColliding) {
+                    isColliding = true;
+                    collisionTime = Date.now();
+                    
+                    // Show collision message
+                    document.getElementById('collisionMessage').style.display = 'block';
+                    
+                    // Redirect after delay
+                    setTimeout(() => {
+                        const redirectUrl = document.getElementById('redirectUrl').value;
+                        window.location.href = redirectUrl;
+                    }, collisionDelay);
+                }
+            } else {
+                isColliding = false;
+                document.getElementById('collisionMessage').style.display = 'none';
+            }
+        }
+        
+        // Movement function
+        function moveCamera() {
+            // Get camera's direction vectors
+            const forward = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+            const right = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
+            
+            // Calculate movement
+            if (controls.moveForward) camera.position.addScaledVector(forward, controls.moveSpeed);
+            if (controls.moveBackward) camera.position.addScaledVector(forward, -controls.moveSpeed);
+            if (controls.moveRight) camera.position.addScaledVector(right, controls.moveSpeed);
+            if (controls.moveLeft) camera.position.addScaledVector(right, -controls.moveSpeed);
+            if (controls.moveUp) camera.position.y += controls.moveSpeed;
+            if (controls.moveDown) camera.position.y -= controls.moveSpeed;
+            
+            // Update camera target based on rotation
+            const target = new THREE.Vector3();
+            target.copy(camera.position);
+            target.add(new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion));
+            
+            // Update heart material camera position
+            if (heartMaterial.uniforms) {
+                heartMaterial.uniforms.cameraPos.value.copy(camera.position);
+            }
+            
+            // Check for collision with heart
+            checkCollision();
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const time = performance.now() * 0.001;
+            
+            // Update shader time uniform
+            if (heartMaterial.uniforms) {
+                heartMaterial.uniforms.time.value = time;
+            }
+            
+            // Move camera based on controls
+            moveCamera();
+            
+            // Animate heart
+            heart.rotation.y = Math.sin(time * 0.2) * 0.2;
+            heart.rotation.x = -Math.PI / 2 + Math.sin(time * 0.15) * 0.1;
+            heart.position.y = Math.sin(time * 0.3) * 0.2;
+            
+            // Keep collision sphere with heart
+            collisionSphere.position.copy(heart.position);
+            
+            // Animate particles
+            particleMesh.rotation.y = time * 0.05;
+            
+            // Animate stars
+            stars.rotation.y = time * 0.01;
+            stars.rotation.x = time * 0.005;
+            
+            // Render the scene
+            renderer.render(scene, camera);
+        }
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            if (heartMaterial.uniforms) {
+                heartMaterial.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
+            }
+        });
+        
+        // Start animation
+        animate();
+    </script>
+</body>
+</html>
