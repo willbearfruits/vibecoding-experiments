@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technological Cadavre</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Using a cleaner monospace font, but keeping a retro feel */
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Roboto Mono', monospace; /* Cleaner monospace */
+            overflow: hidden;
+            background-color: #111827; /* gray-900 darker */
+            color: #d1d5db; /* gray-300 light text */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 10px;
+        }
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border: 2px solid #4b5563; /* gray-600 */
+            background-color: #1f2937; /* gray-800 */
+            padding: 10px;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(75, 85, 99, 0.5);
+        }
+        #game-container {
+            position: relative;
+            width: 800px; /* Fixed width */
+            height: 500px;
+            max-width: 100%;
+            border: 2px solid #374151; /* gray-700 */
+            overflow: hidden;
+            /* Background simulating a decaying grand hall */
+            background: linear-gradient(to bottom, #374151, #1f2937);
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        #character {
+            position: absolute;
+            width: 40px;
+            height: 60px;
+            /* SVG provides visuals */
+            border-radius: 4px;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: left 0.4s linear, bottom 0.4s linear;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        /* Updated SVG Character Colors - Placeholder for Alex/Kai */
+        #character svg rect[fill="#f7d9ae"] { fill: #e2d8cd; } /* Paler skin */
+        #character svg rect[fill="#e53e3e"] { fill: #4b5563; } /* Gray shirt */
+        #character svg rect[fill="#4a5568"] { fill: #1f2937; } /* Darker pants */
+        #character svg circle[fill="#2d3748"] { fill: #111827; } /* Darker eyes */
+        #character svg rect[stroke="#5c4033"] { stroke: #374151; }
+        #character svg rect[stroke="#9b2c2c"] { stroke: #374151; }
+        #character svg rect[stroke="#2d3748"] { stroke: #111827; }
+
+
+        .hotspot {
+            position: absolute;
+            /* Use a subtle glow/outline instead of dashed lines */
+            box-shadow: 0 0 8px rgba(167, 139, 250, 0); /* violet-400 transparent */
+            border: 1px solid rgba(167, 139, 250, 0.3);
+            border-radius: 4px;
+            cursor: help;
+            z-index: 5;
+            transition: box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+        }
+        .hotspot:hover {
+            border-color: rgba(167, 139, 250, 0.8); /* violet-400 */
+            box-shadow: 0 0 12px rgba(167, 139, 250, 0.6);
+            background-color: rgba(167, 139, 250, 0.05); /* Very subtle glow */
+        }
+        #message-box {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background-color: rgba(17, 24, 39, 0.9); /* gray-900 more opaque */
+            color: #86efac; /* green-300 */
+            padding: 8px 15px;
+            box-sizing: border-box;
+            z-index: 20;
+            display: none; /* Hidden initially */
+            font-size: 18px; /* Slightly smaller */
+            line-height: 1.4;
+            border-top: 2px solid #4b5563; /* gray-600 */
+        }
+
+        /* --- Specific Hotspots for Grand Hall --- */
+        #hotspot-piano-wreck {
+            width: 200px;
+            height: 120px;
+            bottom: 10px; /* On the floor */
+            left: 50px;
+            /* background-color: rgba(100, 60, 20, 0.1); */ /* Hint of brown */
+        }
+         #hotspot-loose-wires {
+            width: 50px;
+            height: 70px;
+            top: 200px;
+            right: 80px;
+            /* background-color: rgba(200, 200, 200, 0.1); */ /* Hint of gray */
+        }
+        #hotspot-flickering-light {
+             width: 40px;
+             height: 40px;
+             top: 20px;
+             left: 50%;
+             transform: translateX(-50%);
+             border-radius: 50%;
+             /* background-color: rgba(255, 255, 0, 0.1); */ /* Hint of yellow */
+         }
+        #hotspot-circuit-board { /* Pickupable item */
+            width: 40px;
+            height: 30px;
+            bottom: 30px;
+            left: 300px;
+            border-radius: 2px;
+            /* background-color: rgba(0, 100, 0, 0.2); */ /* Hint of green */
+        }
+
+
+        /* Verb Bar */
+        #verb-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 8px 5px;
+            background-color: transparent; /* Match wrapper */
+            margin-bottom: 10px;
+            width: 100%; /* Take width from wrapper */
+            max-width: 800px;
+        }
+        .verb-button {
+            background-color: #374151; /* gray-700 */
+            color: #9ca3af; /* gray-400 */
+            border: 1px solid #4b5563; /* gray-600 */
+            padding: 8px 18px; /* More padding */
+            margin: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+            text-transform: uppercase; /* Classic adventure game style */
+            letter-spacing: 0.05em;
+        }
+        .verb-button:hover {
+            background-color: #4b5563; /* gray-600 */
+            color: #e5e7eb; /* gray-200 */
+            border-color: #6b7280; /* gray-500 */
+        }
+        .verb-button.active {
+            background-color: #a78bfa; /* violet-400 */
+            color: #111827; /* gray-900 */
+            border-color: #c4b5fd; /* violet-300 */
+            font-weight: bold;
+        }
+
+        /* Inventory Box */
+        #inventory-box {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            padding: 10px;
+            background-color: rgba(17, 24, 39, 0.5); /* gray-900 semi-transparent */
+            border: 1px solid #374151; /* gray-700 */
+            border-radius: 5px;
+            min-height: 50px;
+            width: 100%; /* Take width from wrapper */
+            max-width: 800px;
+        }
+        #inventory-box span {
+            background-color: #374151; /* gray-700 */
+            color: #d1d5db; /* gray-300 */
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 4px;
+            font-size: 16px;
+            border: 1px solid #4b5563; /* gray-600 */
+            cursor: pointer; /* Make inventory items clickable */
+            transition: background-color 0.2s, color 0.2s;
+        }
+        #inventory-box span:hover {
+             background-color: #4b5563; /* gray-600 */
+             color: #fff;
+        }
+         #inventory-box p { /* Placeholder text */
+             color: #6b7280; /* gray-500 */
+             font-size: 16px;
+         }
+         /* Style for selected inventory item */
+         #inventory-box span.selected-item {
+            border-color: #a78bfa; /* violet-400 */
+            background-color: #581c87; /* violet-900 */
+            color: #f5f3ff; /* violet-50 */
+            box-shadow: 0 0 5px #a78bfa;
+         }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <div id="game-container">
+            <div id="room-background" class="absolute inset-0">
+                 <div class="absolute bottom-0 left-0 w-full h-10 bg-gradient-to-t from-gray-800 to-gray-700 border-t-2 border-gray-900"></div>
+                 </div>
+
+            <div id="character">
+                <svg width="100%" height="100%" viewBox="0 0 40 60" preserveAspectRatio="xMidYMid meet" style="display: block;">
+                    <rect x="10" y="0" width="20" height="15" fill="#e2d8cd" stroke="#374151" stroke-width="1"/> <circle cx="16" cy="8" r="2" fill="#111827"/> <circle cx="24" cy="8" r="2" fill="#111827"/> <rect x="8" y="15" width="24" height="25" fill="#4b5563" stroke="#374151" stroke-width="1"/> <rect x="8" y="40" width="10" height="20" fill="#1f2937" stroke="#111827" stroke-width="1"/> <rect x="22" y="40" width="10" height="20" fill="#1f2937" stroke="#111827" stroke-width="1"/> </svg>
+            </div>
+
+            <div id="hotspot-piano-wreck" class="hotspot"
+                 data-description="The mangled remains of a grand piano. Looks like it was deliberately dismantled. Some strings still vibrate faintly."
+                 data-pickup="false"></div>
+            <div id="hotspot-loose-wires" class="hotspot"
+                 data-description="A tangle of wires snakes down the wall, sparking intermittently. Seems dangerous."
+                 data-pickup="false"></div>
+            <div id="hotspot-flickering-light" class="hotspot"
+                 data-description="An old light fixture, buzzing and flickering erratically. It casts dancing shadows."
+                 data-pickup="false"></div>
+            <div id="hotspot-circuit-board" class="hotspot"
+                 data-description="A small, dusty circuit board lying near the piano debris. Might be useful."
+                 data-pickup="circuit_board"></div> <div id="message-box">The air hums with latent energy...</div>
+        </div>
+
+        <div id="verb-bar">
+            <button class="verb-button active" data-verb="Look">Look</button>
+            <button class="verb-button" data-verb="Pick Up">Pick Up</button>
+            <button class="verb-button" data-verb="Use">Use</button>
+            </div>
+
+        <div id="inventory-box">
+            <p>Inventory empty</p>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const character = document.getElementById('character');
+        const messageBox = document.getElementById('message-box');
+        const hotspots = document.querySelectorAll('.hotspot');
+        const verbButtons = document.querySelectorAll('.verb-button');
+        const inventoryBox = document.getElementById('inventory-box');
+
+        // --- Game State ---
+        let messageTimeout;
+        let currentVerb = 'Look';
+        let inventory = [];
+        let selectedInventoryItem = null;
+
+        // --- Function: Display Message ---
+        function displayMessage(text, duration = 4000) {
+            messageBox.textContent = text;
+            messageBox.style.display = 'block';
+            if (messageTimeout) clearTimeout(messageTimeout);
+            if (duration > 0) {
+                 messageTimeout = setTimeout(() => { messageBox.style.display = 'none'; }, duration);
+            }
+        }
+
+        // --- Function: Handle Inventory Click ---
+        function handleInventoryClick(item, itemSpan) {
+             if (currentVerb === 'Use') {
+                 const previouslySelected = inventoryBox.querySelector('.selected-item');
+                 if (previouslySelected) previouslySelected.classList.remove('selected-item');
+
+                 if (selectedInventoryItem === item) {
+                     selectedInventoryItem = null;
+                     displayMessage("Deselected item.", 2000);
+                 } else {
+                     selectedInventoryItem = item;
+                     itemSpan.classList.add('selected-item');
+                     displayMessage(`Use ${item.replace(/_/g, ' ')} on... ?`, 0); // Keep message
+                 }
+             } else {
+                 // Default action (Look)
+                 displayMessage(`It's a ${item.replace(/_/g, ' ')}.`);
+             }
+        }
+
+        // --- Function: Update Inventory Display ---
+        function updateInventoryDisplay() {
+            inventoryBox.innerHTML = ''; // Clear
+            if (inventory.length === 0) {
+                const placeholder = document.createElement('p');
+                placeholder.textContent = 'Inventory empty';
+                inventoryBox.appendChild(placeholder);
+            } else {
+                 inventory.forEach(item => {
+                    const itemSpan = document.createElement('span');
+                    itemSpan.textContent = item.replace(/_/g, ' ');
+                    itemSpan.dataset.item = item;
+                    itemSpan.addEventListener('click', () => handleInventoryClick(item, itemSpan));
+                    inventoryBox.appendChild(itemSpan);
+                 });
+            }
+            // Reset selected item visual if inventory changes
+            selectedInventoryItem = null;
+        }
+
+        // --- Function: Add Item to Inventory ---
+        function addToInventory(item, hotspotElement) {
+             if (!inventory.includes(item)) {
+                inventory.push(item);
+                updateInventoryDisplay();
+                displayMessage(`Picked up the ${item.replace(/_/g, ' ')}.`);
+                if (hotspotElement) {
+                    hotspotElement.style.display = 'none'; // Hide after pickup
+                }
+            } else {
+                displayMessage("You already have that."); // Fallback
+            }
+        }
+
+
+        // --- Event Listener: Verb Selection ---
+        verbButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                currentVerb = button.getAttribute('data-verb');
+                verbButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+
+                // Deselect inventory item if switching away from 'Use'
+                if (currentVerb !== 'Use' && selectedInventoryItem) {
+                     const itemSpan = inventoryBox.querySelector('.selected-item');
+                     if (itemSpan) itemSpan.classList.remove('selected-item');
+                     selectedInventoryItem = null;
+                     displayMessage("", 1); // Clear 'Use X on...'
+                } else if (currentVerb === 'Use' && selectedInventoryItem) {
+                     displayMessage(`Use ${selectedInventoryItem.replace(/_/g, ' ')} on... ?`, 0);
+                } else if (currentVerb === 'Use') {
+                     displayMessage("Use what?", 2000);
+                }
+                console.log("Current Verb:", currentVerb);
+            });
+        });
+
+
+        // --- Event Listener: Movement ---
+        gameContainer.addEventListener('click', (event) => {
+            // Prevent move if clicking hotspot, message box, or UI elements outside container
+            if (event.target.classList.contains('hotspot') ||
+                messageBox.contains(event.target) ||
+                !gameContainer.contains(event.target) ) {
+                return;
+            }
+            // Prevent move if click is near bottom (message box area)
+            if (event.clientY > gameContainer.getBoundingClientRect().bottom - 60) return;
+
+            const rect = gameContainer.getBoundingClientRect();
+            const containerWidth = gameContainer.offsetWidth;
+            const containerHeight = gameContainer.offsetHeight;
+            const charWidth = character.offsetWidth;
+            const charHeight = character.offsetHeight;
+
+            let targetX = event.clientX - rect.left;
+            let targetY = event.clientY - rect.top;
+            let finalX = targetX - (charWidth / 2);
+            let finalBottom = containerHeight - targetY;
+
+            // Boundaries
+            const floorHeight = 10;
+            const ceilingMargin = 50;
+            finalX = Math.max(0, Math.min(finalX, containerWidth - charWidth));
+            finalBottom = Math.max(floorHeight, Math.min(finalBottom, containerHeight - charHeight - ceilingMargin));
+
+            character.style.left = `${finalX}px`;
+            character.style.bottom = `${finalBottom}px`;
+        });
+
+        // --- Event Listener: Hotspot Interaction ---
+        hotspots.forEach(hotspot => {
+            hotspot.addEventListener('click', (event) => {
+                event.stopPropagation(); // Prevent movement
+
+                const description = hotspot.getAttribute('data-description');
+                const pickupItem = hotspot.getAttribute('data-pickup'); // Item name or "false"
+                const hotspotId = hotspot.id;
+
+                console.log(`Clicked: ${hotspotId}, Verb: ${currentVerb}, Item: ${selectedInventoryItem}`);
+
+                switch (currentVerb) {
+                    case 'Look':
+                        displayMessage(description || "It doesn't look very interesting.");
+                        break;
+
+                    case 'Pick Up':
+                        if (pickupItem && pickupItem !== "false") {
+                             // Check if already picked up (hotspot hidden)
+                            if (hotspot.style.display === 'none') {
+                                displayMessage("Already picked up.");
+                                break;
+                            }
+                            addToInventory(pickupItem, hotspot);
+                        } else {
+                            displayMessage("Can't pick that up.");
+                        }
+                        break;
+
+                    case 'Use':
+                        if (!selectedInventoryItem) {
+                            displayMessage(`Use what on the ${hotspotId.replace('hotspot-','')}?`);
+                            return;
+                        }
+
+                        // --- Specific 'Use' interactions for this room ---
+                        let used = false; // Flag to check if any interaction happened
+                        if (selectedInventoryItem === 'circuit_board') {
+                            if (hotspotId === 'hotspot-loose-wires') {
+                                displayMessage("Maybe you could connect this... but how?");
+                                // TODO: Trigger circuit bending minigame?
+                                used = true;
+                            } else if (hotspotId === 'hotspot-piano-wreck') {
+                                displayMessage("You try fitting the board into the piano's guts. Nothing happens.");
+                                used = true;
+                            }
+                        }
+
+                        // Default message if no specific interaction occurred
+                        if (!used) {
+                            displayMessage(`Can't use the ${selectedInventoryItem.replace(/_/g,' ')} on the ${hotspotId.replace('hotspot-','')} like that.`);
+                        }
+
+                        // Deselect item after use attempt
+                        const itemSpan = inventoryBox.querySelector('.selected-item');
+                        if (itemSpan) itemSpan.classList.remove('selected-item');
+                        selectedInventoryItem = null;
+                        // Keep the result message visible for standard duration
+                        displayMessage(messageBox.textContent, 4000);
+
+                        break;
+
+                    default:
+                        displayMessage("Nothing happens.");
+                        break;
+                }
+            });
+        });
+
+        // --- Initial Setup ---
+        updateInventoryDisplay();
+        setTimeout(() => displayMessage("The air hums with latent energy..."), 500);
+
+    </script>
+
+</body>
+</html>
