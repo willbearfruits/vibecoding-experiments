@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Yaniv’s Studio Pyramid</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" />
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+ :root{--tier0:#fafafa;--tier1:#d1d1d1;--tier2:#cfe3ff;--tier3A:#c9ffce;--tier3D:#ffd7b1;--tier4:#d6b48a;--tier5:#333;}
+ html,body{margin:0;padding:0;height:100%;font-family:'Roboto Condensed',sans-serif;background:#111;color:#fff;overflow:hidden;}
+ h1{margin:0;padding:0.5rem 1rem;font-size:1.4rem;background:#222;letter-spacing:0.05em;border-bottom:2px solid #444;}
+ #app{display:grid;grid-template-columns:1fr 350px;grid-template-rows:auto 1fr;grid-template-areas:"head head""pyramid side";height:100vh;}
+ #pyramid{grid-area:pyramid;overflow:auto;padding:1rem;}
+ #side{grid-area:side;display:flex;flex-direction:column;background:#1b1b1b;border-left:2px solid #444;}
+ #editor{flex:1;min-height:50%;}
+ #chat{flex:1;border-top:2px solid #444;display:flex;flex-direction:column;}
+ .tier{padding:0.4rem 0.6rem;margin:0.4rem 0;border-radius:6px;cursor:pointer;transition:background 0.3s;user-select:none;}
+ .tier.collapsed .children{display:none;}
+ .code{font-weight:700;margin-right:0.5em;}
+ .name{opacity:0.85;}
+ .tier:hover{filter:brightness(1.1);} 
+ .tier[data-tier="0"]{background:var(--tier0);color:#111;}
+ .tier[data-tier="1"]{background:var(--tier1);color:#000;}
+ .tier[data-tier="2"]{background:var(--tier2);color:#000;}
+ .tier[data-tier="3A"]{background:var(--tier3A);color:#000;}
+ .tier[data-tier="3D"]{background:var(--tier3D);color:#000;}
+ .tier[data-tier="4"]{background:var(--tier4);color:#000;}
+ .tier[data-tier="5"]{background:var(--tier5);} 
+ #ace{width:100%;height:100%;}
+ #chatlog{flex:1;overflow:auto;padding:0.5rem;}
+ #chatinput{border:none;border-top:2px solid #444;padding:0.5rem;background:#111;color:#fff;resize:none;height:3rem;}
+ button{cursor:pointer;border:none;padding:0.4rem 0.8rem;margin:0.2rem;background:#444;color:#fff;border-radius:4px;}
+ button:hover{background:#666;}
+</style>
+</head>
+<body>
+<h1>Yaniv’s Studio Pyramid • Dashboard</h1>
+<div id="app">
+  <div id="pyramid"></div>
+  <div id="side">
+    <div style="padding:0.5rem;background:#222;border-bottom:2px solid #444;display:flex;justify-content:space-between;align-items:center;">
+      <span>Inventory JSON</span>
+      <span>
+        <button id="btnSave">💾 Save</button>
+        <button id="btnReset">♻ Reset</button>
+      </span>
+    </div>
+    <div id="editor"><pre id="ace"></pre></div>
+    <div id="chat">
+      <div style="padding:0.5rem;background:#222;display:flex;justify-content:space-between;align-items:center;">
+        <span>Ollama Chat</span><button id="btnClearChat">🧹</button>
+      </div>
+      <div id="chatlog"></div>
+      <textarea id="chatinput" placeholder="Ask the studio oracle… (Shift+Enter = newline)"></textarea>
+    </div>
+  </div>
+</div>
+<script id="ace-primary" src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.23.4/ace.min.js" crossorigin="anonymous"></script>
+<script>
+const DEFAULT_DATA = {
+  "meta": {"version": 2, "updated": new Date().toISOString()},
+  "items": [
+    /* Tier 0 – Computer / DB */
+    {"code":"SYS-GIT-SRV","tier":"0","name":"Git Server","location":"Rack"},
+    {"code":"SYS-NAS-48T","tier":"0","name":"48 TB NAS","location":"Rack"},
+
+    /* Tier 1 – Tools & Machines */
+    {"code":"Q-FAB-3DP","tier":"1","name":"Prusa MK4 3D Printer","location":"Printer bay"},
+    {"code":"Q-FAB-CNC","tier":"1","name":"CNC Router 6040","location":"CNC cart"},
+    {"code":"Q-FAB-LSR","tier":"1","name":"40 W CO₂ Laser","location":"Fab wall"},
+    {"code":"Q-SOLD-HAK","tier":"1","name":"Hakko FX‑951","location":"Solder station"},
+    {"code":"Q-SOLD-HOT","tier":"1","name":"Quick 861DW Hot‑Air","location":"Solder station"},
+    {"code":"Q-TEST-OSC","tier":"1","name":"Rigol DS1054Z Oscilloscope","location":"Test bench"},
+    {"code":"Q-TEST-DMM","tier":"1","name":"Brymen BM786 DMM","location":"Test bench"},
+
+    /* Tier 2 – Active Projects / Instruments */
+    {"code":"I-PED-FUZ-v2","tier":"2","name":"Fuzzilator Puke Mk II","status":"WIP"},
+    {"code":"I-SYN-DAI-5S","tier":"2","name":"Daisy 5‑Step Mini‑Studio","status":"Proto"},
+    {"code":"I-MIC-RBN","tier":"2","name":"DIY Ribbon Mic","status":"Calibrating"},
+    {"code":"I-CTRL-RFID","tier":"2","name":"RFID Reader Box","status":"Testing"},
+    {"code":"I-AMP-50W","tier":"2","name":"50 W Bass Head","status":"Ready"},
+
+    /* Tier 3A – Analog Components */
+    {"code":"PA-R-0603-1K","tier":"3A","name":"Resistor 1 kΩ","package":"0603"},
+    {"code":"PA-R-0603-10K","tier":"3A","name":"Resistor 10 kΩ","package":"0603"},
+    {"code":"PA-R-0603-100K","tier":"3A","name":"Resistor 100 kΩ","package":"0603"},
+    {"code":"PA-C-0603-100N","tier":"3A","name":"Cap 100 nF","package":"0603"},
+    {"code":"PA-C-0603-10U","tier":"3A","name":"Cap 10 µF 16 V","package":"0603"},
+    {"code":"PA-L-47UH","tier":"3A","name":"Inductor 47 µH","package":"NR8040"},
+    {"code":"SA-D-1N4148","tier":"3A","name":"Diode 1N4148"},
+    {"code":"SA-T-2N3904","tier":"3A","name":"BJT NPN 2N3904"},
+    {"code":"IA-OP-TL072","tier":"3A","name":"Op‑Amp TL072","package":"SOIC‑8"},
+    {"code":"IA-ANA-LM13700","tier":"3A","name":"OTA LM13700"},
+    {"code":"IA-REG-AMS1117-3V3","tier":"3A","name":"LDO 3.3 V AMS1117"},
+
+    /* Tier 3D – Digital Components */
+    {"code":"PD-74HC595","tier":"3D","name":"74HC595 Shift Register"},
+    {"code":"PD-40106","tier":"3D","name":"CD40106 Hex Schmitt Trigger"},
+    {"code":"SD-ES-WROOM32","tier":"3D","name":"ESP32‑WROOM Module"},
+    {"code":"SD-ES-C3","tier":"3D","name":"ESP32‑C3 SuperMini"},
+    {"code":"SD-TY-4.1","tier":"3D","name":"Teensy 4.1 Dev Board"},
+    {"code":"SD-PI-PICO","tier":"3D","name":"Raspberry Pi Pico"},
+    {"code":"MD-IMU-MPU6050","tier":"3D","name":"MPU‑6050 IMU"},
+    {"code":"MD-ENV-BME280","tier":"3D","name":"BME280 Env Sensor"},
+    {"code":"MD-AUDIO-PCM5102","tier":"3D","name":"PCM5102 I²S DAC Board"},
+    {"code":"UD-SBC-PI4","tier":"3D","name":"Raspberry Pi 4 8 GB"},
+
+    /* Tier 4 – Raw Materials */
+    {"code":"MF-FIL-PLA-BLK","tier":"4","name":"PLA Filament Black"},
+    {"code":"MF-FIL-PLA-RED","tier":"4","name":"PLA Filament Red"},
+    {"code":"MF-FIL-PETG-CLR","tier":"4","name":"PETG Filament Clear"},
+    {"code":"MF-FR4-1.6","tier":"4","name":"FR‑4 1.6 mm Double‑Sided"},
+    {"code":"MW-AL-2MM","tier":"4","name":"Aluminium Sheet 2 mm"},
+    {"code":"MH-HRD-M3","tier":"4","name":"M3 Screw Assortment"},
+    {"code":"MM-ACR-3MM","tier":"4","name":"Acrylic 3 mm Off‑cuts"},
+    {"code":"MS-WIRE-22AWG","tier":"4","name":"22 AWG Stranded Wire Rainbow"},
+
+    /* Tier 5 – Consumables */
+    {"code":"CB-9V","tier":"5","name":"9 V Batteries"},
+    {"code":"CB-AA","tier":"5","name":"AA Batteries"},
+    {"code":"CT-CAPTON","tier":"5","name":"Kapton Tape 10 mm"},
+    {"code":"CT-COP","tier":"5","name":"Copper Tape 12 mm"},
+    {"code":"CW-S63","tier":"5","name":"63/37 Rosin Core Solder"},
+    {"code":"CW-FLX-951","tier":"5","name":"Kester 951 No‑Clean Flux"},
+    {"code":"CH-IPA","tier":"5","name":"Isopropyl Alcohol 99%"},
+    {"code":"CH-ACETONE","tier":"5","name":"Acetone"}
+  ]
+};
+const STORAGE_KEY = "yanivStudioInventory";
+function loadData(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||DEFAULT_DATA;}catch(e){return DEFAULT_DATA;}}
+function saveData(d){localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}
+function renderPyramid(d){const c=document.getElementById("pyramid");c.innerHTML="";const g={};d.items.forEach(i=>(g[i.tier]=g[i.tier]||[]).push(i));["0","1","2","3A","3D","4","5"].forEach(t=>{if(!g[t])return;const tdiv=document.createElement("div");tdiv.className="tier";tdiv.dataset.tier=t;tdiv.innerHTML=`<span class=code>Tier ${t}</span><span class=name> (${g[t].length})</span>`;const ch=document.createElement("div");ch.className="children";g[t].sort((a,b)=>a.code.localeCompare(b.code)).forEach(i=>{const it=document.createElement("div");it.style.padding="0.2rem 0.8rem";it.innerHTML=`<span class=code>${i.code}</span> <span class=name>${i.name}</span>`;ch.appendChild(it);});tdiv.appendChild(ch);tdiv.addEventListener('click',e=>{if(e.target===tdiv)tdiv.classList.toggle('collapsed')});c.appendChild(tdiv);});}
+let editor;
+function initDashboard(){editor=ace.edit("ace");editor.session.setMode("ace/mode/json");editor.setTheme("ace/theme/monokai");editor.session.setUseWrapMode(true);const ref=()=>editor.setValue(JSON.stringify(loadData(),null,2),-1);ref();renderPyramid(loadData());document.getElementById("btnSave").onclick=()=>{try{const d=JSON.parse(editor.getValue());saveData(d);renderPyramid(d);}catch(e){alert("JSON error: "+e.message);}};document.getElementById("btnReset").onclick=()=>{if(confirm("Reset inventory to default?")){saveData(DEFAULT_DATA);ref();renderPyramid(DEFAULT_DATA);}};async function ollamaChat(p){try{const r=await fetch("http://127.0.0.1:11434/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"mistral",prompt:p})});const rd=r.body.getReader();let txt='';while(true){const {value,done}=await rd.read();if(done)break;txt+=new TextDecoder().decode(value);chatAdd('assistant',txt,true);} }catch(err){chatAdd('assistant','[error] '+err.message,true);} }
+function chatAdd(role,msg,rep=false){const l=document.getElementById('chatlog');if(rep&&l.lastChild){l.lastChild.innerHTML=`<b>${role}:</b> ${msg}`;return;}const d=document.createElement('div');d.style.padding="0.3rem 0";d.innerHTML=`<b>${role}:</b> ${msg}`;l.appendChild(d);l.scrollTop=l.scrollHeight;}
+const ci=document.getElementById('chatinput');ci.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const p=ci.value.trim();if(!p)return;ci.value='';chatAdd('user',p);chatAdd('assistant','…');ollamaChat(p);}});
+document.getElementById('btnClearChat').onclick=()=>{document.getElementById('chatlog').innerHTML='';};}
+function waitForAce(r=0){if(window.ace&&typeof ace.edit==='function'){initDashboard();}else if(r<40){setTimeout(()=>waitForAce(r+1),100);}else if(!document.getElementById('ace-fallback')){const s=document.createElement('script');s.id='ace-fallback';s.src='https://unpkg.com/ace-builds@1.23.4/src-min-noconflict/ace.js';s.onload=()=>waitForAce(r+1);document.head.appendChild(s);}else{console.error('Ace failed to load');}}
+window.addEventListener('DOMContentLoaded',()=>waitForAce());
+</script>
+</body>
+</html>
