@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glitch Organism Visualizer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            flex-direction: column;
+        }
+        #container {
+            width: 100%;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #controls {
+            position: relative;
+            z-index: 2;
+            padding: 15px 20px; /* Slightly smaller padding */
+            background-color: rgba(10, 10, 10, 0.8); /* Darker, less transparent */
+            border: 1px solid #444; /* Add a border */
+            border-radius: 6px; /* Less rounded */
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        button {
+            padding: 10px 20px; /* Smaller button */
+            margin-bottom: 8px;
+            font-size: 14px; /* Smaller font */
+            font-weight: normal; /* Normal weight */
+            color: #ccc; /* Less bright text */
+            background: #222; /* Dark background */
+            border: 1px solid #555;
+            border-radius: 4px; /* Less rounded */
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: none; /* No glow */
+        }
+        button:hover {
+            background: #333;
+            color: #fff;
+            border-color: #777;
+            transform: none; /* No scale */
+        }
+        button:active {
+            background: #111;
+            transform: scale(0.98);
+        }
+        button:disabled {
+             background: #1a1a1a;
+             color: #555;
+             border-color: #333;
+             cursor: not-allowed;
+             opacity: 0.7;
+        }
+        #message {
+            font-size: 12px; /* Smaller message */
+            color: #888; /* Dimmer text */
+            font-family: 'Courier New', Courier, monospace; /* Data-like font */
+        }
+        /* Inter font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter&display=swap');
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script id="simplex-noise" type="x-shader/x-fragment">
+        // Description : Array and textureless GLSL 2D/3D/4D simplex
+        //               noise functions.
+        //      Author : Ian McEwan, Ashima Arts.
+        //  Maintainer : stegu
+        //     Lastmod : 20201014 (stegu)
+        //     License : Copyright (C) 2011 Ashima Arts. All rights reserved.
+        //               Distributed under the MIT License. See LICENSE file.
+        //               https://github.com/ashima/webgl-noise
+        //               https://github.com/stegu/webgl-noise
+        //
+
+        vec3 mod289(vec3 x) {
+          return x - floor(x * (1.0 / 289.0)) * 289.0;
+        }
+
+        vec4 mod289(vec4 x) {
+          return x - floor(x * (1.0 / 289.0)) * 289.0;
+        }
+
+        vec4 permute(vec4 x) {
+             return mod289(((x*34.0)+1.0)*x);
+        }
+
+        vec4 taylorInvSqrt(vec4 r)
+        {
+          return 1.79284291400159 - 0.85373472090914 * r;
+        }
+
+        float snoise(vec3 v)
+        {
+          const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;
+          const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);
+
+        // First corner
+          vec3 i  = floor(v + dot(v, C.yyy) );
+          vec3 x0 =   v - i + dot(i, C.xxx) ;
+
+        // Other corners
+          vec3 g = step(x0.yzx, x0.xyz);
+          vec3 l = 1.0 - g;
+          vec3 i1 = min( g.xyz, l.zxy );
+          vec3 i2 = max( g.xyz, l.zxy );
+
+          //   x0 = x0 - 0.0 + 0.0 * C.xxx;
+          //   x1 = x0 - i1  + 1.0 * C.xxx;
+          //   x2 = x0 - i2  + 2.0 * C.xxx;
+          //   x3 = x0 - 1.0 + 3.0 * C.xxx;
+          vec3 x1 = x0 - i1 + C.xxx;
+          vec3 x2 = x0 - i2 + C.yyy; // 2.0*C.x = 1/3 = C.y
+          vec3 x3 = x0 - D.yyy;      // -1.0+3.0*C.x = -1.0+0.5 = -0.5 = D.y
+
+        // Permutations
+          i = mod289(i);
+          vec4 p = permute( permute( permute(
+                     i.z + vec4(0.0, i1.z, i2.z, 1.0 ))
+                   + i.y + vec4(0.0, i1.y, i2.y, 1.0 ))
+                   + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));
+
+        // Gradients: 7x7 points over a square, mapped onto an octahedron.
+        // The ring size 17*17 = 289 is close to a multiple of 49 (49*6 = 294)
+          float n_ = 0.142857142857; // 1.0/7.0
+          vec3  ns = n_ * D.wyz - D.xzx;
+
+          vec4 j = p - 49.0 * floor(p * ns.z * ns.z);  //  mod(p,7*7)
+
+          vec4 x_ = floor(j * ns.z);
+          vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)
+
+          vec4 x = x_ *ns.x + ns.yyyy;
+          vec4 y = y_ *ns.x + ns.yyyy;
+          vec4 h = 1.0 - abs(x) - abs(y);
+
+          vec4 b0 = vec4( x.xy, y.xy );
+          vec4 b1 = vec4( x.zw, y.zw );
+
+          //vec4 s0 = vec4(lessThan(b0,0.0))*2.0 - 1.0;
+          //vec4 s1 = vec4(lessThan(b1,0.0))*2.0 - 1.0;
+          vec4 s0 = floor(b0)*2.0 + 1.0;
+          vec4 s1 = floor(b1)*2.0 + 1.0;
+          vec4 sh = -step(h, vec4(0.0));
+
+          vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;
+          vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;
+
+          vec3 p0 = vec3(a0.xy,h.x);
+          vec3 p1 = vec3(a0.zw,h.y);
+          vec3 p2 = vec3(a1.xy,h.z);
+          vec3 p3 = vec3(a1.zw,h.w);
+
+        //Normalise gradients
+          vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));
+          p0 *= norm.x;
+          p1 *= norm.y;
+          p2 *= norm.z;
+          p3 *= norm.w;
+
+        // Mix final noise value
+          vec4 m = max(0.5 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);
+          m = m * m;
+          return 105.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),
+                                        dot(p2,x2), dot(p3,x3) ) );
+        }
+    </script>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="controls">
+        <button id="modeButton">Switch to Ambient</button>
+        <p id="message">MODE: AUDIO_REACTIVE :: MIC_STATUS: IDLE</p>
+    </div>
+
+    <script>
+        // --- Global Variables ---
+        let scene, camera, renderer, controls;
+        let analyser, mic;
+        let organismMesh; // The central organic mesh
+        let geoMesh; // Geometric wireframe elements
+        let particleSystem; // Particle system
+        let uniforms; // Shader parameters
+        let audioInitialized = false;
+        let currentMode = 'audio'; // 'audio' or 'ambient'
+        let animationFrameId = null;
+        const fftSize = 256;
+        const particleCount = 2000; // Fewer, potentially more impactful particles
+
+        // --- Shader Code (GLSL) ---
+
+        // Noise function needs to be included in shaders that use it
+        const noiseFunc = document.getElementById('simplex-noise').textContent;
+
+        // Organic Vertex Shader (Displacement)
+        const organicVertexShader = `
+            uniform float u_time;
+            uniform float u_audio_level;
+            uniform float u_audio_low;
+            uniform float u_audio_mid;
+            uniform float u_mode; // 0 = audio, 1 = ambient
+
+            varying vec3 vNormal;
+            varying vec3 vPosition;
+            varying float vNoise; // Pass noise value to fragment
+
+            ${noiseFunc} // Include noise function code
+
+            void main() {
+                vNormal = normalMatrix * normal; // Transform normal to view space
+                vPosition = position;
+
+                // --- Noise Calculation ---
+                float time = u_time * (u_mode == 1.0 ? 0.3 : 0.5); // Slower base speed in ambient
+                float noiseFreq = 1.5;
+                float noiseAmp = 0.2 + u_audio_low * 0.4 + (u_mode * 0.1 * sin(time * 2.0)); // Base + low freq pulse + ambient pulse
+
+                // Combine multiple octaves of noise for detail
+                float noiseVal = 0.0;
+                float freq = noiseFreq;
+                float amp = noiseAmp;
+                for (int i = 0; i < 3; i++) { // 3 Octaves
+                    noiseVal += snoise(position * freq + time * 0.5) * amp;
+                    freq *= 2.0;
+                    amp *= 0.5;
+                }
+                vNoise = noiseVal; // Pass raw noise value
+
+                // --- Displacement ---
+                // Displace vertex along its normal
+                vec3 displacement = normal * noiseVal * (1.0 + u_audio_level * 1.5); // Scale displacement by overall level
+                vec3 newPosition = position + displacement;
+
+                // --- Glitchy Vertex Jitter (Subtle) ---
+                // Triggered by mid frequencies
+                float jitterIntensity = smoothstep(0.4, 0.8, u_audio_mid) * 0.02;
+                 if (jitterIntensity > 0.001) {
+                     newPosition += (vec3(snoise(position * 10.0 + u_time * 5.0),
+                                          snoise(position * 10.0 + u_time * 5.0 + 10.0),
+                                          snoise(position * 10.0 + u_time * 5.0 + 20.0)) * jitterIntensity);
+                 }
+
+
+                vPosition = newPosition; // Store final position for fragment shader
+
+                gl_Position = projectionMatrix * modelViewMatrix * vec4(newPosition, 1.0);
+            }
+        `;
+
+        // Organic Fragment Shader (Coloring, Lighting, Glitch)
+        const organicFragmentShader = `
+            uniform float u_time;
+            uniform float u_audio_level;
+            uniform float u_audio_low;
+            uniform float u_audio_mid;
+            uniform float u_audio_high;
+            uniform float u_mode; // 0 = audio, 1 = ambient
+            uniform vec3 u_camera_pos; // Camera position for lighting/effects
+
+            varying vec3 vNormal;
+            varying vec3 vPosition; // World/model space position
+            varying float vNoise;    // Noise value from vertex shader
+
+             ${noiseFunc} // Include noise function code
+
+            // Simple pseudo-random function
+            float rand(vec2 co){
+                return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);
+            }
+
+
+            void main() {
+                // --- Basic Lighting ---
+                vec3 normal = normalize(vNormal);
+                vec3 viewDir = normalize(u_camera_pos - vPosition); // Assuming vPosition is in world space (check if model space)
+                vec3 lightDir = normalize(vec3(0.5, 0.8, 1.0)); // Simple directional light
+                float diffuse = max(dot(normal, lightDir), 0.0);
+                float ambient = 0.2;
+                // Fake specular highlight
+                float specularStrength = 0.3 + u_audio_high * 0.5;
+                vec3 reflectDir = reflect(-lightDir, normal);
+                float spec = pow(max(dot(viewDir, reflectDir), 0.0), 16.0) * specularStrength;
+
+                // --- Base Color (Fleshy/Organic) ---
+                // Use noise value and audio signals
+                float colorNoise = snoise(vPosition * 2.0 + u_time * 0.2 + vNoise * 5.0); // Additional noise for color variation
+                vec3 baseColor = mix(vec3(0.6, 0.1, 0.2), vec3(0.1, 0.3, 0.5), smoothstep(-0.3, 0.3, colorNoise)); // Mix between red/purple and blue/green
+                baseColor = mix(baseColor, vec3(0.9, 0.8, 0.6), u_audio_low * 0.5); // Add sickly yellow/white pulse with lows
+                baseColor = mix(baseColor, vec3(0.0, 1.0, 1.0), smoothstep(0.5, 0.9, u_audio_mid) * 0.3); // Cyan veins/highlights with mids
+
+                vec3 finalColor = baseColor * (diffuse * 0.8 + ambient) + vec3(1.0) * spec; // Apply lighting
+
+                // --- Glitch Effects ---
+                float glitchIntensity = smoothstep(0.5, 0.9, u_audio_high) + smoothstep(0.7, 1.0, u_audio_level) * 0.5; // Triggered by highs and overall level
+                glitchIntensity = clamp(glitchIntensity, 0.0, 1.0);
+
+                if (glitchIntensity > 0.1) {
+                    vec2 uv = gl_FragCoord.xy / vec2(1000.0); // Use screen coords for glitch base - needs resolution uniform ideally!
+                    float glitchTime = u_time * 10.0;
+
+                    // 1. Scan Lines
+                    float scanLine = sin(vPosition.y * 100.0 + glitchTime * 0.1) * 0.05 * glitchIntensity;
+                    finalColor.rgb -= scanLine * vec3(0.1, 0.15, 0.2); // Darken slightly
+
+                    // 2. Color Channel Shift
+                    float shiftAmount = (rand(uv + floor(glitchTime)) - 0.5) * 0.05 * glitchIntensity; // Random shift per frame/block
+                    // Sample slightly offset - requires texture lookup if post-processing, here we fake it by shifting color channels
+                    finalColor.r = mix(finalColor.r, finalColor.g, abs(shiftAmount) * 5.0); // Simple mix based on shift
+                    finalColor.b = mix(finalColor.b, finalColor.r, abs(shiftAmount) * 5.0);
+
+                    // 3. Block Noise / Displacement (Harder without texture lookup)
+                    // Fake it with brightness noise
+                     float blockNoise = rand(floor(uv * (20.0 + 30.0 * (1.0-glitchIntensity))) + floor(glitchTime*0.5)) * 0.3 * glitchIntensity;
+                     finalColor.rgb += blockNoise;
+
+
+                     // 4. White Noise Overlay
+                     float whiteNoise = (rand(uv + fract(glitchTime)) - 0.5) * 0.2 * glitchIntensity;
+                     finalColor.rgb += whiteNoise;
+
+                     // 5. Occasional Full White Flash (Ryoji Ikeda inspired)
+                     if (rand(vec2(floor(u_time * 2.0))) > 0.95 && glitchIntensity > 0.7) {
+                         finalColor = vec3(1.0);
+                     }
+                     // 6. Occasional Blackout
+                     else if (rand(vec2(floor(u_time * 2.0)+1.0)) > 0.98 && glitchIntensity > 0.6) {
+                          finalColor = vec3(0.0);
+                     }
+                }
+
+
+                // Clamp final color
+                finalColor = clamp(finalColor, 0.0, 1.0);
+
+                gl_FragColor = vec4(finalColor, 1.0);
+            }
+        `;
+
+
+        // --- Initialization ---
+        function init() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000); // Ensure black background
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100); // Adjusted far plane
+            camera.position.z = 3.0;
+
+            // Renderer
+            const container = document.getElementById('container');
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.1; // More damping for smoother manual control
+            controls.enablePan = false; // Disable panning
+            controls.minDistance = 1.5;
+            controls.maxDistance = 10;
+            controls.target.set(0, 0, 0);
+            controls.enabled = true;
+
+            // Shader Uniforms
+            uniforms = {
+                u_time: { value: 0.0 },
+                u_resolution: { value: new THREE.Vector2(window.innerWidth, window.innerHeight) }, // Pass resolution
+                u_audio_level: { value: 0.0 },
+                u_audio_low: { value: 0.0 },
+                u_audio_mid: { value: 0.0 },
+                u_audio_high: { value: 0.0 },
+                u_camera_pos: { value: camera.position },
+                u_mode: { value: 0.0 } // 0.0 for audio, 1.0 for ambient
+            };
+
+            // Organic Mesh (Sphere)
+            // Use higher segments for smoother noise displacement
+            const organismGeometry = new THREE.IcosahedronGeometry(1, 6); // Radius 1, detail 6
+            const organismMaterial = new THREE.ShaderMaterial({
+                uniforms: uniforms,
+                vertexShader: organicVertexShader,
+                fragmentShader: organicFragmentShader,
+                // side: THREE.DoubleSide // If needed
+            });
+            organismMesh = new THREE.Mesh(organismGeometry, organismMaterial);
+            scene.add(organismMesh);
+
+             // Geometric Elements (Wireframe Boxes)
+             const geoGeometry = new THREE.BoxGeometry(4, 4, 4); // Larger box encompassing the sphere
+             const geoMaterial = new THREE.MeshBasicMaterial({
+                 color: 0xffffff, // White
+                 wireframe: true,
+                 transparent: true,
+                 opacity: 0.1 // Make it faint
+             });
+             geoMesh = new THREE.Mesh(geoGeometry, geoMaterial);
+             scene.add(geoMesh);
+
+
+            // Particle System (Sparks/Debris)
+            const particlesGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const velocities = new Float32Array(particleCount * 3); // Store velocities
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                // Start near the center or surface
+                 positions[i3] = (Math.random() - 0.5) * 0.5;
+                 positions[i3 + 1] = (Math.random() - 0.5) * 0.5;
+                 positions[i3 + 2] = (Math.random() - 0.5) * 0.5;
+
+                // Initial velocity outward
+                 velocities[i3] = (Math.random() - 0.5) * 0.02;
+                 velocities[i3 + 1] = (Math.random() - 0.5) * 0.02;
+                 velocities[i3 + 2] = (Math.random() - 0.5) * 0.02;
+            }
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            particlesGeometry.setAttribute('velocity', new THREE.BufferAttribute(velocities, 3)); // Store velocities
+
+            const particleMaterial = new THREE.PointsMaterial({
+                size: 0.03, // Smaller, sharper points
+                color: 0xffffff, // White sparks
+                sizeAttenuation: true,
+                blending: THREE.AdditiveBlending,
+                transparent: true,
+                opacity: 0.7,
+                depthWrite: false
+            });
+
+            particleSystem = new THREE.Points(particlesGeometry, particleMaterial);
+            scene.add(particleSystem);
+
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize, false);
+            document.getElementById('modeButton').addEventListener('click', toggleMode);
+
+            // Initial setup
+            updateUI();
+            startAnimationLoop();
+        }
+
+        // --- Mode Toggling ---
+        function toggleMode() {
+            if (currentMode === 'audio') {
+                currentMode = 'ambient';
+                uniforms.u_mode.value = 1.0;
+                stopAudio();
+                // Keep controls enabled in this version unless specifically requested
+                // controls.enabled = false;
+            } else {
+                currentMode = 'audio';
+                uniforms.u_mode.value = 0.0;
+                // controls.enabled = true;
+                startAudio(); // Attempt to start audio
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            const button = document.getElementById('modeButton');
+            const message = document.getElementById('message');
+            let micStatus = audioInitialized ? "ACTIVE" : (currentMode === 'audio' ? "IDLE/OFF" : "N/A");
+            let modeText = currentMode === 'audio' ? "AUDIO_REACTIVE" : "AMBIENT";
+
+            if (currentMode === 'audio') {
+                button.textContent = 'Switch to Ambient';
+                if (!audioInitialized && mic === null) { // Only show start prompt if not initialized and not tried yet
+                     // message.textContent += " (Click to Start Mic)";
+                }
+            } else {
+                button.textContent = 'Switch to Audio Reactive';
+            }
+             message.textContent = `MODE: ${modeText} :: MIC_STATUS: ${micStatus}`;
+             button.disabled = false; // Keep enabled unless actively initializing
+        }
+
+
+        // --- Audio Handling ---
+        async function startAudio() {
+            if (audioInitialized || currentMode !== 'audio') return;
+
+            const button = document.getElementById('modeButton');
+            const messageElement = document.getElementById('message');
+            button.disabled = true;
+            messageElement.textContent = "MODE: AUDIO_REACTIVE :: MIC_STATUS: INITIALIZING...";
+
+            try {
+                await Tone.start();
+                mic = new Tone.UserMedia();
+                analyser = new Tone.Analyser('fft', fftSize);
+                await mic.open(); // User permission prompt
+                mic.connect(analyser);
+                audioInitialized = true;
+                console.log('Audio setup complete.');
+            } catch (error) {
+                console.error('Audio initialization failed:', error);
+                audioInitialized = false;
+                mic = null; // Ensure mic is null on failure
+                messageElement.textContent = `MODE: AUDIO_REACTIVE :: MIC_STATUS: ERROR - ${error.message}`;
+            } finally {
+                 button.disabled = false;
+                 updateUI();
+            }
+        }
+
+        function stopAudio() {
+            if (mic) {
+                mic.close();
+                mic = null;
+                analyser = null;
+                audioInitialized = false;
+                console.log('Audio stopped.');
+            }
+             // Reset audio uniforms
+             decayAudioUniforms(1.0); // Instant reset when stopping mode
+             updateUI();
+        }
+
+        // --- Handle Window Resize ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            uniforms.u_resolution.value.set(window.innerWidth, window.innerHeight); // Update resolution uniform
+        }
+
+        // --- Animation Loop ---
+        function startAnimationLoop() {
+            if (!animationFrameId) {
+                animate();
+            }
+        }
+
+        function animate(time) {
+            animationFrameId = requestAnimationFrame(animate);
+
+            const elapsedTime = time * 0.001;
+            uniforms.u_time.value = elapsedTime;
+
+            // --- Update based on Mode ---
+            if (currentMode === 'audio') {
+                if (audioInitialized && analyser) {
+                    processAudioInput();
+                } else {
+                    decayAudioUniforms(0.05);
+                }
+            } else { // Ambient Mode
+                simulateAudioInput_Glitchy(elapsedTime); // Use new simulation
+            }
+
+            // Update camera position uniform
+            uniforms.u_camera_pos.value.copy(camera.position);
+
+            // Animate geometric wireframe (slow rotation)
+            geoMesh.rotation.x += 0.0005;
+            geoMesh.rotation.y += 0.0007;
+
+            // Animate particles
+            animateParticles_Akira(elapsedTime); // Use new particle logic
+
+            // Update controls AFTER potential camera shakes
+            controls.update();
+
+            // Camera Shake based on high frequencies / level peaks
+            let shakeIntensity = Math.min(uniforms.u_audio_high.value * 0.02 + uniforms.u_audio_level.value * 0.01, 0.05);
+             if (shakeIntensity > 0.001) {
+                 camera.position.x += (Math.random() - 0.5) * shakeIntensity;
+                 camera.position.y += (Math.random() - 0.5) * shakeIntensity;
+                 // camera.rotation.z += (Math.random() - 0.5) * shakeIntensity * 0.1; // Subtle rotation shake
+             }
+
+
+            // Render the scene
+            renderer.render(scene, camera);
+        }
+
+        function processAudioInput() {
+             // Same processing logic as before
+             try {
+                const fftValues = analyser.getValue();
+                const minDb = -100; const maxDb = -20;
+                let levelSum = 0, lowSum = 0, midSum = 0, highSum = 0;
+                const numBins = fftValues.length;
+                const lowEnd = Math.floor(numBins * 0.15); // Adjusted bands slightly
+                const midEnd = Math.floor(numBins * 0.5);
+
+                for (let i = 0; i < numBins; i++) {
+                    const normalizedValue = Math.max(0, Math.min(1, (fftValues[i] - minDb) / (maxDb - minDb)));
+                    levelSum += normalizedValue;
+                    if (i < lowEnd) lowSum += normalizedValue;
+                    else if (i < midEnd) midSum += normalizedValue;
+                    else highSum += normalizedValue;
+                }
+                const avgLevel = levelSum / numBins;
+                const avgLow = lowEnd > 0 ? lowSum / lowEnd : 0;
+                const avgMid = (midEnd - lowEnd) > 0 ? midSum / (midEnd - lowEnd) : 0;
+                const avgHigh = (numBins - midEnd) > 0 ? highSum / (numBins - midEnd) : 0;
+
+                const smoothFactor = 0.15; // Slightly faster smoothing
+                uniforms.u_audio_level.value = THREE.MathUtils.lerp(uniforms.u_audio_level.value, avgLevel, smoothFactor);
+                uniforms.u_audio_low.value = THREE.MathUtils.lerp(uniforms.u_audio_low.value, avgLow, smoothFactor);
+                uniforms.u_audio_mid.value = THREE.MathUtils.lerp(uniforms.u_audio_mid.value, avgMid, smoothFactor);
+                uniforms.u_audio_high.value = THREE.MathUtils.lerp(uniforms.u_audio_high.value, avgHigh, smoothFactor);
+            } catch (error) { decayAudioUniforms(0.1); }
+        }
+
+        function simulateAudioInput_Glitchy(time) {
+            // Simulate more erratic, bursty signals for ambient mode
+            const smoothFactor = 0.1;
+            let level = 0.1;
+            let low = 0.1;
+            let mid = 0.1;
+            let high = 0.1;
+
+            // Base slow oscillation
+            level += Math.sin(time * 0.2) * 0.1;
+            low += Math.cos(time * 0.3) * 0.2;
+
+            // Random bursts (Ikeda/Akira inspired)
+            if (Math.random() < 0.05) { // 5% chance per frame for a burst
+                 level = 0.5 + Math.random() * 0.5; // High level burst
+                 high = 0.6 + Math.random() * 0.4; // High freq burst
+                 mid = Math.random() * 0.5;
+            } else if (Math.random() < 0.1) { // 10% chance for mid-range pulse
+                 mid = 0.4 + Math.random() * 0.4;
+                 low = 0.3 + Math.random() * 0.3;
+            }
+
+            // Add some continuous noise floor simulation
+            level += Math.random() * 0.05;
+            low += Math.random() * 0.05;
+            mid += Math.random() * 0.05;
+            high += Math.random() * 0.05;
+
+
+            uniforms.u_audio_level.value = THREE.MathUtils.lerp(uniforms.u_audio_level.value, level, smoothFactor);
+            uniforms.u_audio_low.value = THREE.MathUtils.lerp(uniforms.u_audio_low.value, low, smoothFactor);
+            uniforms.u_audio_mid.value = THREE.MathUtils.lerp(uniforms.u_audio_mid.value, mid, smoothFactor);
+            uniforms.u_audio_high.value = THREE.MathUtils.lerp(uniforms.u_audio_high.value, high, smoothFactor);
+        }
+
+
+        function decayAudioUniforms(factor) {
+            uniforms.u_audio_level.value = THREE.MathUtils.lerp(uniforms.u_audio_level.value, 0.0, factor);
+            uniforms.u_audio_low.value = THREE.MathUtils.lerp(uniforms.u_audio_low.value, 0.0, factor);
+            uniforms.u_audio_mid.value = THREE.MathUtils.lerp(uniforms.u_audio_mid.value, 0.0, factor);
+            uniforms.u_audio_high.value = THREE.MathUtils.lerp(uniforms.u_audio_high.value, 0.0, factor);
+        }
+
+
+        function animateParticles_Akira(time) {
+            const positions = particleSystem.geometry.attributes.position.array;
+            const velocities = particleSystem.geometry.attributes.velocity.array;
+            const level = uniforms.u_audio_level.value;
+            const high = uniforms.u_audio_high.value;
+
+            const burstThreshold = 0.7; // Audio level needed for strong burst
+            const doBurst = (level + high * 0.5) > burstThreshold;
+            const burstProbability = doBurst ? 0.1 : 0.001; // Higher chance during bursts
+
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+
+                // Apply velocity
+                positions[i3] += velocities[i3];
+                positions[i3 + 1] += velocities[i3 + 1];
+                positions[i3 + 2] += velocities[i3 + 2];
+
+                // Apply drag/friction
+                velocities[i3] *= 0.96;
+                velocities[i3 + 1] *= 0.96;
+                velocities[i3 + 2] *= 0.96;
+
+                // Check distance / reset condition
+                const distSq = positions[i3]**2 + positions[i3+1]**2 + positions[i3+2]**2;
+                const maxDistSq = 25.0; // Reset if further than 5 units
+
+                // Reset particle position and give new velocity if too far OR random chance during burst
+                if (distSq > maxDistSq || (doBurst && Math.random() < burstProbability) || distSq < 0.01) {
+                    // Reset near the center/surface
+                    const radius = 0.8 + Math.random() * 0.4; // Start near surface of sphere
+                    const phi = Math.acos((2 * Math.random()) - 1);
+                    const theta = Math.random() * Math.PI * 2;
+                    positions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+                    positions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+                    positions[i3 + 2] = radius * Math.cos(phi);
+
+
+                    // New velocity - stronger burst if triggered by audio
+                    const speed = (doBurst ? 0.015 : 0.005) + Math.random() * 0.01;
+                    const vPhi = Math.acos((2 * Math.random()) - 1);
+                    const vTheta = Math.random() * Math.PI * 2;
+                    velocities[i3] = speed * Math.sin(vPhi) * Math.cos(vTheta);
+                    velocities[i3 + 1] = speed * Math.sin(vPhi) * Math.sin(vTheta);
+                    velocities[i3 + 2] = speed * Math.cos(vPhi);
+
+                     // Add velocity component away from center
+                     let normX = positions[i3]; let normY = positions[i3+1]; let normZ = positions[i3+2];
+                     const len = Math.sqrt(normX*normX + normY*normY + normZ*normZ);
+                     if (len > 0.01) {
+                         normX /= len; normY /= len; normZ /= len;
+                         velocities[i3] += normX * speed * 0.5;
+                         velocities[i3+1] += normY * speed * 0.5;
+                         velocities[i3+2] += normZ * speed * 0.5;
+                     }
+                }
+            }
+            particleSystem.geometry.attributes.position.needsUpdate = true;
+        }
+
+
+        // --- Start ---
+        init();
+
+    </script>
+</body>
+</html>
