@@ -1,0 +1,1736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SONIC SCULPTURES | BUILD OR BUY</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Base Styles with Punk Attitude */
+        :root {
+            --primary: #0a0a12;
+            --secondary: #0f0f1a;
+            --accent: #ff00ea;
+            --accent-bright: #00f0ff;
+            --noise: #00f0ff;
+            --piss: #e4ff00;
+            --vomit: #00ff66;
+            --blood: #ff2222;
+            --text: #e6e6fa;
+            --text-dark: #b0b0c0;
+            --gradient-1: linear-gradient(135deg, #ff00ea 0%, #4361ee 50%, #7209b7 100%);
+            --gradient-2: linear-gradient(45deg, #00f0ff 0%, #4895ef 50%, #e4ff00 100%);
+        }
+
+        @font-face {
+            font-family: 'Synth';
+            src: url('https://fonts.googleapis.com/css2?family=Space+Mono&display=swap');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--primary);
+            color: var(--text);
+            font-family: 'Courier Prime', monospace;
+            overflow-x: hidden;
+            cursor: crosshair;
+            line-height: 1.6;
+        }
+
+        /* Noise & Glitch Effects */
+        .noise-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.05;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .glitch-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 100%;
+            background: repeating-linear-gradient(
+                transparent,
+                transparent 2px,
+                rgba(255, 255, 255, 0.05) 2px,
+                rgba(255, 255, 255, 0.05) 4px
+            );
+            animation: scan 8s linear infinite;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.1;
+        }
+
+        @keyframes scan {
+            0% {
+                transform: translateY(-100%);
+            }
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+        /* Split Navigation with Attitude */
+        nav {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            padding: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(10, 10, 18, 0.8);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 2px solid var(--accent);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -1px;
+            position: relative;
+            transform: skew(-5deg);
+        }
+
+        .logo::after {
+            content: "SONIC SCULPTURES";
+            position: absolute;
+            top: 0;
+            left: 2px;
+            color: rgba(0, 240, 255, 0.5);
+            z-index: -1;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            color: var(--accent-bright);
+            transform: skew(-10deg);
+        }
+
+        /* Hero Section - Polished but Edgy */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            padding: 8rem 2rem 4rem;
+            overflow: hidden;
+        }
+
+        .hero-content {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: 4rem;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            text-transform: uppercase;
+            position: relative;
+        }
+
+        .hero h1 span {
+            display: block;
+        }
+
+        .build {
+            color: var(--accent-bright);
+            background: var(--gradient-2);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .or {
+            font-size: 2rem;
+            color: var(--piss);
+        }
+
+        .buy {
+            color: var(--accent);
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 700px;
+            margin-bottom: 2.5rem;
+            color: var(--text-dark);
+        }
+
+        .cta-container {
+            display: flex;
+            gap: 2rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .cta-button {
+            padding: 1rem 2.5rem;
+            border: none;
+            color: black;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cta-build {
+            background: var(--noise);
+        }
+
+        .cta-buy {
+            background: var(--accent);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px) skew(-5deg);
+        }
+
+        /* 3D Device Showcase with Punk Edge */
+        .device-showcase {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            margin: 3rem 0;
+            display: flex;
+            justify-content: center;
+            perspective: 1000px;
+        }
+
+        .device-container {
+            width: 300px;
+            height: 300px;
+            position: relative;
+            transform-style: preserve-3d;
+            animation: rotate 20s infinite linear;
+        }
+
+        .device-face {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid var(--accent);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+            overflow: hidden;
+        }
+
+        .device-face::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(255, 0, 234, 0.1), transparent);
+            z-index: -1;
+        }
+
+        .device-face i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: var(--accent-bright);
+        }
+
+        .device-face h3 {
+            font-size: 1.2rem;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            text-transform: uppercase;
+        }
+
+        .device-face p {
+            font-size: 0.9rem;
+            color: var(--text-dark);
+            text-align: center;
+        }
+
+        .front { transform: translateZ(150px); }
+        .back { transform: rotateY(180deg) translateZ(150px); }
+        .left { transform: rotateY(-90deg) translateZ(150px); }
+        .right { transform: rotateY(90deg) translateZ(150px); }
+        .top { transform: rotateX(90deg) translateZ(150px); }
+        .bottom { transform: rotateX(-90deg) translateZ(150px); }
+
+        @keyframes rotate {
+            0% { transform: rotateY(0) rotateX(15deg); }
+            100% { transform: rotateY(360deg) rotateX(15deg); }
+        }
+
+        /* Philosophy Section - Raw and Real */
+        .philosophy {
+            padding: 6rem 2rem;
+            background: var(--secondary);
+            position: relative;
+            border-top: 2px solid var(--accent);
+            border-bottom: 2px solid var(--accent-bright);
+        }
+
+        .philosophy-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .philosophy-title {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: var(--piss);
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .philosophy-title::before {
+            content: "// ";
+            color: var(--accent);
+        }
+
+        .philosophy-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 3rem;
+        }
+
+        .philosophy-card {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            border-left: 4px solid var(--accent-bright);
+            position: relative;
+        }
+
+        .philosophy-card h3 {
+            color: var(--accent-bright);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+        }
+
+        .philosophy-card p {
+            color: var(--text-dark);
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+
+        .existential-quote {
+            padding: 2rem;
+            margin: 4rem auto;
+            max-width: 800px;
+            background: rgba(0, 0, 0, 0.5);
+            border-left: 4px solid var(--piss);
+            font-style: italic;
+            position: relative;
+        }
+
+        .existential-quote p {
+            font-size: 1.2rem;
+            color: var(--text);
+        }
+
+        .quote-author {
+            margin-top: 1rem;
+            text-align: right;
+            color: var(--piss);
+            font-style: normal;
+        }
+
+        .copyleft {
+            transform: rotate(180deg);
+            display: inline-block;
+        }
+
+        /* Products Section - Polished but Anti-Commercial */
+        .products {
+            padding: 6rem 2rem;
+            position: relative;
+        }
+
+        .products-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .products-title {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .products-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 3rem;
+            color: var(--text-dark);
+            text-align: center;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 3rem;
+            margin-bottom: 4rem;
+        }
+
+        .product-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--accent);
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--accent-bright);
+        }
+
+        .product-image {
+            height: 250px;
+            width: 100%;
+            background: #111;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .product-image img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .product-placeholder {
+            text-align: center;
+            font-size: 3rem;
+            color: var(--accent);
+        }
+
+        .product-content {
+            padding: 1.5rem;
+        }
+
+        .product-name {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-bright);
+            text-transform: uppercase;
+        }
+
+        .product-description {
+            color: var(--text-dark);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px dashed rgba(255, 255, 255, 0.1);
+        }
+
+        .product-price {
+            font-size: 1.2rem;
+            color: var(--piss);
+            font-weight: bold;
+        }
+
+        .product-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .product-button {
+            padding: 0.5rem 1rem;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .buy-button {
+            background: var(--accent);
+            color: black;
+        }
+
+        .diy-button {
+            background: transparent;
+            border: 1px solid var(--noise);
+            color: var(--noise);
+        }
+
+        .product-button:hover {
+            transform: skew(-10deg);
+        }
+
+        /* DIY Circuit Section - Raw and Instructional */
+        .diy-circuit {
+            padding: 6rem 2rem;
+            background: var(--secondary);
+            position: relative;
+            border-top: 2px solid var(--noise);
+        }
+
+        .circuit-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .circuit-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--noise);
+            text-transform: uppercase;
+        }
+
+        .circuit-title::before {
+            content: ">>> ";
+        }
+
+        .circuit-description {
+            margin-bottom: 3rem;
+            font-size: 1rem;
+            line-height: 1.6;
+            color: var(--text-dark);
+        }
+
+        .circuit-diagram {
+            border: 2px dashed var(--noise);
+            padding: 2rem;
+            margin: 3rem 0;
+            background: rgba(0, 0, 0, 0.5);
+            overflow-x: auto;
+            font-family: monospace;
+            position: relative;
+        }
+
+        .circuit-diagram pre {
+            color: var(--noise);
+            overflow-x: auto;
+            white-space: pre;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
+        .parts-list {
+            padding: 2rem;
+            background: rgba(0, 0, 0, 0.5);
+            margin: 3rem 0;
+            border-left: 4px solid var(--noise);
+        }
+
+        .parts-list h3 {
+            margin-bottom: 1.5rem;
+            color: var(--noise);
+            font-size: 1.5rem;
+        }
+
+        .parts-list ul {
+            list-style-type: none;
+        }
+
+        .parts-list li {
+            padding: 0.8rem 0;
+            border-bottom: 1px dotted #333;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+
+        .parts-list li:last-child {
+            border-bottom: none;
+        }
+
+        .part-name {
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .part-source {
+            color: var(--text-dark);
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+
+        .part-source a {
+            color: var(--noise);
+            text-decoration: none;
+        }
+
+        .part-source a:hover {
+            text-decoration: underline;
+        }
+
+        .notes {
+            padding: 1.5rem;
+            background: rgba(0, 0, 0, 0.5);
+            border-left: 4px solid var(--piss);
+            margin: 2rem 0;
+            font-size: 0.9rem;
+        }
+
+        .notes h4 {
+            margin-bottom: 1rem;
+            color: var(--piss);
+            font-size: 1.2rem;
+        }
+
+        .warning {
+            color: var(--blood);
+            font-weight: bold;
+        }
+
+        /* Sound Visualizer - Modern but Glitchy */
+        .sound-visualizer {
+            padding: 6rem 2rem;
+            text-align: center;
+            position: relative;
+            background: var(--primary);
+            border-top: 2px solid var(--piss);
+        }
+
+        .visualizer-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--piss);
+            text-transform: uppercase;
+        }
+
+        .visualizer-title::before {
+            content: "### ";
+        }
+
+        .visualizer-description {
+            margin-bottom: 3rem;
+            font-size: 1rem;
+            max-width: 700px;
+            margin-left: auto;
+            margin-right: auto;
+            color: var(--text-dark);
+        }
+
+        .visualizer-container {
+            max-width: 800px;
+            height: 200px;
+            margin: 3rem auto;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--piss);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .visualizer-bars {
+            display: flex;
+            height: 100%;
+            align-items: flex-end;
+            width: 100%;
+            gap: 2px;
+        }
+
+        .bar {
+            flex: 1;
+            background: var(--piss);
+            transition: height 0.1s;
+        }
+
+        .sound-controls {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-top: 2rem;
+        }
+
+        .sound-button {
+            padding: 0.8rem 1.5rem;
+            border: 1px solid var(--piss);
+            background: transparent;
+            color: var(--piss);
+            font-family: inherit;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-transform: uppercase;
+        }
+
+        .sound-button:hover {
+            background: var(--piss);
+            color: black;
+            transform: skew(-10deg);
+        }
+
+        /* Workshops Section - Community Focus */
+        .workshops {
+            padding: 6rem 2rem;
+            background: var(--secondary);
+            position: relative;
+            border-top: 2px solid var(--accent-bright);
+        }
+
+        .workshop-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .workshop-title {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-bright);
+            text-transform: uppercase;
+        }
+
+        .workshop-title::before {
+            content: ">> ";
+        }
+
+        .workshop-description {
+            margin-bottom: 3rem;
+            font-size: 1rem;
+            color: var(--text-dark);
+            max-width: 700px;
+        }
+
+        .workshop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .workshop-card {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--accent-bright);
+            padding: 2rem;
+            position: relative;
+            transform: rotate(-1deg);
+            transition: all 0.3s ease;
+        }
+
+        .workshop-card:nth-child(even) {
+            transform: rotate(1deg);
+        }
+
+        .workshop-card:hover {
+            transform: rotate(0) translateY(-5px);
+        }
+
+        .workshop-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--accent-bright);
+            text-transform: uppercase;
+        }
+
+        .workshop-card p {
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            color: var(--text-dark);
+        }
+
+        .workshop-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 1rem;
+            font-size: 0.8rem;
+            border-left: 3px solid var(--accent-bright);
+        }
+
+        .workshop-date, .workshop-location {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+        }
+
+        .workshop-link {
+            display: inline-block;
+            margin-top: 1.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--accent-bright);
+            color: black;
+            text-decoration: none;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .workshop-link:hover {
+            transform: skew(-15deg);
+        }
+
+        /* Contact & Newsletter Section */
+        .contact {
+            padding: 6rem 2rem;
+            position: relative;
+            background: url("data:image/svg+xml,%3Csvg viewBox='0 0 250 250' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E"), var(--primary);
+            background-blend-mode: overlay;
+            border-top: 2px solid var(--accent);
+        }
+
+        .contact-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 4rem;
+        }
+
+        .contact-form {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            border: 1px solid var(--accent);
+        }
+
+        .contact-title {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent);
+            text-transform: uppercase;
+        }
+
+        .contact-description {
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 0, 234, 0.3);
+            color: var(--text);
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            border-color: var(--accent);
+            outline: none;
+        }
+
+        .form-input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .form-submit {
+            padding: 0.8rem 1.5rem;
+            background: var(--accent);
+            color: black;
+            border: none;
+            font-family: inherit;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .form-submit:hover {
+            transform: skew(-10deg);
+        }
+
+        .newsletter {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2rem;
+            border: 1px solid var(--noise);
+        }
+
+        .newsletter-title {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--noise);
+            text-transform: uppercase;
+        }
+
+        .newsletter-description {
+            margin-bottom: 2rem;
+            font-size: 0.9rem;
+            color: var(--text-dark);
+        }
+
+        /* Footer with Manifesto */
+        footer {
+            background: black;
+            padding: 4rem 2rem 2rem;
+            position: relative;
+            border-top: 2px solid var(--accent-bright);
+        }
+
+        .footer-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 3rem;
+        }
+
+        .footer-logo {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: inline-block;
+        }
+
+        .footer-manifesto {
+            grid-column: span 2;
+            font-size: 0.9rem;
+            line-height: 1.6;
+            color: var(--text-dark);
+        }
+
+        .footer-manifesto p {
+            margin-bottom: 1rem;
+        }
+
+        .footer-links h3 {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+            color: var(--accent-bright);
+            text-transform: uppercase;
+        }
+
+        .footer-links ul {
+            list-style: none;
+        }
+
+        .footer-links li {
+            margin-bottom: 0.8rem;
+        }
+
+        .footer-links a {
+            color: var(--text-dark);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .footer-links a:hover {
+            color: var(--accent);
+            padding-left: 5px;
+        }
+
+        .social-links {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .social-link {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 0, 234, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .social-link i {
+            color: var(--accent);
+        }
+
+        .social-link:hover {
+            background: var(--accent);
+            transform: rotate(15deg);
+        }
+
+        .social-link:hover i {
+            color: black;
+        }
+
+        .footer-bottom {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-dark);
+        }
+
+        /* Animations & Glitch Effects */
+        @keyframes glitch {
+            0% {
+                transform: translate(0);
+            }
+            20% {
+                transform: translate(-2px, 2px);
+            }
+            40% {
+                transform: translate(-2px, -2px);
+            }
+            60% {
+                transform: translate(2px, 2px);
+            }
+            80% {
+                transform: translate(2px, -2px);
+            }
+            100% {
+                transform: translate(0);
+            }
+        }
+
+        .glitch-text {
+            position: relative;
+        }
+
+        .glitch-text::before, .glitch-text::after {
+            content: attr(data-text);
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -1px 0 var(--noise);
+            animation: glitch 3s infinite;
+            background: var(--primary);
+            clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+            transform: translate(-2px, -2px);
+        }
+
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: 1px 0 var(--accent);
+            animation: glitch 2s infinite;
+            background: var(--primary);
+            clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+            transform: translate(2px, 2px);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                width: 100%;
+                overflow-x: auto;
+                padding-bottom: 1rem;
+            }
+            
+            .hero h1 {
+                font-size: 3rem;
+            }
+            
+            .device-container {
+                width: 250px;
+                height: 250px;
+            }
+            
+            .front, .back, .left, .right, .top, .bottom {
+                transform: translateZ(125px);
+            }
+            
+            .back { transform: rotateY(180deg) translateZ(125px); }
+            .left { transform: rotateY(-90deg) translateZ(125px); }
+            .right { transform: rotateY(90deg) translateZ(125px); }
+            .top { transform: rotateX(90deg) translateZ(125px); }
+            .bottom { transform: rotateX(-90deg) translateZ(125px); }
+            
+            .cta-container {
+                flex-direction: column;
+                gap: 1rem;
+            }
+        }
+
+        /* Utility Classes */
+        .glitch-effect {
+            animation: glitch 5s infinite;
+        }
+        
+        .fade-in {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease, transform 0.8s ease;
+        }
+        
+        .fade-in.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .delay-1 { transition-delay: 0.2s; }
+        .delay-2 { transition-delay: 0.4s; }
+        .delay-3 { transition-delay: 0.6s; }
+    </style>
+</head>
+<body>
+    <!-- Noise & Glitch Effects -->
+    <div class="noise-background"></div>
+    <div class="glitch-line"></div>
+
+    <!-- Navigation -->
+    <nav>
+        <div class="logo">SONIC SCULPTURES</div>
+        <div class="nav-links">
+            <a href="#philosophy">Manifesto</a>
+            <a href="#products">Devices</a>
+            <a href="#diy">DIY Guides</a>
+            <a href="#sound">Sound Lab</a>
+            <a href="#workshops">Workshops</a>
+            <a href="#contact">Contact</a>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1>
+                <span class="build">BUILD</span>
+                <span class="or">OR</span>
+                <span class="buy">BUY</span>
+            </h1>
+            <p>Experimental sound devices for noise exploration. All our circuit diagrams are free to use, but if you'd rather skip the soldering, you can buy our handcrafted machines.</p>
+            
+            <div class="cta-container">
+                <button class="cta-button cta-build">
+                    <i class="fas fa-wrench"></i> DIY Guides
+                </button>
+                <button class="cta-button cta-buy">
+                    <i class="fas fa-shopping-cart"></i> Shop Devices
+                </button>
+            </div>
+            
+            <!-- 3D Device Showcase -->
+            <div class="device-showcase fade-in">
+                <div class="device-container">
+                    <div class="device-face front">
+                        <i class="fas fa-wave-square"></i>
+                        <h3>NOISE SYNTHESIZER</h3>
+                        <p>Handbuilt chaotic sound generator</p>
+                    </div>
+                    <div class="device-face back">
+                        <i class="fas fa-sliders-h"></i>
+                        <h3>CONTROL PANEL</h3>
+                        <p>Intuitive chaos interface</p>
+                    </div>
+                    <div class="device-face left">
+                        <i class="fas fa-volume-up"></i>
+                        <h3>AUDIO OUTPUT</h3>
+                        <p>High-quality noise generation</p>
+                    </div>
+                    <div class="device-face right">
+                        <i class="fas fa-plug"></i>
+                        <h3>CONNECTIVITY</h3>
+                        <p>Multiple I/O options</p>
+                    </div>
+                    <div class="device-face top">
+                        <i class="fas fa-microchip"></i>
+                        <h3>CIRCUIT DESIGN</h3>
+                        <p>Open-source architecture</p>
+                    </div>
+                    <div class="device-face bottom">
+                        <i class="fas fa-random"></i>
+                        <h3>CHAOS ENGINE</h3>
+                        <p>Unpredictable glitch generator</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Philosophy Section -->
+    <section class="philosophy" id="philosophy">
+        <div class="philosophy-container">
+            <h2 class="philosophy-title fade-in">NOISE MANIFESTO</h2>
+            
+            <div class="philosophy-grid">
+                <div class="philosophy-card fade-in">
+                    <h3>DIY ETHOS</h3>
+                    <p>I believe in sharing knowledge, not hoarding it. Every device I sell comes with full schematics and build instructions. You can buy it or build it yourself - your choice. This isn't about profit; it's about noise liberation.</p>
+                </div>
+                
+                <div class="philosophy-card fade-in delay-1">
+                    <h3>ANTI-COMMERCIAL</h3>
+                    <p>These aren't polished consumer products. They're raw, experimental tools for sonic exploration. Each device is handmade with salvaged parts when possible, designed for maximum chaos with minimum environmental impact.</p>
+                </div>
+                
+                <div class="philosophy-card fade-in delay-2">
+                    <h3>NOISE AS FREEDOM</h3>
+                    <p>Noise is the ultimate rejection of musical constraints. It's chaos embraced, it's freedom from structure, it's pure sonic expression. These machines are designed to liberate sound from convention.</p>
+                </div>
+            </div>
+            
+            <div class="existential-quote fade-in delay-3">
+                <p>"True noise is the democratization of sound, where intention meets chaos, and where hierarchies of musical training collapse. What remains is pure sonic expression."</p>
+                <div class="quote-author">— Not some famous authority, just me after too much coffee</div>
+            </div>
+            
+            <p class="fade-in delay-3" style="text-align: center; color: var(--text-dark);">All circuit diagrams, code, and schematics here are <span class="copyleft">©</span> COPYLEFT — take them, change them, improve them.</p>
+        </div>
+    </section>
+
+    <!-- Products Section -->
+    <section class="products" id="products">
+        <div class="products-container">
+            <h2 class="products-title fade-in">NOISE DEVICES</h2>
+            <p class="products-subtitle fade-in">Each machine is handcrafted, unique, and comes with full schematics so you can repair, modify, or build your own.</p>
+            
+            <div class="products-grid">
+                <div class="product-card fade-in">
+                    <div class="product-image">
+                        <div class="product-placeholder">
+                            <i class="fas fa-wave-square"></i>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">VOID SCANNER</h3>
+                        <p class="product-description">Chaotic drone synthesizer with feedback matrix and multiple distortion paths. Creates walls of noise that evolve over time. Built with salvaged parts from old TVs and radios.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$189</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">Buy</button>
+                                <button class="product-button diy-button">DIY Guide</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-card fade-in delay-1">
+                    <div class="product-image">
+                        <div class="product-placeholder">
+                            <i class="fas fa-bolt"></i>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">GLITCH PROPHET</h3>
+                        <p class="product-description">Digital noise generator with unstable oscillators and granular processor. Transforms input audio into broken digital fragments. Housed in repurposed vintage hardware.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$249</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">Buy</button>
+                                <button class="product-button diy-button">DIY Guide</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-card fade-in delay-2">
+                    <div class="product-image">
+                        <div class="product-placeholder">
+                            <i class="fas fa-microchip"></i>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">CONTACT CRAWLER</h3>
+                        <p class="product-description">Advanced contact mic system with built-in processing. Amplifies microscopic vibrations from any surface and transforms them through filters and distortion circuits.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$139</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">Buy</button>
+                                <button class="product-button diy-button">DIY Guide</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="product-card fade-in delay-3">
+                    <div class="product-image">
+                        <div class="product-placeholder">
+                            <i class="fas fa-broadcast-tower"></i>
+                        </div>
+                    </div>
+                    <div class="product-content">
+                        <h3 class="product-name">RADIO WRAITH</h3>
+                        <p class="product-description">Circuit-bent radio receiver that scans and processes electromagnetic frequencies. Creates eerie soundscapes from radio waves, WiFi signals, and electronic device emissions.</p>
+                        <div class="product-meta">
+                            <span class="product-price">$215</span>
+                            <div class="product-buttons">
+                                <button class="product-button buy-button">Buy</button>
+                                <button class="product-button diy-button">DIY Guide</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DIY Circuit Section -->
+    <section class="diy-circuit" id="diy">
+        <div class="circuit-container">
+            <h2 class="circuit-title fade-in">DIY NOISE CIRCUITS</h2>
+            <p class="circuit-description fade-in">Build your own experimental sound devices with these open-source schematics. Each circuit can be created from readily available or salvaged components.</p>
+            
+            <!-- CIRCUIT DIAGRAM EXAMPLE -->
+            <div class="circuit-diagram fade-in">
+                <pre>
+                             9V
+                              │
+                              ▼
+                              │
+                 R1          │
+          ┌──────────────┐   │
+          │              │   │
+          │       8      ├───┘
+          │  ┌─────────┐ │
+          └──┤4        │ │
+             │         │ │
+   ┌─────────┤2      3 ├─┴──────┐
+   │         │   555   │        │
+   │  C1     │         │        │  R3
+   │         │6        │        ├──────────┐
+   │   │     └────┬────┘        │          │
+   │   │          │             │          │
+   └───┴──────────┴─────────────┘          │
+          │                                 │       R4
+          │                                 │    ┌──────────┐
+          │       8                         │    │          │   OUTPUT
+          │  ┌─────────┐                    └────┤3         ├─────○
+    C2    └──┤4        │                         │          │
+    │        │         │                         │   POT    │
+    ├────────┤2      3 ├─────────────────────────┤          │
+    │        │   555   │                         │          │
+    │        │         │        ┌────────────────┤1         │
+    │        │6        │        │ R5             └──────────┘
+    │        └────┬────┘        │                     │
+    │             │             │                     │
+    └─────────────┴─────────────┴─────────────────────┘
+                                                      │
+                                                      ▼
+                                                     GND
+                </pre>
+            </div>
+            
+            <div class="parts-list fade-in delay-1">
+                <h3>ATARI PUNK CONSOLE PARTS</h3>
+                <ul>
+                    <li>
+                        <span class="part-name">2 × 555 Timer ICs</span>
+                        <span class="part-source">Salvage from old electronics or any electronics supplier</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R1: 10kΩ Resistor</span>
+                        <span class="part-source">Literally anywhere that sells electronics</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R3: 1kΩ Resistor</span>
+                        <span class="part-source">Common in almost all electronic devices</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R5: 100kΩ Resistor</span>
+                        <span class="part-source">Common in almost all electronic devices</span>
+                    </li>
+                    <li>
+                        <span class="part-name">C1: 0.01μF Capacitor</span>
+                        <span class="part-source">Salvage from old circuit boards</span>
+                    </li>
+                    <li>
+                        <span class="part-name">C2: 0.1μF Capacitor</span>
+                        <span class="part-source">Salvage from old circuit boards</span>
+                    </li>
+                    <li>
+                        <span class="part-name">R4: 100kΩ Potentiometer</span>
+                        <span class="part-source">Old radios, TVs, etc.</span>
+                    </li>
+                    <li>
+                        <span class="part-name">9V Battery Clip</span>
+                        <span class="part-source">Dead smoke detectors or electronics stores</span>
+                    </li>
+                    <li>
+                        <span class="part-name">Audio Jack (1/8" or 1/4")</span>
+                        <span class="part-source">Broken headphones or electronics stores</span>
+                    </li>
+                </ul>
+            </div>
+            
+            <div class="notes fade-in delay-2">
+                <h4>BUILD NOTES</h4>
+                <p>The Atari Punk Console (or APC) is a classic noise-maker that produces square-wave sounds. It's perfect for beginners and can be the foundation for more complex noise machines.</p>
+                <p>Experiment with different capacitor values to change the sound range. Smaller capacitors = higher frequencies. You can also add switches to toggle between different capacitor values for more sound options.</p>
+                <p><span class="warning">WARNING:</span> This will generate harsh tones that might damage speakers at high volumes. Start with low volume and work your way up.</p>
+            </div>
+            
+            <p class="fade-in delay-3" style="text-align: center; margin-top: 3rem; color: var(--noise); font-size: 1.2rem;">More circuit diagrams included with each device purchase or available upon request</p>
+        </div>
+    </section>
+
+    <!-- Sound Visualizer -->
+    <section class="sound-visualizer" id="sound">
+        <h2 class="visualizer-title fade-in">SOUND LABORATORY</h2>
+        <p class="visualizer-description fade-in">Listen to the raw output of our handbuilt noise machines. Each sample demonstrates what these circuits can do in the right (or wrong) hands.</p>
+        
+        <div class="visualizer-container fade-in">
+            <div class="visualizer-bars" id="visualizer">
+                <!-- Bars will be generated by JS -->
+            </div>
+        </div>
+        
+        <div class="sound-controls fade-in delay-1">
+            <button class="sound-button" data-sound="drone">Wall of Noise</button>
+            <button class="sound-button" data-sound="glitch">Digital Glitch</button>
+            <button class="sound-button" data-sound="punk">Atari Punk</button>
+            <button class="sound-button" data-sound="feedback">Feedback Loop</button>
+            <button class="sound-button" data-sound="radio">Radio Waves</button>
+            <button class="sound-button" data-sound="metal">Metal Machine</button>
+        </div>
+    </section>
+
+    <!-- Workshops Section -->
+    <section class="workshops" id="workshops">
+        <div class="workshop-container">
+            <h2 class="workshop-title fade-in">NOISE WORKSHOPS</h2>
+            <p class="workshop-description fade-in">Join our DIY workshops where we build noise machines together. Pay-what-you-can model, no one turned away for lack of funds. All tools and parts provided.</p>
+            
+            <div class="workshop-grid">
+                <div class="workshop-card fade-in">
+                    <h3>CIRCUIT BENDING 101</h3>
+                    <p>Learn how to hack children's toys and cheap electronics into chaotic sound machines. Bring broken toys, leave with beautiful noise. No previous experience required.</p>
+                    <div class="workshop-info">
+                        <span class="workshop-date">Next: October 31, 2025</span>
+                        <span class="workshop-location">Location: The Autonomous Factory, Jerusalem</span>
+                    </div>
+                    <a href="#" class="workshop-link">Register</a>
+                </div>
+                
+                <div class="workshop-card fade-in delay-1">
+                    <h3>DIY SYNTH BUILDING</h3>
+                    <p>Collective soldering session where we'll build simple synth circuits from scratch. No experience needed, tools provided. You'll go home with a working noise device.</p>
+                    <div class="workshop-info">
+                        <span class="workshop-date">Next: November 15, 2025</span>
+                        <span class="workshop-location">Location: Resistance Space, Tel Aviv</span>
+                    </div>
+                    <a href="#" class="workshop-link">Register</a>
+                </div>
+                
+                <div class="workshop-card fade-in delay-2">
+                    <h3>FOUND OBJECT INSTRUMENTS</h3>
+                    <p>Turn trash into musical instruments using basic electronics. Create contact mics, piezo pickups, and simple amplifiers to sonify the world around you.</p>
+                    <div class="workshop-info">
+                        <span class="workshop-date">Next: December 5, 2025</span>
+                        <span class="workshop-location">Location: The Old Power Station, Haifa</span>
+                    </div>
+                    <a href="#" class="workshop-link">Register</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact & Newsletter -->
+    <section class="contact" id="contact">
+        <div class="contact-container">
+            <div class="contact-form fade-in">
+                <h2 class="contact-title">GET IN TOUCH</h2>
+                <p class="contact-description">Questions about building or buying? Need help with a circuit? Just want to talk noise?</p>
+                
+                <form>
+                    <div class="form-group">
+                        <label for="name">NAME</label>
+                        <input type="text" id="name" class="form-input" placeholder="Your name or alias">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">EMAIL</label>
+                        <input type="email" id="email" class="form-input" placeholder="Where to reach you">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="message">MESSAGE</label>
+                        <textarea id="message" class="form-input" rows="5" placeholder="What's on your mind?"></textarea>
+                    </div>
+                    
+                    <button type="submit" class="form-submit">Send Message</button>
+                </form>
+            </div>
+            
+            <div class="newsletter fade-in delay-1">
+                <h2 class="newsletter-title">NOISE LETTER</h2>
+                <p class="newsletter-description">Subscribe for new circuit diagrams, workshop announcements, and noise philosophy. No spam, just occasional transmissions.</p>
+                
+                <form>
+                    <div class="form-group">
+                        <label for="newsletter-email">EMAIL</label>
+                        <input type="email" id="newsletter-email" class="form-input" placeholder="Your email">
+                    </div>
+                    
+                    <button type="submit" class="form-submit" style="background: var(--noise);">Subscribe</button>
+                </form>
+                
+                <p style="margin-top: 2rem; font-size: 0.8rem; color: var(--text-dark);">You can unsubscribe anytime. I won't sell your data because I don't believe in digital capitalism.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="footer-container">
+            <div class="footer-manifesto">
+                <div class="footer-logo">SONIC SCULPTURES</div>
+                <p>This website is a hybrid - yes, I sell handmade noise machines, but I also share all the knowledge needed to build them yourself. The choice is yours.</p>
+                <p>If you buy from me, you're supporting more workshops, more innovation, and more circuit designs to share with the community. If you build it yourself, you're still part of the noise revolution. Either way, we win.</p>
+                
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="fab fa-bandcamp"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-instagram"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-youtube"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-links">
+                <h3>SHOP</h3>
+                <ul>
+                    <li><a href="#">Noise Machines</a></li>
+                    <li><a href="#">DIY Kits</a></li>
+                    <li><a href="#">Components</a></li>
+                    <li><a href="#">Custom Builds</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-links">
+                <h3>DIY</h3>
+                <ul>
+                    <li><a href="#">Circuit Diagrams</a></li>
+                    <li><a href="#">Build Guides</a></li>
+                    <li><a href="#">Workshops</a></li>
+                    <li><a href="#">Resources</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-links">
+                <h3>COMMUNITY</h3>
+                <ul>
+                    <li><a href="#">Noise Collective</a></li>
+                    <li><a href="#">Forums</a></li>
+                    <li><a href="#">Performances</a></li>
+                    <li><a href="#">Collaborations</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="footer-bottom">
+            <p>This site is <span class="copyleft">©</span> COPYLEFT. Take what you need, share what you learn.</p>
+            <p>No cookies, no tracking, no bullshit. Just noise.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Create visualizer bars
+        const visualizer = document.getElementById('visualizer');
+        const barCount = 40;
+        
+        for (let i = 0; i < barCount; i++) {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = '0px';
+            visualizer.appendChild(bar);
+        }
+        
+        // Simple visualizer animation
+        let isPlaying = false;
+        let currentSound = null;
+        
+        function animateVisualizer() {
+            const bars = document.querySelectorAll('.bar');
+            
+            function updateBars() {
+                if (!isPlaying) return;
+                
+                if (currentSound === 'drone') {
+                    // Wall of noise - mostly high values with slow fluctuation
+                    bars.forEach(bar => {
+                        const height = 50 + Math.random() * 50;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'glitch') {
+                    // Digital glitch - erratic, jumpy pattern
+                    bars.forEach(bar => {
+                        const height = Math.random() > 0.5 ? Math.random() * 100 : 0;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'punk') {
+                    // Atari Punk - square wave-like pattern
+                    bars.forEach((bar, index) => {
+                        const height = Math.sin(Date.now() * 0.01 + index * 0.2) > 0 ? 80 : 20;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'feedback') {
+                    // Feedback - growing and falling intensity
+                    const base = (Math.sin(Date.now() * 0.001) + 1) * 50;
+                    bars.forEach(bar => {
+                        const height = base + (Math.random() * 20 - 10);
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'radio') {
+                    // Radio - static-like
+                    bars.forEach(bar => {
+                        const height = 20 + Math.random() * 60;
+                        bar.style.height = `${height}%`;
+                    });
+                } else if (currentSound === 'metal') {
+                    // Metal - heavy bass and treble
+                    bars.forEach((bar, index) => {
+                        let height;
+                        if (index < 8 || index > 24) {
+                            height = 60 + Math.random() * 40;
+                        } else {
+                            height = 20 + Math.random() * 30;
+                        }
+                        bar.style.height = `${height}%`;
+                    });
+                }
+                
+                requestAnimationFrame(updateBars);
+            }
+            
+            updateBars();
+        }
+        
+        // Sound buttons functionality
+        const soundButtons = document.querySelectorAll('.sound-button');
+        
+        soundButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const sound = button.getAttribute('data-sound');
+                
+                // Reset all buttons
+                soundButtons.forEach(btn => {
+                    btn.style.background = 'transparent';
+                    btn.style.color = 'var(--piss)';
+                });
+                
+                if (currentSound === sound && isPlaying) {
+                    // Stop current sound if clicking the same button
+                    isPlaying = false;
+                    currentSound = null;
+                    
+                    // Reset all bars
+                    const bars = document.querySelectorAll('.bar');
+                    bars.forEach(bar => {
+                        bar.style.height = '0px';
+                    });
+                } else {
+                    // Start new sound
+                    button.style.background = 'var(--piss)';
+                    button.style.color = 'black';
+                    
+                    isPlaying = true;
+                    currentSound = sound;
+                    
+                    if (!isPlaying) {
+                        animateVisualizer();
+                    }
+                }
+            });
+        });
+        
+        // Scroll animations
+        function checkFadeElements() {
+            const fadeElements = document.querySelectorAll('.fade-in');
+            
+            fadeElements.forEach(element => {
+                const elementTop = element.getBoundingClientRect().top;
+                const elementBottom = element.getBoundingClientRect().bottom;
+                
+                if (elementTop < window.innerHeight - 100 && elementBottom > 0) {
+                    element.classList.add('active');
+                }
+            });
+        }
+        
+        // Check fade elements on load and scroll
+        window.addEventListener('load', checkFadeElements);
+        window.addEventListener('scroll', checkFadeElements);
+        
+        // Random glitch effect for entire page (very subtle)
+        function pageGlitch() {
+            setInterval(() => {
+                if (Math.random() > 0.995) {
+                    document.body.style.filter = 'invert(100%)';
+                    
+                    setTimeout(() => {
+                        document.body.style.filter = 'none';
+                    }, 50);
+                }
+            }, 5000);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            pageGlitch();
+            
+            // Start visualizer animation
+            animateVisualizer();
+        });
+    </script>
+</body>
+</html>
