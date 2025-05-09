@@ -1,0 +1,264 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Build Boss — One‑File Sprint Console</title>
+<style>
+:root{
+  --bg:#0d0d0d;
+  --fg:#e0e0e0;
+  --accent:#ff5252;
+  --accent2:#22d4ff;
+  --spacing:8px;
+  font-family:'Fira Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);}
+header{display:flex;align-items:center;gap:var(--spacing);padding:var(--spacing);}
+h1{margin:0;font-size:1.4rem;flex:1}
+#boss{width:140px;height:140px}
+#mouth{transform-origin:center}
+.talking #mouth{animation:talk 0.35s infinite alternate}
+@keyframes talk{0%{transform:scaleY(1)}100%{transform:scaleY(0.1)}}
+#boss-eyes circle{animation:blink 5s infinite}
+@keyframes blink{0%,92%{r:8px;}94%,96%{r:1px;}98%,100%{r:8px;}}
+#boss-speech{font-weight:bold;white-space:nowrap}
+main{padding:var(--spacing);display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+section{border:1px solid #333;padding:var(--spacing);border-radius:6px}
+section h2{margin:0 0 .5rem 0;color:var(--accent)}
+.phase-title{font-weight:bold;margin-top:6px;color:var(--accent2)}
+.task-item{display:flex;align-items:center;font-size:.9rem;margin:2px 0}
+.task-item input{margin-right:.5rem}
+button{background:var(--accent);color:#fff;border:none;padding:.4rem .9rem;margin-right:.4rem;cursor:pointer;border-radius:4px}
+button:hover{opacity:.8}
+#timer-display{font-size:2rem;margin:.5rem 0}
+textarea#import{width:100%;height:60px;background:#111;color:#0f0;font-family:inherit;font-size:.8rem;border:1px solid #444;padding:4px}
+small{font-size:.7rem;color:#888}
+@media(max-width:800px){
+  main{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header>
+  <svg id="boss" class="talking" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="90" fill="#222"/>
+    <g id="boss-eyes">
+      <circle cx="65" cy="80" r="8" fill="#fff"/>
+      <circle cx="135" cy="80" r="8" fill="#fff"/>
+      <circle cx="65" cy="80" r="4" fill="#000"/>
+      <circle cx="135" cy="80" r="4" fill="#000"/>
+    </g>
+    <rect id="mouth" x="60" y="120" width="80" height="22" rx="10" fill="#f33"/>
+  </svg>
+  <h1>Build Boss</h1>
+  <div id="boss-speech">“Boot up, solder monster!”</div>
+</header>
+<main>
+  <section>
+    <h2>Project Sprint</h2>
+      <label>Project:
+        <select id="project">
+          <option value="fuzz">Fuzz Pedal</option>
+          <option value="synth">Mini Synth</option>
+          <option value="headphone">Headphone Amp</option>
+          <option value="daisy">Daisy Sampler</option>
+          <option value="fade">Fade Pedal</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+      <div id="tasks"></div>
+      <details style="margin-top:.6rem">
+        <summary>➕ Quick‑add task</summary>
+        <input id="new-task" placeholder="e.g. Route power plane…"/>
+        <button onclick="addTask()">Add</button>
+      </details>
+  </section>
+
+  <section>
+    <h2>Pomodoro</h2>
+      <div id="timer-display">25:00</div>
+      <button id="start">Start</button>
+      <button id="stop">Stop</button>
+      <button id="reset">Reset</button>
+      <small>25 / 5 cycle, long 15‑min break every 4.</small>
+  </section>
+
+  <section style="grid-column:1 / -1">
+    <h2>Daily Ritual Checklist</h2>
+    <textarea id="import" placeholder="Paste tasks here – one per line → import"></textarea><br/>
+    <button onclick="bulkImport()">Import</button>
+    <button onclick="clearRitual()">Clear Done</button>
+    <div id="ritual"></div>
+  </section>
+
+  <section>
+    <h2>Outsourcing Blocks</h2>
+    <div id="sessions"></div>
+  </section>
+
+  <section>
+    <h2>BPM Ticker</h2>
+    <div id="bpm" style="font-size:2rem">120</div>
+    <button onclick="bpmDown()">‑</button>
+    <button onclick="bpmUp()">+</button>
+    <small>Tap tempo with <kbd>Space</kbd></small>
+  </section>
+
+</main>
+
+<script>
+// ===== Boss quotes =====
+const quotes=[
+  "Boot up, solder monster!",
+  "Document or it didn't happen!",
+  "One checkbox at a time.",
+  "Smoke test beats smoke break.",
+  "Pixels don’t solder themselves.",
+  "Coffee first, then Gerbers.",
+  "DONE > perfect. Ship it!"
+];
+setInterval(()=>bossSpeech.textContent=quotes[Math.random()*quotes.length|0],12000);
+
+// ===== Task template =====
+const TASK_TPL=[
+  {phase:"Ideation",items:["Sketch concept","BOM & cost","Feasibility check"]},
+  {phase:"PCB Design",items:["Schematic capture","Layout & DRC","Gerber export"]},
+  {phase:"Assembly",items:["Stencil/paste","Reflow or hand‑solder","Enclosure prep"]},
+  {phase:"Testing",items:["Smoke test","Functional demo","Record video","Push docs"]}
+];
+
+const bossSpeech=document.getElementById('boss-speech');
+const projectSel=document.getElementById('project');
+const taskDiv=document.getElementById('tasks');
+projectSel.onchange=()=>loadTasks(projectSel.value);
+
+function loadTasks(proj){
+  taskDiv.innerHTML="";
+  const saved=JSON.parse(localStorage.getItem('t-'+proj)||"{}");
+  TASK_TPL.forEach((p,pi)=>{
+    const title=document.createElement('div');
+    title.className='phase-title';
+    title.textContent=p.phase;
+    taskDiv.appendChild(title);
+    p.items.forEach((t,ti)=>makeTaskRow(taskDiv,proj,`${pi}-${ti}`,t,saved));
+  });
+}
+function makeTaskRow(parent,proj,id,label,saved){
+  const row=document.createElement('label');
+  row.className='task-item';
+  const ck=document.createElement('input');
+  ck.type='checkbox';
+  ck.checked=saved[id]||false;
+  ck.onchange=()=>{saved[id]=ck.checked;localStorage.setItem('t-'+proj,JSON.stringify(saved));};
+  row.appendChild(ck);row.append(label);
+  parent.appendChild(row);
+}
+// Quick add
+function addTask(){
+  const txt=document.getElementById('new-task');
+  if(!txt.value.trim())return;
+  const proj=projectSel.value;
+  const saved=JSON.parse(localStorage.getItem('custom-'+proj)||"[]");
+  saved.push({label:txt.value,done:false});
+  localStorage.setItem('custom-'+proj,JSON.stringify(saved));
+  txt.value="";
+  renderCustom();
+}
+function renderCustom(){
+  const proj=projectSel.value;
+  const saved=JSON.parse(localStorage.getItem('custom-'+proj)||"[]");
+  if(!saved.length)return;
+  const head=document.createElement('div');
+  head.className='phase-title';
+  head.textContent='Custom';
+  taskDiv.appendChild(head);
+  saved.forEach((o,i)=>{
+    const id='c'+i;
+    makeTaskRow(taskDiv,proj,id,o.label,saved);
+  });
+}
+loadTasks(projectSel.value);
+
+// ===== Pomodoro =====
+let pMin=25,pSec=0,interval=null,cycles=0;
+const disp=document.getElementById('timer-display');
+function updDisp(){disp.textContent=String(pMin).padStart(2,'0')+':'+String(pSec).padStart(2,'0');}
+function tick(){
+  if(--pSec<0){pSec=59;pMin--;}
+  if(pMin<0){finished();}
+  updDisp();
+}
+function finished(){
+  clearInterval(interval);interval=null;
+  beep();bossSpeech.textContent="Break time! 🧠";
+  cycles++;pMin=(cycles%4===0)?15:5;pSec=0;updDisp();
+}
+document.getElementById('start').onclick=()=>{if(!interval){interval=setInterval(tick,1000);}};
+document.getElementById('stop').onclick=()=>{clearInterval(interval);interval=null;};
+document.getElementById('reset').onclick=()=>{clearInterval(interval);interval=null;pMin=25;pSec=0;updDisp();};
+updDisp();
+function beep(){
+  const ctx=new (window.AudioContext||window.webkitAudioContext)();
+  const osc=ctx.createOscillator();osc.frequency.value=880;
+  osc.connect(ctx.destination);osc.start();osc.stop(ctx.currentTime+.2);
+}
+
+// ===== Outsourcing schedule =====
+const days=["Mon","Wed","Fri"];
+const sesDiv=document.getElementById('sessions');
+function buildSessions(){
+  sesDiv.innerHTML="";
+  days.forEach(d=>{
+    const row=document.createElement('label');
+    row.className='task-item';
+    const ck=document.createElement('input');ck.type='checkbox';
+    const id='outs-'+d;
+    ck.checked=localStorage.getItem(id)==='1';
+    ck.onchange=()=>localStorage.setItem(id,ck.checked?'1':'0');
+    row.appendChild(ck);row.append(d+" 4h block");
+    sesDiv.appendChild(row);
+  });
+}
+buildSessions();
+
+// ===== Daily Ritual area =====
+const ritDiv=document.getElementById('ritual');
+const DEFAULT_RITUAL=["Breadboard sesh","Organize a bit","Shower","Dishes",
+  "Food secure","Meditation 30 min","Print Amp","Print Daisy","Print Fuzz",
+  "Print Matrix‑knit","AK","Corridor","Garden","Kitchen","Room clothes",
+  "Room music","Shave hair"];
+let ritual=JSON.parse(localStorage.getItem('ritual')||"null")||DEFAULT_RITUAL.map(t=>({t,done:false}));
+function saveRit(){localStorage.setItem('ritual',JSON.stringify(ritual));}
+function renderRit(){ritDiv.innerHTML="";ritual.forEach((o,i)=>{const row=document.createElement('label');row.className='task-item';
+  const ck=document.createElement('input');ck.type='checkbox';ck.checked=o.done;
+  ck.onchange=()=>{o.done=ck.checked;saveRit();};row.appendChild(ck);row.append(o.t);ritDiv.appendChild(row);});}
+function bulkImport(){
+  const txt=document.getElementById('import').value.trim();
+  if(!txt)return;
+  txt.split(/\n+/).forEach(l=>ritual.push({t:l.trim(),done:false}));
+  document.getElementById('import').value="";saveRit();renderRit();
+}
+function clearRitual(){ritual=ritual.filter(o=>!o.done);saveRit();renderRit();}
+renderRit();
+
+// ===== Tempo tap =====
+let tapTimes=[];
+function tap(){
+  const now=Date.now();
+  tapTimes=tapTimes.filter(t=>now-t<1500);
+  tapTimes.push(now);
+  if(tapTimes.length>1){
+    const intervals=tapTimes.slice(1).map((t,i)=>t-tapTimes[i]);
+    const avg=intervals.reduce((a,b)=>a+b,0)/intervals.length;
+    bpmDisplay(60000/avg);
+  }
+}
+function bpmDisplay(val){document.getElementById('bpm').textContent=Math.round(val);}
+function bpmUp(){bpmDisplay(+document.getElementById('bpm').textContent+1);}
+function bpmDown(){bpmDisplay(+document.getElementById('bpm').textContent-1);}
+window.onkeydown=e=>{if(e.code==='Space'){tap();e.preventDefault();}}
+</script>
+</body>
+</html>
