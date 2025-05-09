@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Build Boss — Docs + Media</title>
+<style>
+:root{--bg:#0d0d0d;--fg:#e0e0e0;--accent:#ff5252;--accent2:#22d4ff;--spacing:8px;font-family:'Fira Mono',monospace;}
+body{margin:0;background:var(--bg);color:var(--fg);}*{box-sizing:border-box}
+header{display:flex;align-items:center;gap:var(--spacing);padding:var(--spacing);}
+h1{margin:0;font-size:1.4rem;flex:1}
+#boss{width:140px;height:140px}
+#mouth{transform-origin:center}.talking #mouth{animation:talk .35s infinite alternate}
+@keyframes talk{0%{transform:scaleY(1)}100%{transform:scaleY(.1)}}
+#boss-eyes circle{animation:blink 5s infinite}@keyframes blink{0%,92%{r:8px;}94%,96%{r:1px;}98%,100%{r:8px;}}
+#boss-speech{font-weight:bold;white-space:nowrap}
+main{padding:var(--spacing);display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:2rem}
+section{border:1px solid #333;padding:var(--spacing);border-radius:6px}
+section h2{margin:0 0 .5rem;color:var(--accent)}
+.phase-title{font-weight:bold;margin-top:6px;color:var(--accent2)}
+.task-item{display:flex;align-items:center;font-size:.9rem;margin:2px 0}
+.task-item input{margin-right:.5rem}
+button{background:var(--accent);color:#fff;border:none;padding:.4rem .9rem;margin:.2rem .4rem .2rem 0;cursor:pointer;border-radius:4px}
+button:hover{opacity:.8}
+input,select,textarea{background:#111;color:#e0e0e0;border:1px solid #444;font-family:inherit;font-size:.85rem;padding:4px;border-radius:4px}
+#timer-display{font-size:2rem;margin:.5rem 0}
+textarea{width:100%;resize:vertical}
+small{font-size:.7rem;color:#888}
+pre.preview{white-space:pre-wrap;background:#111;padding:6px;border:1px solid #333;border-radius:4px;font-size:.85rem}
+.media-thumb{max-width:80px;max-height:80px;margin:2px;border:1px solid #555;border-radius:4px}
+</style>
+</head>
+<body>
+<header>
+  <svg id="boss" class="talking" viewBox="0 0 200 200">
+    <circle cx="100" cy="100" r="90" fill="#222"/>
+    <g id="boss-eyes"><circle cx="65" cy="80" r="8" fill="#fff"/><circle cx="135" cy="80" r="8" fill="#fff"/>
+      <circle cx="65" cy="80" r="4" fill="#000"/><circle cx="135" cy="80" r="4" fill="#000"/></g>
+    <rect id="mouth" x="60" y="120" width="80" height="22" rx="10" fill="#f33"/>
+  </svg>
+  <h1>Build Boss</h1><div id="boss-speech">“Pixels don’t solder themselves.”</div>
+</header>
+
+<main>
+  <!-- Project sprint, pomodoro, ritual, etc. (trimmed for brevity) -->
+  <section style="grid-column:1/-1">
+    <h2>Documentation Notebook + Media</h2>
+    <label>Project: <select id="docProj"></select></label>
+    <textarea id="docText" rows="6" placeholder="# Notes"></textarea>
+    <div>
+      <button onclick="saveDoc()">Save</button><button onclick="previewDoc()">Preview</button>
+      <button onclick="exportZip()">Export ZIP</button><span id="docSaved"></span>
+    </div>
+    <pre id="docPrev" class="preview" hidden></pre>
+    <hr>
+    <label>Attach media:
+      <input type="file" id="mediaInput" accept="image/*,audio/*,video/*" multiple/>
+    </label>
+    <div id="mediaList" style="display:flex;flex-wrap:wrap;"></div>
+  </section>
+</main>
+
+<!-- JSZip from CDN (tiny & cached) -->
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const quotes=["Boot up, solder monster!","Document or it didn't happen!","One checkbox at a time.","Smoke test beats smoke break.","Pixels don’t solder themselves.","Coffee first, then Gerbers.","DONE > perfect. Ship it!"];
+setInterval(()=>document.getElementById('boss-speech').textContent=quotes[Math.random()*quotes.length|0],12000);
+
+// project list sync
+const projList=["fuzz","synth","headphone","daisy","fade","custom"];
+const docProjSel=document.getElementById('docProj');
+projList.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;docProjSel.appendChild(o);});
+docProjSel.value='fuzz';
+
+// media persistence array must be declared before loadDoc
+let mediaArr = [];
+
+// media handling
+const mediaInput=document.getElementById('mediaInput');
+const mediaList=document.getElementById('mediaList');
+
+function loadMedia(){
+  mediaArr = JSON.parse(localStorage.getItem('media-'+docProjSel.value)||"[]");
+  renderMedia();
+}
+function saveMedia(){localStorage.setItem('media-'+docProjSel.value, JSON.stringify(mediaArr));}
+
+function renderMedia(){
+  mediaList.innerHTML="";
+  mediaArr.forEach((m,i)=>{
+    const blob = dataURLtoBlob(m.data);
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement(m.type.startsWith('image/')?'img':(m.type.startsWith('audio/')?'audio':'video'));
+    if(el.tagName==='IMG'){el.src=url;el.className='media-thumb';}
+    else{el.src=url;el.controls=true;el.className='media-thumb';}
+    const del = document.createElement('button'); del.textContent='×';
+    del.style.position='absolute'; del.style.top='2px'; del.style.right='2px';
+    del.onclick=()=>{ mediaArr.splice(i,1); saveMedia(); renderMedia(); };
+    const wrap = document.createElement('div'); wrap.style.position='relative';
+    wrap.appendChild(el); wrap.appendChild(del);
+    mediaList.appendChild(wrap);
+  });
+}
+
+mediaInput.onchange = e => {
+  [...e.target.files].forEach(f=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{ mediaArr.push({name:f.name,type:f.type,data:ev.target.result}); saveMedia(); renderMedia(); };
+    reader.readAsDataURL(f);
+  });
+};
+
+// documentation
+const docText=document.getElementById('docText');
+const docPrev=document.getElementById('docPrev');
+const savedLbl=document.getElementById('docSaved');
+
+function loadDoc(){
+  docText.value = localStorage.getItem('doc-'+docProjSel.value) || "";
+  loadMedia();  // now mediaArr exists
+}
+function saveDoc(){
+  localStorage.setItem('doc-'+docProjSel.value, docText.value);
+  savedLbl.textContent=" ✓";
+  setTimeout(()=>savedLbl.textContent="",1500);
+}
+function previewDoc(){
+  docPrev.textContent = docText.value;
+  docPrev.hidden = !docPrev.hidden;
+}
+
+docProjSel.onchange = loadDoc;
+loadDoc();
+
+// export ZIP
+function dataURLtoBlob(dataurl){
+  const [header,b64] = dataurl.split(',');
+  const mime = header.match(/:(.*?);/)[1];
+  const bytes = atob(b64);
+  const buf = new Uint8Array(bytes.length);
+  for(let i=0;i<bytes.length;i++) buf[i]=bytes.charCodeAt(i);
+  return new Blob([buf],{type:mime});
+}
+
+async function exportZip(){
+  const zip = new JSZip();
+  zip.file(docProjSel.value+".md", docText.value||"# "+docProjSel.value);
+  mediaArr.forEach(m => zip.file("media/"+m.name, dataURLtoBlob(m.data)));
+  const blob = await zip.generateAsync({type:"blob"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = docProjSel.value+"_doc_"+new Date().toISOString().slice(0,10)+".zip";
+  a.click();
+}
+</script>
+</body>
+</html>
