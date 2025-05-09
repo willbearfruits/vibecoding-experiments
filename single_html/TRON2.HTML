@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Tron Light Cycle RTX-Style (Debugging)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* CSS remains the same */
+        body { margin: 0; background-color: #000; color: #0ff; font-family: 'Press Start 2P', cursive; overflow: hidden; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        #gameContainer { position: relative; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        canvas { display: block; width: 100%; height: 100%; }
+        #uiOverlay { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; align-items: flex-start; z-index: 10; pointer-events: none; }
+        #controls, #info { display: flex; gap: 10px; background-color: rgba(0, 0, 0, 0.6); padding: 10px; border-radius: 5px; border: 1px solid #0ff; box-shadow: 0 0 8px #0ff; pointer-events: auto; }
+        #info { flex-direction: column; align-items: flex-start; font-size: 0.75em; min-width: 150px; }
+        #info span { color: #fff; text-shadow: 0 0 3px #000; line-height: 1.4; }
+        #info .bonus-active { color: #ff0; font-weight: bold; }
+        button { font-family: 'Press Start 2P', cursive; background: linear-gradient(145deg, #2a2a2a, #0a0a0a); color: #0ff; border: 1px solid #0ff; padding: 8px 15px; border-radius: 5px; cursor: pointer; text-shadow: 0 0 3px #0ff; box-shadow: 0 0 5px #0ff, inset 0 0 3px #333; transition: all 0.2s ease; font-size: 0.8em; }
+        button:hover, button:focus { background: linear-gradient(145deg, #333, #111); color: #fff; box-shadow: 0 0 8px #0ff, 0 0 12px #0ff, inset 0 0 4px #444; transform: scale(1.05); outline: none; }
+        button:active { transform: scale(0.98); box-shadow: 0 0 3px #0ff, inset 0 0 4px #555; }
+        #messageBox { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.9); color: #fff; padding: 35px 45px; border: 2px solid #0ff; box-shadow: 0 0 20px #0ff; border-radius: 10px; text-align: center; font-size: 1.3em; display: none; z-index: 20; pointer-events: auto; }
+        #messageBox p { margin-bottom: 25px; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="uiOverlay">
+            <div id="controls">
+                <button id="startButton">Start</button>
+                <button id="resetButton">Reset</button>
+                <button id="fullscreenButton">Full Screen</button>
+                <button id="cameraButton">Toggle Cam (Chase)</button>
+            </div>
+             <div id="info">
+                <span id="statusText">Status: Idle</span>
+                <span id="playerSpeedText">Player Speed: Normal</span>
+                <span id="aiSpeedText">AI Speed: Normal</span>
+                <span id="controlInfo">Controls: Arrows/WASD/Gamepad</span>
+            </div>
+        </div>
+        <div id="messageBox">
+            <p id="messageText">Welcome to 3D Tron!</p>
+            <button id="closeMessageButton">OK</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/UnrealBloomPass.js';
+        import { SSAOPass } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/postprocessing/SSAOPass.js';
+        import { Reflector } from 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/jsm/objects/Reflector.js';
+
+        // --- Three.js Setup ---
+        let scene, camera, renderer, composer;
+        let gameContainer;
+        let clock = new THREE.Clock();
+        let groundMirror;
+
+        // --- Game Constants ---
+        const GRID_UNIT = 5;
+        const ARENA_SIZE = 150;
+        const BASE_SPEED = GRID_UNIT * 7; // Default: 35
+        const BOOST_SPEED_MULTIPLIER = 1.8;
+        const BOOST_DURATION = 4;
+        const PLAYER_COLOR = 0x00ffff;
+        const AI_COLOR = 0xffa500;
+        const BONUS_COLOR = 0xff00ff;
+        const TRAIL_HEIGHT = GRID_UNIT * 0.8;
+        const TRAIL_THICKNESS = GRID_UNIT * 0.3;
+        const TRAIL_SEGMENT_MIN_LENGTH = GRID_UNIT * 0.5;
+        const BONUS_SPAWN_INTERVAL = 8;
+        const BONUS_SIZE = GRID_UNIT * 0.5;
+        const AI_RAYCAST_DISTANCE = GRID_UNIT * 4.5;
+        const BIKE_TURN_SMOOTHNESS = 0.15;
+        const ENV_MAP_INTENSITY = 1.5;
+
+        // --- Game State ---
+        let player, ai;
+        let running = false;
+        let gameOver = false;
+        let gamepadIndex = null;
+        let cameraMode = 'chase';
+        let allTrails = [];
+        let activeBonuses = [];
+        let bonusSpawnTimer = 0;
+        let raycaster = new THREE.Raycaster();
+        let environmentMap = null;
+        let frameCount = 0;
+
+        // --- DOM Elements ---
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const cameraButton = document.getElementById('cameraButton');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const closeMessageButton = document.getElementById('closeMessageButton');
+        const statusText = document.getElementById('statusText');
+        const playerSpeedText = document.getElementById('playerSpeedText');
+        const aiSpeedText = document.getElementById('aiSpeedText');
+
+        // --- Initialization ---
+        function init() {
+            console.log("DEBUG: init() called");
+            gameContainer = document.getElementById('gameContainer');
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, ARENA_SIZE * 4);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            gameContainer.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x606080, 1.0);
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 2.5);
+            directionalLight.position.set(20, 70, 50);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            directionalLight.shadow.camera.near = 10;
+            directionalLight.shadow.camera.far = ARENA_SIZE * 2;
+            directionalLight.shadow.bias = -0.001;
+             directionalLight.shadow.camera.left = -ARENA_SIZE * 1.1;
+             directionalLight.shadow.camera.right = ARENA_SIZE * 1.1;
+             directionalLight.shadow.camera.top = ARENA_SIZE * 1.1;
+             directionalLight.shadow.camera.bottom = -ARENA_SIZE * 1.1;
+            scene.add(directionalLight);
+
+            // Environment Map & Background
+            const cubeTextureLoader = new THREE.CubeTextureLoader();
+            const textureURLs = [ /* ... placeholder URLs ... */
+                 'https://placehold.co/256x256/000011/00ffff?text=PX', 'https://placehold.co/256x256/000011/00ffff?text=NX',
+                'https://placehold.co/256x256/000011/00ffff?text=PY', 'https://placehold.co/256x256/000011/00ffff?text=NY',
+                'https://placehold.co/256x256/000011/00ffff?text=PZ', 'https://placehold.co/256x256/000011/00ffff?text=NZ'
+            ];
+             environmentMap = cubeTextureLoader.load(textureURLs,
+                 () => { console.log("DEBUG: Cubemap loaded successfully."); },
+                 undefined,
+                 (error) => { console.error("DEBUG: Error loading cubemap:", error); scene.background = new THREE.Color(0x050510); }
+             );
+             environmentMap.encoding = THREE.sRGBEncoding;
+             scene.background = environmentMap;
+
+            // Reflective Ground Plane
+            const groundGeometry = new THREE.PlaneGeometry(ARENA_SIZE * 2, ARENA_SIZE * 2);
+             groundMirror = new Reflector(groundGeometry, {
+                 clipBias: 0.003,
+                 textureWidth: Math.floor(window.innerWidth * window.devicePixelRatio * 0.75),
+                 textureHeight: Math.floor(window.innerHeight * window.devicePixelRatio * 0.75),
+                 color: 0x777777,
+                 recursion: 1
+             });
+             groundMirror.position.y = -TRAIL_HEIGHT / 2 - 0.05;
+             groundMirror.rotation.x = -Math.PI / 2;
+             scene.add(groundMirror);
+
+            // Environment Geometry
+            createEnvironmentGeometry();
+            // Arena Walls
+            createArenaWalls();
+
+            // Post-processing Composer
+            console.log("DEBUG: Creating EffectComposer...");
+            composer = new EffectComposer(renderer);
+            console.log("DEBUG: EffectComposer created:", composer);
+            const renderPass = new RenderPass(scene, camera);
+            composer.addPass(renderPass);
+            const ssaoPass = new SSAOPass(scene, camera, window.innerWidth, window.innerHeight);
+            ssaoPass.kernelRadius = 12; ssaoPass.minDistance = 0.001; ssaoPass.maxDistance = 0.1;
+            composer.addPass(ssaoPass);
+            const bloomPass = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 1.4, 0.8, 0.65);
+            composer.addPass(bloomPass);
+
+            // Initial Reset
+            resetGame();
+
+            // Start Animation Loop
+            console.log("DEBUG: Starting animation loop...");
+            animate();
+        }
+
+         function createEnvironmentGeometry() { /* ... identical ... */ }
+        function createArenaWalls() { /* ... identical ... */ }
+        function createLightCycle(color, startPos, startDir) { /* ... identical ... */ }
+        function addTrailSegment(cycle) { /* ... identical ... */ }
+        function spawnBonus() { /* ... identical ... */ }
+        function collectBonus(cycle, bonusMesh) { /* ... identical ... */ }
+        function updateBonusTimers(cycle, delta) { /* ... identical ... */ }
+
+
+        // --- Game Loop (Animation) ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+            frameCount++;
+
+            // DEBUG: Log game state periodically
+            // if (frameCount % 120 === 0) { // Log every ~2 seconds
+            //      console.log(`DEBUG Frame: ${frameCount}, Running: ${running}, GameOver: ${gameOver}, Delta: ${delta.toFixed(4)}`);
+            // }
+
+            // Smooth Visual Rotation
+            if (player && player.mesh) {
+                player.mesh.rotation.y = THREE.MathUtils.lerp(player.mesh.rotation.y, player.targetRotationY, BIKE_TURN_SMOOTHNESS);
+                 while (player.targetRotationY - player.mesh.rotation.y > Math.PI) player.mesh.rotation.y += Math.PI * 2;
+                 while (player.targetRotationY - player.mesh.rotation.y < -Math.PI) player.mesh.rotation.y -= Math.PI * 2;
+            }
+            if (ai && ai.mesh) {
+                 ai.mesh.rotation.y = THREE.MathUtils.lerp(ai.mesh.rotation.y, ai.targetRotationY, BIKE_TURN_SMOOTHNESS);
+                 while (ai.targetRotationY - ai.mesh.rotation.y > Math.PI) ai.mesh.rotation.y += Math.PI * 2;
+                 while (ai.targetRotationY - ai.mesh.rotation.y < -Math.PI) ai.mesh.rotation.y -= Math.PI * 2;
+            }
+
+            // *** Core Game Logic Update Call ***
+            if (running && !gameOver) {
+                updateGame(delta); // This calls the function containing moveCycle
+            } else {
+                 // Only handle gamepad connection/disconnection checks when not running
+                 handleGamepadInput(true); // Pass flag to indicate only connection check needed
+            }
+
+            // Update bonus timers regardless of running state
+            if(player) updateBonusTimers(player, delta);
+            if(ai) updateBonusTimers(ai, delta);
+
+            updateCamera();
+            if (composer) {
+                composer.render(delta);
+            } else if (renderer) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // --- Game Logic Update ---
+        function updateGame(delta) {
+            // DEBUG: Log entry into updateGame - RE-ENABLED
+            console.log(`DEBUG: updateGame(delta=${delta.toFixed(4)}) called. Running: ${running}, GameOver: ${gameOver}`);
+
+            if (!running || gameOver) return;
+            statusText.textContent = "Status: Running";
+            handleGamepadInput(false); // Handle actual input when running
+            if (ai) updateAI(ai, player, delta);
+            if (player) moveCycle(player, delta); // Move player
+            if (!gameOver && ai) {
+                moveCycle(ai, delta); // Move AI
+            }
+
+            // Spawn Bonuses
+            bonusSpawnTimer += delta;
+            if (bonusSpawnTimer >= BONUS_SPAWN_INTERVAL) {
+                bonusSpawnTimer = 0;
+                if (activeBonuses.length < 3) {
+                     spawnBonus();
+                }
+            }
+
+            // Reset turn flags (less critical now, but keep for consistency)
+            if (player) player.canTurn = true;
+            if (ai) ai.canTurn = true;
+        }
+
+        // --- Movement & Collision ---
+        function moveCycle(cycle, delta) {
+             if (gameOver || !cycle) return;
+             // DEBUG: Log movement attempt with details - RE-ENABLED & ENHANCED
+             console.log(`DEBUG: moveCycle(${cycle.isAI ? 'AI' : 'Player'}) - Vel: ${cycle.velocity.toFixed(1)} Delta: ${delta.toFixed(4)} Pos: (${cycle.position.x.toFixed(1)}, ${cycle.position.z.toFixed(1)})`);
+
+            const moveDistance = cycle.velocity * delta;
+            // DEBUG: Log calculated move distance - RE-ENABLED
+            console.log(`DEBUG: moveDistance = ${moveDistance.toFixed(4)}`);
+
+            // Check if moveDistance is valid
+            if (isNaN(moveDistance) || moveDistance <= 0) {
+                // Log only if delta is also suspect, otherwise small moves are ok
+                if (delta <= 0 || isNaN(delta)) {
+                    console.warn(`DEBUG: Invalid moveDistance (${moveDistance}) for ${cycle.isAI ? 'AI' : 'Player'}. Velocity: ${cycle.velocity}, Delta: ${delta}`);
+                }
+                // Don't return here, allow zero movement if intended (e.g., velocity 0)
+            }
+
+            const moveVector = cycle.direction.clone().multiplyScalar(moveDistance);
+            const nextPos = cycle.position.clone().add(moveVector);
+
+            // --- Collision Detection ---
+            const bikeFrontOffset = cycle.direction.clone().multiplyScalar(GRID_UNIT * 0.6);
+            const rayOrigin = cycle.position.clone().add(bikeFrontOffset);
+            raycaster.set(rayOrigin, cycle.direction);
+            // Boundary Check
+            raycaster.far = moveDistance + GRID_UNIT * 0.1;
+            const boundaryIntersects = raycaster.intersectObjects(allTrails.filter(o => o && o.userData.isBoundary), false); // Added null check for o
+            if (boundaryIntersects.length > 0 && boundaryIntersects[0].distance <= moveDistance) {
+                 console.log("DEBUG: Boundary Hit Detected by", cycle.isAI ? "AI" : "Player");
+                 endGame(cycle === player ? "Player hit boundary!" : "AI hit boundary!"); return;
+            }
+            // Trail Check
+             raycaster.far = moveDistance + GRID_UNIT * 0.1;
+             const collidableTrails = allTrails.filter(t => t && !t.userData.isBoundary && t.userData.owner !== cycle.mesh); // Added null check for t
+             const trailIntersects = raycaster.intersectObjects(collidableTrails, false);
+             const selfCollidableTrails = allTrails.filter(t => t && t.userData.owner === cycle.mesh && cycle.trailSegments.indexOf(t) < cycle.trailSegments.length - 3); // Added null check for t
+             const selfTrailIntersects = raycaster.intersectObjects(selfCollidableTrails, false);
+             if (trailIntersects.length > 0 && trailIntersects[0].distance <= moveDistance) {
+                 console.log("DEBUG: Opponent Trail Hit Detected by", cycle.isAI ? "AI" : "Player");
+                 endGame(cycle === player ? "Player hit AI trail!" : "AI hit Player trail!"); return;
+             }
+             if (selfTrailIntersects.length > 0 && selfTrailIntersects[0].distance <= moveDistance) {
+                  console.log("DEBUG: Self Trail Hit Detected by", cycle.isAI ? "AI" : "Player");
+                  endGame(cycle === player ? "Player hit own trail!" : "AI hit own trail!"); return;
+             }
+             // --- END Collision Detection ---
+
+
+            // --- Update Position ---
+            const oldPos = cycle.position.clone(); // DEBUG
+            cycle.position.copy(nextPos); // Updates logical position
+            if (cycle.mesh) cycle.mesh.position.copy(nextPos); // Updates visual mesh position
+
+            // DEBUG: Log position update - RE-ENABLED
+            console.log(`DEBUG: Pos updated for ${cycle.isAI ? 'AI' : 'Player'}. Old: (${oldPos.x.toFixed(1)}, ${oldPos.z.toFixed(1)}), New: (${cycle.position.x.toFixed(1)}, ${cycle.position.z.toFixed(1)})`);
+
+
+            // --- Update Trail ---
+            const lastTrailPoint = cycle.trailPoints[cycle.trailPoints.length - 1];
+            if (cycle.position.distanceTo(lastTrailPoint) > TRAIL_SEGMENT_MIN_LENGTH) {
+                cycle.trailPoints.push(cycle.position.clone());
+                addTrailSegment(cycle);
+            }
+
+            // --- Check Bonus Collection ---
+             activeBonuses.forEach(bonus => {
+                 if (bonus && bonus.position && cycle && cycle.position &&
+                     cycle.position.distanceTo(bonus.position) < BONUS_SIZE + GRID_UNIT * 0.4) {
+                     collectBonus(cycle, bonus);
+                 }
+             });
+        }
+
+
+        // --- AI Logic ---
+        function updateAI(aiCycle, playerCycle, delta) { /* ... identical ... */ }
+        function checkRaycast(origin, direction, distance, objects, selfMesh) { /* ... identical ... */ }
+
+
+        // --- Input Handling ---
+         function handleKeyDown(e) {
+             console.log(`DEBUG: KeyDown event: ${e.key}`);
+             // Allow Enter/Start even if not running
+             if (e.key === 'Enter') {
+                 if (gameOver || messageBox.style.display === 'block') {
+                     console.log("DEBUG: Enter key pressed to start/restart");
+                     if (gameOver) resetGame();
+                     startGame();
+                 }
+                 return; // Prevent turning if Enter was pressed
+             }
+
+             // Handle turns only if running
+             if (!player || gameOver || !running) {
+                 return;
+             }
+
+             let turned = false;
+             switch (e.key) {
+                 case 'ArrowLeft': case 'a': turned = turnCycle(player, 'left'); break;
+                 case 'ArrowRight': case 'd': turned = turnCycle(player, 'right'); break;
+             }
+             if (turned) console.log("DEBUG: Player turned via keyboard");
+         }
+
+         // Modified to accept a flag to only check connections
+         function handleGamepadInput(checkConnectionsOnly = false) {
+             const gamepads = navigator.getGamepads();
+             let activeGp = null;
+             // Connection check logic (same as before)
+             if (gamepadIndex !== null && gamepads[gamepadIndex]) { activeGp = gamepads[gamepadIndex]; }
+             else { /* ... find first connected gamepad ... */
+                 for (let i = 0; i < gamepads.length; i++) { if (gamepads[i] && gamepads[i].connected) { if (gamepadIndex === null) { console.log("DEBUG: Gamepad connected:", gamepads[i].id); showMessage(`Controller Connected:\n${gamepads[i].id}`); setTimeout(hideMessage, 2000); } gamepadIndex = i; activeGp = gamepads[i]; break; } }
+                 if (activeGp === null && gamepadIndex !== null) { console.log("DEBUG: Gamepad disconnected."); showMessage("Controller Disconnected."); setTimeout(hideMessage, 2000); gamepadIndex = null; }
+             }
+
+             // If only checking connections, exit here
+             if (checkConnectionsOnly || !activeGp || !player) return;
+
+             const gp = activeGp;
+             let turned = false;
+             const threshold = 0.6;
+
+             // Check Start button FIRST (can be pressed anytime)
+             // Use a simple flag to avoid rapid-fire start presses
+             let startButtonPressed = gp.buttons[9]?.pressed;
+             if (startButtonPressed && !gp.lastStartPressed) { // Check if pressed *now* but not *last frame*
+                 if (!running && (gameOver || messageBox.style.display === 'block')) {
+                     console.log("DEBUG: Gamepad Start pressed to start/restart");
+                     if (gameOver) resetGame();
+                     startGame();
+                     gp.lastStartPressed = true; // Store state for next frame
+                     return; // Prevent turning immediately
+                 }
+             }
+             gp.lastStartPressed = startButtonPressed; // Store state for next frame
+
+
+             // Check turns only if running
+             if (!gameOver && running) {
+                 if (gp.buttons[14]?.pressed || gp.axes[0] < -threshold) {
+                     turned = turnCycle(player, 'left');
+                 } else if (gp.buttons[15]?.pressed || gp.axes[0] > threshold) {
+                     turned = turnCycle(player, 'right');
+                 }
+                 if (turned) console.log("DEBUG: Player turned via gamepad");
+             }
+         }
+
+         function turnCycle(cycle, turn) { /* ... identical (sets targetRotationY) ... */ }
+
+        // --- Camera Control ---
+        function updateCamera() { /* ... identical ... */ }
+        function toggleCamera() { /* ... identical ... */ }
+
+
+        // --- Game State Management ---
+        function startGame() {
+            console.log("DEBUG: startGame() called");
+            if (running) {
+                 console.log("DEBUG: startGame() aborted, already running.");
+                 return;
+            }
+            hideMessage();
+            if (gameOver || !player) {
+                 console.log("DEBUG: startGame() calling resetGame() first.");
+                 resetGame();
+            }
+            // Ensure player/ai exist after potential reset
+            if (!player || !ai) {
+                console.error("DEBUG: Player or AI is null after reset in startGame!");
+                return; // Cannot start
+            }
+            running = true;
+            gameOver = false;
+            // Reset velocities just in case they were 0 from previous endGame
+            player.velocity = BASE_SPEED;
+            ai.velocity = BASE_SPEED;
+            player.boostTimer = 0; // Ensure boost timer is reset
+            ai.boostTimer = 0;
+            if (player.material) player.material.emissiveIntensity = 2.5; // Reset boost visual
+            if (ai.material) ai.material.emissiveIntensity = 2.5;
+
+            bonusSpawnTimer = BONUS_SPAWN_INTERVAL / 2;
+            statusText.textContent = "Status: Running";
+            console.log("DEBUG: Game Started! running =", running, "gameOver =", gameOver);
+        }
+        function endGame(reason) {
+            console.log("DEBUG: endGame() called with reason:", reason);
+            if (gameOver) return;
+            running = false;
+            gameOver = true;
+            // Set velocities to 0 immediately
+            if(player) player.velocity = 0;
+            if(ai) ai.velocity = 0;
+            showMessage(`Game Over!\n${reason}`);
+            statusText.textContent = `Status: Game Over!`;
+        }
+        function resetGame() {
+             console.log("DEBUG: resetGame() called");
+            running = false;
+            gameOver = false;
+            statusText.textContent = "Status: Idle";
+            playerSpeedText.textContent = "Player Speed: Normal";
+            aiSpeedText.textContent = "AI Speed: Normal";
+            playerSpeedText.classList.remove('bonus-active');
+            aiSpeedText.classList.remove('bonus-active');
+
+            // Clear dynamic objects
+            if (player && player.mesh) scene.remove(player.mesh);
+            if (ai && ai.mesh) scene.remove(ai.mesh);
+            allTrails.forEach(trailMesh => { if (trailMesh && !trailMesh.userData.isBoundary) { scene.remove(trailMesh); if(trailMesh.geometry) trailMesh.geometry.dispose(); } });
+             if (player && player.trailMaterial) player.trailMaterial.dispose();
+             if (ai && ai.trailMaterial) ai.trailMaterial.dispose();
+             if (player && player.material) player.material.dispose();
+             if (ai && ai.material) ai.material.dispose();
+            allTrails = allTrails.filter(t => t && t.userData.isBoundary);
+            activeBonuses.forEach(bonusMesh => { if (bonusMesh) { scene.remove(bonusMesh); if(bonusMesh.geometry) bonusMesh.geometry.dispose(); if(bonusMesh.material) bonusMesh.material.dispose(); } });
+            activeBonuses = [];
+            bonusSpawnTimer = 0;
+            player = null; ai = null;
+
+            // Create new players
+            const playerStartPos = new THREE.Vector3(-ARENA_SIZE / 2, 0, 0); const playerStartDir = new THREE.Vector3(1, 0, 0);
+            player = createLightCycle(PLAYER_COLOR, playerStartPos, playerStartDir); player.isAI = false; scene.add(player.mesh);
+            const aiStartPos = new THREE.Vector3(ARENA_SIZE / 2, 0, 0); const aiStartDir = new THREE.Vector3(-1, 0, 0);
+            ai = createLightCycle(AI_COLOR, aiStartPos, aiStartDir); ai.isAI = true; scene.add(ai.mesh);
+
+             // Reset camera
+             cameraMode = 'chase'; cameraButton.textContent = 'Toggle Cam (Chase)';
+             if (player && player.mesh) { const bikePos = player.mesh.position; const offset = player.direction.clone().multiplyScalar(-GRID_UNIT * 3.5).add(new THREE.Vector3(0, GRID_UNIT * 1.8, 0)); if (camera) camera.position.copy(bikePos.clone().add(offset)); updateCamera(); }
+            hideMessage();
+             if (renderer && composer) composer.render(clock.getDelta());
+             console.log("DEBUG: resetGame() finished.");
+        }
+
+        // --- Utility Functions ---
+        function showMessage(text) { /* ... identical ... */ }
+        function hideMessage() {
+             console.log("DEBUG: Hiding message box");
+             messageBox.style.display = 'none';
+        }
+        function toggleFullScreen() { /* ... identical ... */ }
+
+        // --- Event Listeners ---
+         window.addEventListener('resize', () => { /* ... identical (with composer check) ... */ });
+        document.addEventListener('keydown', handleKeyDown);
+        startButton.addEventListener('click', () => {
+             console.log("DEBUG: Start Button clicked. Running:", running, "GameOver:", gameOver);
+             if (!running) {
+                 // No need to reset here if just starting, startGame handles it if gameOver
+                 console.log("DEBUG: Start Button calling startGame()");
+                 startGame();
+             } else {
+                 console.log("DEBUG: Start Button clicked, but game already running.");
+             }
+        });
+        resetButton.addEventListener('click', () => {
+             console.log("DEBUG: Reset Button clicked.");
+             resetGame();
+        });
+        fullscreenButton.addEventListener('click', toggleFullScreen);
+        cameraButton.addEventListener('click', toggleCamera);
+        closeMessageButton.addEventListener('click', () => {
+             console.log("DEBUG: Close Message Button clicked.");
+             hideMessage();
+             if(gameOver) {
+                 console.log("DEBUG: Close Message Button calling resetGame() after game over.");
+                 resetGame();
+             }
+        });
+
+        // --- Start ---
+         window.onload = () => {
+             console.log("DEBUG: window.onload called");
+             try {
+                 init();
+                 showMessage("3D Tron RTX-Style!\nReflections, AO, Environment!\nPress Start or Enter");
+             } catch (error) {
+                 console.error("Initialization failed:", error);
+                 messageText.innerHTML = `Initialization Failed:<br>${error.message}<br>Check console for details.`;
+                 messageBox.style.display = 'block';
+             }
+         };
+
+    </script>
+</body>
+</html>
+```
+
+**Key Logging Added/Ensured:**
+
+* `updateGame` start log re-enabled.
+* `moveCycle` start log re-enabled and enhanced (shows velocity, delta, position).
+* `moveCycle` logs the calculated `moveDistance`.
+* `moveCycle` logs the old and new positions *after* the update lines are executed.
+* Added checks/warnings for invalid `moveDistance`.
+* Added logs to the `startGame` function start/end and state changes.
+* Added logs to event listeners (`startButton`, `keydown`, `gamepad`) to confirm they trigger `startGame`.
+* Added periodic logging in `animate` to monitor `running` and `gameOver` state.
+
+Please run this version, open the console, try starting the game, and observe the logs. Pay close attention to:
+
+1.  Does `DEBUG: updateGame(...) called.` appear repeatedly after you start?
+2.  Does `DEBUG: moveCycle(Player) ...` appear?
+3.  What is the value of `DEBUG: moveDistance = ...`? Is it greater than zero?
+4.  Does `DEBUG: Pos updated for Player...` appear, and are the "Old" and "New" positions different?
+
+This detailed trace should reveal exactly where the process is stoppi
