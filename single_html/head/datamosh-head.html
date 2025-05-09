@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compressed Head Datamoshing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: monospace;
+            background-color: black;
+        }
+        
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 32px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background-color: rgba(0, 0, 30, 0.8);
+            color: white;
+            border: 1px solid rgba(50, 50, 255, 0.3);
+            border-radius: 24px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 12px rgba(0, 0, 255, 0.2);
+        }
+        
+        button:hover {
+            background-color: rgba(10, 10, 40, 0.8);
+            box-shadow: 0 4px 15px rgba(50, 50, 255, 0.3);
+        }
+        
+        .status {
+            position: absolute;
+            top: 32px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .status-box {
+            padding: 8px 16px;
+            background-color: rgba(0, 0, 30, 0.6);
+            color: white;
+            border-radius: 8px;
+            text-shadow: 0 0 8px rgba(0, 50, 255, 0.5);
+        }
+        
+        .image-upload {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .image-input {
+            background-color: rgba(0, 0, 30, 0.6);
+            color: white;
+            border-radius: 8px;
+            padding: 6px 12px;
+            border: 1px solid rgba(50, 50, 255, 0.3);
+        }
+        
+        .image-input::-webkit-file-upload-button {
+            background-color: rgba(10, 10, 40, 0.8);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+        }
+        
+        .resolution-controls {
+            position: absolute;
+            bottom: 80px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .resolution-slider {
+            width: 200px;
+            margin: 0 10px;
+        }
+        
+        .resolution-label {
+            color: white;
+            background-color: rgba(0, 0, 30, 0.6);
+            padding: 6px 12px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container">
+        <canvas id="mainCanvas"></canvas>
+    </div>
+    
+    <div class="status">
+        <div class="status-box" id="status-text">Compressed head awaiting datamoshing...</div>
+    </div>
+    
+    <div class="image-upload">
+        <input type="file" id="image-input" class="image-input" accept="image/*">
+    </div>
+    
+    <div class="resolution-controls">
+        <div class="resolution-label">Compression Level: </div>
+        <input type="range" min="2" max="64" value="20" class="resolution-slider" id="resolution-slider">
+    </div>
+    
+    <div class="controls">
+        <button id="toggle-button">Begin Experience</button>
+    </div>
+
+    <script>
+        // Global variables
+        let isPlaying = false;
+        let animationFrameId = null;
+        let audioSetup = false;
+        let audioNodes = {};
+        let time = 0;
+        let intensity = 0;
+        let phase = 'calm';
+        let userImage = null;
+        let headOutline = null;
+        let showUserImage = true;
+        let frameHistory = [];
+        let maxHistoryLength = 10;
+        let blockSize = 20; // Initial block size for the compression artifacts
+        let currentImageData = null;
+        let previousImageData = null;
+        let keyframes = [];
+        let lastKeyframeTime = 0;
+        
+        // Get DOM elements
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d');
+        const toggleButton = document.getElementById('toggle-button');
+        const statusText = document.getElementById('status-text');
+        const imageInput = document.getElementById('image-input');
+        const resolutionSlider = document.getElementById('resolution-slider');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // Initialize
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Handle resolution slider
+        resolutionSlider.addEventListener('input', function() {
+            blockSize = parseInt(this.value);
+        });
+        
+        // Handle image upload
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    userImage = img;
+                    showUserImage = true;
+                    
+                    // Reset frame history when image changes
+                    frameHistory = [];
+                    keyframes = [];
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Create default head outline
+        function createHeadOutline() {
+            const size = 300;
+            const offscreenCanvas = document.createElement('canvas');
+            offscreenCanvas.width = size;
+            offscreenCanvas.height = size;
+            const offCtx = offscreenCanvas.getContext('2d');
+            
+            // Background
+            offCtx.fillStyle = 'black';
+            offCtx.fillRect(0, 0, size, size);
+            
+            // Head shape
+            offCtx.fillStyle = '#cccccc';
+            offCtx.beginPath();
+            offCtx.ellipse(size/2, size/2, size/3, size/2.5, 0, 0, Math.PI * 2);
+            offCtx.fill();
+            
+            // Eyes
+            offCtx.fillStyle = 'black';
+            offCtx.beginPath();
+            offCtx.ellipse(size/2 - 30, size/2 - 20, 10, 15, 0, 0, Math.PI * 2);
+            offCtx.fill();
+            
+            offCtx.beginPath();
+            offCtx.ellipse(size/2 + 30, size/2 - 20, 10, 15, 0, 0, Math.PI * 2);
+            offCtx.fill();
+            
+            // Mouth
+            offCtx.beginPath();
+            offCtx.ellipse(size/2, size/2 + 40, 30, 10, 0, 0, Math.PI);
+            offCtx.stroke();
+            
+            return offscreenCanvas;
+        }
+        
+        // Create a new keyframe
+        function createKeyframe(sourceData) {
+            // Clone the current image data
+            const keyframe = new ImageData(
+                new Uint8ClampedArray(sourceData.data), 
+                sourceData.width, 
+                sourceData.height
+            );
+            return keyframe;
+        }
+        
+        // Setup audio
+        async function setupAudio() {
+            if (audioSetup) return;
+            
+            await Tone.start();
+            Tone.Transport.bpm.value = 80;
+            
+            // Create synthesizers
+            // Glitch synth - for digital errors and glitches
+            const glitchSynth = new Tone.Synth({
+                oscillator: {
+                    type: 'square8',
+                    modulationType: 'sawtooth',
+                    harmonicity: 1.5,
+                    modulationIndex: 2
+                },
+                envelope: {
+                    attack: 0.01,
+                    decay: 0.1,
+                    sustain: 0.1,
+                    release: 0.1
+                }
+            });
+            
+            // Ambient background synth
+            const padSynth = new Tone.PolySynth(Tone.FMSynth, {
+                harmonicity: 3,
+                modulationIndex: 10,
+                oscillator: {
+                    type: 'sine'
+                },
+                envelope: {
+                    attack: 0.5,
+                    decay: 0.5,
+                    sustain: 0.5,
+                    release: 1
+                },
+                modulation: {
+                    type: 'square'
+                },
+                modulationEnvelope: {
+                    attack: 0.5,
+                    decay: 0.5,
+                    sustain: 0.5,
+                    release: 1
+                }
+            });
+            
+            // Bass for foundation
+            const bassSynth = new Tone.MonoSynth({
+                oscillator: {
+                    type: 'sine'
+                },
+                envelope: {
+                    attack: 0.1,
+                    decay: 0.2,
+                    sustain: 0.9,
+                    release: 1
+                }
+            });
+            
+            // Effects chain
+            const bitCrusher = new Tone.BitCrusher({
+                bits: 8,
+                wet: 0.5
+            });
+            
+            const pingPongDelay = new Tone.PingPongDelay({
+                delayTime: "8n",
+                feedback: 0.2,
+                wet: 0.2
+            });
+            
+            const chorus = new Tone.Chorus({
+                frequency: 1.5,
+                delayTime: 3.5,
+                depth: 0.7,
+                wet: 0.5
+            }).start();
+            
+            const reverb = new Tone.Reverb({
+                decay: 4,
+                wet: 0.3
+            });
+            
+            const distortion = new Tone.Distortion({
+                distortion: 0.4,
+                wet: 0.4
+            });
+            
+            const filter = new Tone.Filter({
+                type: "lowpass",
+                frequency: 1000,
+                Q: 1
+            });
+            
+            const volume = new Tone.Volume(-15);
+            
+            // Connect synths and effects
+            glitchSynth.connect(bitCrusher);
+            bitCrusher.connect(distortion);
+            distortion.connect(pingPongDelay);
+            
+            padSynth.connect(chorus);
+            chorus.connect(reverb);
+            
+            bassSynth.connect(filter);
+            filter.connect(reverb);
+            
+            pingPongDelay.connect(reverb);
+            reverb.connect(volume);
+            volume.toDestination();
+            
+            // Create patterns
+            // Ambient pad pattern
+            const padNotes = ["F#3", "B3", "C#4", "F#4"];
+            const padLoop = new Tone.Loop((time) => {
+                // Change chords periodically
+                if (Math.random() > 0.7) {
+                    const chord = [];
+                    // Create a chord from random notes in the scale
+                    for (let i = 0; i < 3; i++) {
+                        chord.push(padNotes[Math.floor(Math.random() * padNotes.length)]);
+                    }
+                    padSynth.triggerAttackRelease(chord, "2n", time);
+                }
+            }, "4n").start();
+            
+            // Glitch pattern - creates digital errors
+            const glitchLoop = new Tone.Loop((time) => {
+                if (intensity > 0.3 && Math.random() > 0.6) {
+                    // More glitches with higher intensity
+                    const glitchCount = Math.floor(intensity * 5);
+                    const detuneAmount = intensity * 200; // More out of tune with higher intensity
+                    
+                    for (let i = 0; i < glitchCount; i++) {
+                        const note = Math.random() > 0.5 ? "C6" : "C7";
+                        const detune = (Math.random() * 2 - 1) * detuneAmount;
+                        const duration = (0.05 + Math.random() * 0.1) * (1 - intensity * 0.5); // Shorter with higher intensity
+                        
+                        // Schedule the glitch
+                        glitchSynth.triggerAttackRelease(note, duration, time + i * 0.1, 0.3);
+                        
+                        // Randomly change bitcrusher settings for more digital artifacts
+                        if (Math.random() > 0.7) {
+                            const newBits = Math.max(1, Math.min(8, Math.floor(8 - intensity * 6)));
+                            bitCrusher.set({ bits: newBits });
+                        }
+                    }
+                }
+            }, "8n").start();
+            
+            // Bass pattern
+            const bassLoop = new Tone.Loop((time) => {
+                // Bass follows the phase
+                if (phase === 'calm') {
+                    if (Tone.Transport.position.split(":")[2] === "0") {
+                        bassSynth.triggerAttackRelease("F#1", "8n", time, 0.7);
+                    }
+                } else if (phase === 'building') {
+                    if (Tone.Transport.position.split(":")[2] === "0" || 
+                        Tone.Transport.position.split(":")[2] === "2") {
+                        bassSynth.triggerAttackRelease("F#1", "8n", time, 0.8);
+                    }
+                } else if (phase === 'peak' || phase === 'release') {
+                    // During peaks, bass becomes more aggressive
+                    const currentStep = parseInt(Tone.Transport.position.split(":")[2]);
+                    if (currentStep % 2 === 0) {
+                        const note = currentStep === 0 ? "F#1" : "G#1";
+                        bassSynth.triggerAttackRelease(note, "8n", time, 0.9);
+                    }
+                }
+            }, "8n").start();
+            
+            // Store nodes for later parameter control
+            audioNodes = {
+                glitchSynth,
+                padSynth,
+                bassSynth,
+                bitCrusher,
+                pingPongDelay,
+                chorus,
+                reverb,
+                distortion,
+                filter,
+                volume
+            };
+            
+            Tone.Transport.start();
+            audioSetup = true;
+        }
+        
+        // Apply datamoshing effects
+        function applyDatamosh(imgData, intensity) {
+            const data = imgData.data;
+            const width = imgData.width;
+            const height = imgData.height;
+            
+            // Different effects based on intensity
+            
+            // 1. Block displacement/motion compensation errors
+            if (intensity > 0.3) {
+                const blockDisplacementCount = Math.floor(intensity * 20);
+                
+                for (let i = 0; i < blockDisplacementCount; i++) {
+                    // Select random block
+                    const blockX = Math.floor(Math.random() * (width - blockSize));
+                    const blockY = Math.floor(Math.random() * (height - blockSize));
+                    
+                    // Determine displacement
+                    const displaceX = Math.floor((Math.random() * 2 - 1) * intensity * 100);
+                    const displaceY = Math.floor((Math.random() * 2 - 1) * intensity * 100);
+                    
+                    // Target coordinates
+                    const targetX = Math.max(0, Math.min(width - blockSize, blockX + displaceX));
+                    const targetY = Math.max(0, Math.min(height - blockSize, blockY + displaceY));
+                    
+                    // Copy block to new location
+                    for (let y = 0; y < blockSize; y++) {
+                        for (let x = 0; x < blockSize; x++) {
+                            const sourceIndex = ((blockY + y) * width + (blockX + x)) * 4;
+                            const targetIndex = ((targetY + y) * width + (targetX + x)) * 4;
+                            
+                            if (targetIndex < data.length - 4 && sourceIndex < data.length - 4) {
+                                data[targetIndex] = data[sourceIndex];
+                                data[targetIndex + 1] = data[sourceIndex + 1];
+                                data[targetIndex + 2] = data[sourceIndex + 2];
+                                // Keep original alpha to avoid transparency issues
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 2. P-frame prediction errors - blend with previous frames
+            if (frameHistory.length > 0 && intensity > 0.2) {
+                // Select a random frame from history
+                const historyFrame = frameHistory[Math.floor(Math.random() * frameHistory.length)];
+                
+                // Amount of blending increases with intensity
+                const blendAmount = intensity * 0.7;
+                const errorRegions = Math.floor(intensity * 10);
+                
+                for (let i = 0; i < errorRegions; i++) {
+                    const regionX = Math.floor(Math.random() * (width - blockSize * 2));
+                    const regionY = Math.floor(Math.random() * (height - blockSize * 2));
+                    const regionSize = blockSize * 2;
+                    
+                    for (let y = 0; y < regionSize; y++) {
+                        for (let x = 0; x < regionSize; x++) {
+                            const idx = ((regionY + y) * width + (regionX + x)) * 4;
+                            
+                            if (idx < data.length - 4 && idx < historyFrame.data.length - 4) {
+                                data[idx] = Math.floor(data[idx] * (1 - blendAmount) + historyFrame.data[idx] * blendAmount);
+                                data[idx + 1] = Math.floor(data[idx + 1] * (1 - blendAmount) + historyFrame.data[idx + 1] * blendAmount);
+                                data[idx + 2] = Math.floor(data[idx + 2] * (1 - blendAmount) + historyFrame.data[idx + 2] * blendAmount);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 3. Macroblock distortion - create 8x8 macroblock errors
+            if (intensity > 0.5) {
+                const macroblockCount = Math.floor(intensity * 15);
+                
+                for (let i = 0; i < macroblockCount; i++) {
+                    const mbSize = 8; // Standard macroblock size
+                    const mbX = Math.floor(Math.random() * (width - mbSize));
+                    const mbY = Math.floor(Math.random() * (height - mbSize));
+                    
+                    // Create a distorted macroblock
+                    // Options: color shift, block repeat, or block quantization
+                    const effect = Math.floor(Math.random() * 3);
+                    
+                    if (effect === 0) {
+                        // Color shift - common in datamoshing
+                        const colorShift = Math.floor(Math.random() * 3); // Which color channel to shift
+                        
+                        for (let y = 0; y < mbSize; y++) {
+                            for (let x = 0; x < mbSize; x++) {
+                                const idx = ((mbY + y) * width + (mbX + x)) * 4;
+                                
+                                if (idx < data.length - 4) {
+                                    // Shift the selected color channel
+                                    data[idx + colorShift] = 255 - data[idx + colorShift];
+                                }
+                            }
+                        }
+                    } else if (effect === 1) {
+                        // Block repeat - copy one part of the macroblock to the entire block
+                        const sampleX = mbX + Math.floor(Math.random() * mbSize);
+                        const sampleY = mbY + Math.floor(Math.random() * mbSize);
+                        const sampleIdx = (sampleY * width + sampleX) * 4;
+                        
+                        if (sampleIdx < data.length - 4) {
+                            const r = data[sampleIdx];
+                            const g = data[sampleIdx + 1];
+                            const b = data[sampleIdx + 2];
+                            
+                            for (let y = 0; y < mbSize; y++) {
+                                for (let x = 0; x < mbSize; x++) {
+                                    const idx = ((mbY + y) * width + (mbX + x)) * 4;
+                                    
+                                    if (idx < data.length - 4) {
+                                        data[idx] = r;
+                                        data[idx + 1] = g;
+                                        data[idx + 2] = b;
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Block quantization - reduce color precision in block
+                        const quantLevel = Math.max(2, Math.floor(8 - intensity * 6)); // Higher intensity = more quantization
+                        
+                        for (let y = 0; y < mbSize; y++) {
+                            for (let x = 0; x < mbSize; x++) {
+                                const idx = ((mbY + y) * width + (mbX + x)) * 4;
+                                
+                                if (idx < data.length - 4) {
+                                    // Quantize each color channel
+                                    data[idx] = Math.floor(data[idx] / quantLevel) * quantLevel;
+                                    data[idx + 1] = Math.floor(data[idx + 1] / quantLevel) * quantLevel;
+                                    data[idx + 2] = Math.floor(data[idx + 2] / quantLevel) * quantLevel;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 4. I-frame corruption - keyframe loss or corruption
+            if (intensity > 0.7 && keyframes.length > 0 && Math.random() > 0.7) {
+                // Select a random keyframe to inject corruption
+                const keyframe = keyframes[Math.floor(Math.random() * keyframes.length)];
+                
+                // Corrupt a large section of the image with keyframe data
+                const sectionWidth = Math.floor(width * 0.3);
+                const sectionHeight = Math.floor(height * 0.3);
+                const sectionX = Math.floor(Math.random() * (width - sectionWidth));
+                const sectionY = Math.floor(Math.random() * (height - sectionHeight));
+                
+                for (let y = 0; y < sectionHeight; y++) {
+                    for (let x = 0; x < sectionWidth; x++) {
+                        const sourceIdx = ((sectionY + y) * width + (sectionX + x)) * 4;
+                        
+                        if (sourceIdx < keyframe.data.length - 4 && sourceIdx < data.length - 4) {
+                            // Mix current frame with keyframe data
+                            const mixRatio = 0.7 + Math.random() * 0.3; // Between 0.7 and 1.0
+                            
+                            data[sourceIdx] = Math.floor(data[sourceIdx] * (1 - mixRatio) + keyframe.data[sourceIdx] * mixRatio);
+                            data[sourceIdx + 1] = Math.floor(data[sourceIdx + 1] * (1 - mixRatio) + keyframe.data[sourceIdx + 1] * mixRatio);
+                            data[sourceIdx + 2] = Math.floor(data[sourceIdx + 2] * (1 - mixRatio) + keyframe.data[sourceIdx + 2] * mixRatio);
+                        }
+                    }
+                }
+            }
+            
+            // 5. Block bleeding - where blocks from one frame leak into another
+            if (intensity > 0.4 && previousImageData) {
+                const bleedCount = Math.floor(intensity * 10);
+                
+                for (let i = 0; i < bleedCount; i++) {
+                    const bleedWidth = blockSize * (1 + Math.floor(Math.random() * 3));
+                    const bleedHeight = Math.floor(bleedWidth * (0.5 + Math.random()));
+                    const bleedX = Math.floor(Math.random() * (width - bleedWidth));
+                    const bleedY = Math.floor(Math.random() * (height - bleedHeight));
+                    
+                    // Create horizontal streak effect, common in compression artifacts
+                    for (let y = 0; y < bleedHeight; y++) {
+                        for (let x = 0; x < bleedWidth; x++) {
+                            const idx = ((bleedY + y) * width + (bleedX + x)) * 4;
+                            
+                            if (idx < data.length - 4 && idx < previousImageData.data.length - 4) {
+                                // Use data from previous frame for the streak
+                                data[idx] = previousImageData.data[idx];
+                                data[idx + 1] = previousImageData.data[idx + 1];
+                                data[idx + 2] = previousImageData.data[idx + 2];
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 6. Extreme corruption during peaks
+            if (intensity > 0.8) {
+                // Add color channel splitting - severe compression artifact
+                const splitAmount = Math.floor(intensity * 10);
+                const channelToSplit = Math.floor(Math.random() * 3); // Which RGB channel to split
+                const splitDirection = Math.random() > 0.5 ? 1 : -1;
+                
+                for (let y = 0; y < height; y++) {
+                    for (let x = 0; x < width; x++) {
+                        const idx = (y * width + x) * 4;
+                        const targetX = Math.max(0, Math.min(width - 1, x + splitDirection * splitAmount));
+                        const targetIdx = (y * width + targetX) * 4;
+                        
+                        if (idx < data.length - 4 && targetIdx < data.length - 4) {
+                            // Split only one channel
+                            data[targetIdx + channelToSplit] = data[idx + channelToSplit];
+                        }
+                    }
+                }
+            }
+            
+            return imgData;
+        }
+        
+        // Update status text based on phase
+        function updateStatusText() {
+            switch(phase) {
+                case 'calm':
+                    statusText.textContent = 'Low compression artifacts...';
+                    break;
+                case 'building':
+                    statusText.textContent = 'Compression ratio increasing...';
+                    break;
+                case 'peak':
+                    statusText.textContent = 'BUFFER OVERFLOW / CODEC ERROR 0x' + Math.random().toString(16).substring(2, 10).toUpperCase();
+                    break;
+                case 'release':
+                    statusText.textContent = 'Frame recovery in progress...';
+                    break;
+                default:
+                    statusText.textContent = 'Compressed head awaiting datamoshing...';
+            }
+        }
+        
+        // Main animation loop
+        function animate() {
+            const width = canvas.width;
+            const height = canvas.height;
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // Update time
+            time += 0.01;
+            
+            // Cycle through different phases
+            // Each complete cycle takes about 60-90 seconds
+            const cycleDuration = 80;
+            const normalizedTime = (time % cycleDuration) / cycleDuration;
+            
+            // Determine current phase and intensity
+            let newIntensity = 0;
+            let newPhase = 'calm';
+            
+            if (normalizedTime < 0.3) {
+                // Calm phase (30% of cycle)
+                newPhase = 'calm';
+                newIntensity = 0.05 + Math.sin(time * 2) * 0.05;
+            } else if (normalizedTime < 0.6) {
+                // Building phase (30% of cycle)
+                newPhase = 'building';
+                // Gradually increase intensity, with slight variations
+                const buildProgress = (normalizedTime - 0.3) / 0.3;
+                newIntensity = 0.1 + buildProgress * 0.6 + Math.sin(time * 3) * 0.1;
+            } else if (normalizedTime < 0.7) {
+                // Peak phase (10% of cycle)
+                newPhase = 'peak';
+                newIntensity = 0.7 + Math.sin(time * 10) * 0.3;
+            } else {
+                // Release phase (30% of cycle)
+                newPhase = 'release';
+                const releaseProgress = (normalizedTime - 0.7) / 0.3;
+                newIntensity = 0.7 - releaseProgress * 0.65 + Math.sin(time * 2) * 0.05;
+            }
+            
+            intensity = newIntensity;
+            
+            // Only update the text when phase changes to avoid too many DOM updates
+            if (phase !== newPhase) {
+                phase = newPhase;
+                updateStatusText();
+            }
+            
+            // Update audio parameters based on intensity
+            if (audioSetup) {
+                const { 
+                    bitCrusher, distortion, filter, chorus, reverb, pingPongDelay
+                } = audioNodes;
+                
+                // Update audio parameters
+                bitCrusher.bits = Math.max(1, 8 - Math.floor(intensity * 6));
+                bitCrusher.wet.value = Math.min(1, intensity * 1.5);
+                
+                distortion.distortion = intensity * 2;
+                distortion.wet.value = Math.min(1, intensity * 1.2);
+                
+                filter.frequency.value = 300 + (1 - intensity) * 4000;
+                
+                chorus.frequency.value = 0.5 + intensity * 4;
+                chorus.depth = 0.3 + intensity * 0.7;
+                
+                reverb.decay = 1 + intensity * 4;
+                
+                pingPongDelay.feedback.value = 0.1 + intensity * 0.4;
+            }
+            
+            // Display background
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, width, height);
+            
+            // Generate compression block grid for visualization
+            if (intensity > 0.3) {
+                const gridOpacity = Math.min(0.2, intensity * 0.3);
+                ctx.strokeStyle = `rgba(0, 100, 255, ${gridOpacity})`;
+                ctx.lineWidth = 1;
+                
+                const gridSize = Math.max(4, blockSize);
+                
+                for (let x = 0; x < width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                
+                for (let y = 0; y < height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+            }
+            
+            // Initialize head outline if needed
+            if (!headOutline) {
+                headOutline = createHeadOutline();
+            }
+            
+            // Draw the image (either user image or default head)
+            const sourceImage = showUserImage && userImage ? userImage : headOutline;
+            let imgWidth, imgHeight, imgX, imgY;
+            
+            if (sourceImage) {
+                imgWidth = Math.min(width * 0.7, sourceImage.width);
+                imgHeight = (imgWidth / sourceImage.width) * sourceImage.height;
+                imgX = (width - imgWidth) / 2;
+                imgY = (height - imgHeight) / 2;
+                
+                // Draw the image first
+                ctx.drawImage(sourceImage, imgX, imgY, imgWidth, imgHeight);
+                
+                // Get image data for manipulation
+                const imageData = ctx.getImageData(0, 0, width, height);
+                
+                // Store current frame data for the next iteration
+                if (previousImageData === null) {
+                    previousImageData = createKeyframe(imageData);
+                }
+                
+                // Occasionally create a keyframe
+                if (time - lastKeyframeTime > 3 + Math.random() * 2) {
+                    keyframes.push(createKeyframe(imageData));
+                    if (keyframes.length > 5) {
+                        keyframes.shift(); // Keep only the most recent keyframes
+                    }
+                    lastKeyframeTime = time;
+                }
+                
+                // Apply datamoshing effects
+                const moshedData = applyDatamosh(imageData, intensity);
+                
+                // Push to frame history for future P-frame effects
+                if (frameHistory.length >= maxHistoryLength) {
+                    frameHistory.shift();
+                }
+                frameHistory.push(createKeyframe(moshedData));
+                
+                // Update previous image data
+                previousImageData = createKeyframe(moshedData);
+                
+                // Draw the modified image
+                ctx.putImageData(moshedData, 0, 0);
+            }
+            
+            // Add compression artifact text during high intensity phases
+            if (intensity > 0.6) {
+                ctx.font = '16px monospace';
+                ctx.fillStyle = `rgba(0, 200, 255, ${intensity * 0.7})`;
+                
+                const errors = [
+                    "FRAME_BUFFER_OVERFLOW",
+                    "CODEC_ERROR",
+                    "KEYFRAME_MISSING",
+                    "MB_TYPE_INVALID",
+                    "INVALID_REF_FRAME",
+                    "MOTION_VECTOR_ERROR",
+                    "DCT_COEFFICIENT_ERROR",
+                    "SLICE_BOUNDARY_ERROR",
+                    "CRC_CHECKSUM_FAILED",
+                    "BUFFER_UNDERRUN"
+                ];
+                
+                // Display random error messages
+                for (let i = 0; i < intensity * 10; i++) {
+                    const error = errors[Math.floor(Math.random() * errors.length)];
+                    const x = Math.random() * (width - 200);
+                    const y = Math.random() * height;
+                    
+                    ctx.fillText(error, x, y);
+                }
+                
+                // Add codec data during peaks
+                if (intensity > 0.8) {
+                    ctx.font = '14px monospace';
+                    ctx.fillStyle = `rgba(0, 255, 255, ${intensity * 0.8})`;
+                    
+                    for (let i = 0; i < 20; i++) {
+                        let codecData = "0x";
+                        for (let j = 0; j < 8; j++) {
+                            codecData += Math.floor(Math.random() * 16).toString(16);
+                        }
+                        const x = Math.random() * (width - 100);
+                        const y = Math.random() * height;
+                        
+                        ctx.fillText(codecData, x, y);
+                    }
+                }
+            }
+            
+            // Display compression info
+            ctx.font = '14px monospace';
+            ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
+            ctx.fillText(`Compression: ${Math.floor(intensity * 100)}%`, 20, height - 20);
+            ctx.fillText(`Block Size: ${blockSize}px`, 20, height - 40);
+            ctx.fillText(`Frame Buffer: ${frameHistory.length}`, 20, height - 60);
+            
+            // Continue animation loop
+            animationFrameId = requestAnimationFrame(animate);
+        }
+        
+        // Handle play/pause
+        async function togglePlay() {
+            if (!isPlaying) {
+                try {
+                    await setupAudio();
+                    animationFrameId = requestAnimationFrame(animate);
+                    isPlaying = true;
+                    toggleButton.textContent = 'Stop Experience';
+                } catch (error) {
+                    console.error('Error starting audio:', error);
+                    alert('There was an error starting the audio. Please try again or check your browser settings.');
+                }
+            } else {
+                if (animationFrameId) {
+                    cancelAnimationFrame(animationFrameId);
+                }
+                
+                if (audioSetup) {
+                    Tone.Transport.stop();
+                    Object.values(audioNodes).forEach(node => {
+                        if (node && typeof node.dispose === 'function') {
+                            node.dispose();
+                        }
+                    });
+                    audioSetup = false;
+                }
+                
+                isPlaying = false;
+                toggleButton.textContent = 'Begin Experience';
+                statusText.textContent = 'Compressed head awaiting datamoshing...';
+                
+                // Reset variables
+                frameHistory = [];
+                keyframes = [];
+                previousImageData = null;
+            }
+        }
+        
+        // Add button event listener
+        toggleButton.addEventListener('click', togglePlay);
+    </script>
+</body>
+</html>
