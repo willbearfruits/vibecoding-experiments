@@ -1,0 +1,2333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enhanced Symmetrical Drawing Canvas</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-color: #1a1a2e;
+      --panel-color: #16213e;
+      --accent-color: #4361ee;
+      --text-color: #e2e2e2;
+      --secondary-text: #b2b2b2;
+      --border-color: #2c3e50;
+      --tool-hover: #3a3f58;
+      --tool-active: #4361ee;
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .app-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 70px);
+      overflow: hidden;
+    }
+    
+    .toolbar {
+      background-color: var(--panel-color);
+      width: 70px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px 0;
+      border-right: 1px solid var(--border-color);
+    }
+    
+    .tool-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 18px;
+    }
+    
+    .tool-btn:hover {
+      background: var(--tool-hover);
+    }
+    
+    .tool-btn.active {
+      background: var(--tool-active);
+      color: white;
+    }
+    
+    .tool-separator {
+      width: 40px;
+      height: 1px;
+      background: var(--border-color);
+      margin: 10px 0;
+    }
+    
+    .main-area {
+      flex: 1;
+      display: flex;
+      position: relative;
+    }
+    
+    .canvas-container {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #121212;
+      background-image: 
+        linear-gradient(rgba(100, 100, 100, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(100, 100, 100, 0.1) 1px, transparent 1px);
+      background-size: 20px 20px;
+    }
+    
+    #canvas {
+      background: white;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+      cursor: crosshair;
+    }
+    
+    .settings-panel {
+      width: 280px;
+      background: var(--panel-color);
+      border-left: 1px solid var(--border-color);
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .panel-section {
+      margin-bottom: 25px;
+    }
+    
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+    }
+    
+    .panel-title i {
+      margin-right: 8px;
+      color: var(--accent-color);
+    }
+    
+    .control-group {
+      margin-bottom: 15px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--secondary-text);
+    }
+    
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #2d3748;
+      border-radius: 3px;
+      outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+    }
+    
+    input[type="number"] {
+      width: 60px;
+      background: #2d3748;
+      border: none;
+      color: white;
+      padding: 5px;
+      border-radius: 4px;
+      text-align: center;
+    }
+    
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: #2d3748;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+    }
+    
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+    }
+    
+    .checkbox-wrapper label {
+      margin: 0 0 0 8px;
+    }
+    
+    .color-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .color-option {
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.2s;
+    }
+    
+    .color-option:hover {
+      transform: scale(1.1);
+    }
+    
+    .color-option.active {
+      border-color: white;
+      transform: scale(1.1);
+    }
+    
+    .custom-color {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 4px;
+    }
+    
+    .symmetry-types {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .symmetry-type {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      background: #2d3748;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px;
+    }
+    
+    .symmetry-type:hover {
+      background: var(--tool-hover);
+    }
+    
+    .symmetry-type.active {
+      background: var(--tool-active);
+      color: white;
+    }
+    
+    .btn {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    
+    .btn:hover {
+      background: #3050db;
+    }
+    
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn-secondary {
+      background: #2d3748;
+    }
+    
+    .btn-secondary:hover {
+      background: #3b485e;
+    }
+    
+    .footer {
+      height: 40px;
+      background: var(--panel-color);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+    
+    .canvas-info {
+      color: var(--secondary-text);
+    }
+    
+    .history-buttons {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .history-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      font-size: 16px;
+    }
+    
+    .history-btn:hover {
+      opacity: 1;
+    }
+    
+    .history-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    
+    .opacity-control {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    
+    .opacity-control input[type="range"] {
+      flex: 1;
+    }
+    
+    .opacity-value {
+      width: 40px;
+      text-align: center;
+    }
+    
+    .brush-preview {
+      width: 50px;
+      height: 50px;
+      border-radius: 4px;
+      background: #2d3748;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-left: 10px;
+    }
+    
+    .brush-dot {
+      background: white;
+      border-radius: 50%;
+    }
+    
+    .gradient-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .gradient-control {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .gradient-color {
+      flex: 1;
+    }
+    
+    .download-options {
+      display: flex;
+      gap: 10px;
+    }
+    
+    @media (max-width: 1200px) {
+      .settings-panel {
+        width: 250px;
+      }
+    }
+    
+    @media (max-width: 900px) {
+      .app-container {
+        flex-direction: column;
+      }
+      
+      .toolbar {
+        width: 100%;
+        height: 60px;
+        flex-direction: row;
+        padding: 0 15px;
+        justify-content: center;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+      }
+      
+      .tool-btn {
+        margin: 0 5px;
+      }
+      
+      .tool-separator {
+        width: 1px;
+        height: 30px;
+        margin: 0 8px;
+      }
+      
+      .main-area {
+        flex-direction: column;
+      }
+      
+      .settings-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        max-height: 300px;
+      }
+    }
+
+    /* Tooltip styling */
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+    }
+
+    /* Stroke preview */
+    .stroke-preview {
+      height: 30px;
+      background: #2d3748;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .stroke-line {
+      background: white;
+      height: 2px;
+    }
+
+    /* Pattern options */
+    .pattern-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pattern-option {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      background: #2d3748;
+      border: 2px solid transparent;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .pattern-option.active {
+      border-color: white;
+    }
+
+    .pattern-dots {
+      background-image: radial-gradient(circle, white 2px, transparent 2px);
+      background-size: 10px 10px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pattern-lines {
+      background-image: linear-gradient(to right, white 1px, transparent 1px);
+      background-size: 5px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pattern-zigzag {
+      position: relative;
+    }
+
+    .pattern-zigzag::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: linear-gradient(135deg, white 25%, transparent 25%, transparent 50%, white 50%, white 75%, transparent 75%, transparent);
+      background-size: 8px 8px;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .modal-content {
+      background: var(--panel-color);
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-size: 20px;
+      cursor: pointer;
+    }
+
+    .modal-body {
+      margin-bottom: 20px;
+    }
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Brushes panel */
+    .brushes-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .brush-preset {
+      width: 55px;
+      height: 55px;
+      border-radius: 8px;
+      background: #2d3748;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      border: 2px solid transparent;
+    }
+
+    .brush-preset.active {
+      border-color: var(--accent-color);
+    }
+
+    .brush-preset img {
+      width: 30px;
+      height: 30px;
+      opacity: 0.8;
+    }
+
+    /* Animation */
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .pulse {
+      animation: pulse 1s infinite;
+    }
+
+    /* Custom checkboxes */
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #2d3748;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--accent-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .toggle-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .toggle-wrapper label {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="toolbar">
+      <button class="tool-btn active tooltip" data-tool="pen" data-tooltip="Brush Tool (B)">
+        <i class="fas fa-paint-brush"></i>
+      </button>
+      <button class="tool-btn tooltip" data-tool="line" data-tooltip="Line Tool (L)">
+        <i class="fas fa-slash"></i>
+      </button>
+      <button class="tool-btn tooltip" data-tool="circle" data-tooltip="Circle Tool (C)">
+        <i class="far fa-circle"></i>
+      </button>
+      <button class="tool-btn tooltip" data-tool="rect" data-tooltip="Rectangle Tool (R)">
+        <i class="far fa-square"></i>
+      </button>
+      <button class="tool-btn tooltip" data-tool="polygon" data-tooltip="Polygon Tool (P)">
+        <i class="fas fa-draw-polygon"></i>
+      </button>
+      <button class="tool-btn tooltip" data-tool="eraser" data-tooltip="Eraser Tool (E)">
+        <i class="fas fa-eraser"></i>
+      </button>
+      <div class="tool-separator"></div>
+      <button class="tool-btn tooltip" data-tool="fill" data-tooltip="Fill Tool (F)">
+        <i class="fas fa-fill-drip"></i>
+      </button>
+      <button class="tool-btn tooltip" data-tool="eyedropper" data-tooltip="Color Picker (I)">
+        <i class="fas fa-eye-dropper"></i>
+      </button>
+      <div class="tool-separator"></div>
+      <button class="tool-btn tooltip" id="clear-canvas" data-tooltip="Clear Canvas">
+        <i class="fas fa-trash-alt"></i>
+      </button>
+      <button class="tool-btn tooltip" id="save-btn" data-tooltip="Save/Export">
+        <i class="fas fa-download"></i>
+      </button>
+    </div>
+    
+    <div class="main-area">
+      <div class="canvas-container">
+        <canvas id="canvas" width="800" height="800"></canvas>
+      </div>
+      
+      <div class="settings-panel">
+        <div class="panel-section">
+          <div class="panel-title">
+            <i class="fas fa-palette"></i> Color
+          </div>
+          <div class="color-picker">
+            <div class="color-option active" style="background-color: #000000;" data-color="#000000"></div>
+            <div class="color-option" style="background-color: #ffffff;" data-color="#ffffff"></div>
+            <div class="color-option" style="background-color: #ff0000;" data-color="#ff0000"></div>
+            <div class="color-option" style="background-color: #ff9900;" data-color="#ff9900"></div>
+            <div class="color-option" style="background-color: #ffff00;" data-color="#ffff00"></div>
+            <div class="color-option" style="background-color: #00ff00;" data-color="#00ff00"></div>
+            <div class="color-option" style="background-color: #00ffff;" data-color="#00ffff"></div>
+            <div class="color-option" style="background-color: #0000ff;" data-color="#0000ff"></div>
+            <div class="color-option" style="background-color: #9900ff;" data-color="#9900ff"></div>
+            <div class="color-option" style="background-color: #ff00ff;" data-color="#ff00ff"></div>
+          </div>
+          <div class="custom-color">
+            <input type="color" id="color-picker" value="#000000">
+            <div class="opacity-control">
+              <label>Opacity:</label>
+              <input type="range" id="opacity" min="0" max="1" step="0.01" value="1">
+              <span class="opacity-value">100%</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-title">
+            <i class="fas fa-star-of-life"></i> Symmetry
+          </div>
+          <div class="symmetry-types">
+            <div class="symmetry-type active" data-type="radial">Radial</div>
+            <div class="symmetry-type" data-type="mirror">Mirror</div>
+            <div class="symmetry-type" data-type="kaleidoscope">Kaleidoscope</div>
+          </div>
+          <div class="control-group">
+            <label>Symmetry Count: <span id="symmetry-value">6</span></label>
+            <input type="range" id="symmetry" min="1" max="36" value="6">
+          </div>
+          <div class="control-group" id="rotation-control">
+            <label>Rotation: <span id="rotation-value">0°</span></label>
+            <input type="range" id="rotation" min="0" max="360" value="0">
+          </div>
+          <div class="toggle-wrapper">
+            <label>Show Symmetry Guide</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="show-guide">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-wrapper">
+            <label>Center at Mouse Position</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="dynamic-center">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-title">
+            <i class="fas fa-paint-brush"></i> Brush Settings
+          </div>
+          <div class="control-group">
+            <label>Size: <span id="size-value">2</span></label>
+            <div style="display: flex; align-items: center;">
+              <input type="range" id="weight" min="1" max="50" value="2">
+              <div class="brush-preview">
+                <div class="brush-dot" style="width: 2px; height: 2px;"></div>
+              </div>
+            </div>
+          </div>
+          <div class="control-group">
+            <label>Style:</label>
+            <select id="strokeCap">
+              <option value="round">Round</option>
+              <option value="square">Square</option>
+              <option value="butt">Flat</option>
+            </select>
+          </div>
+          <div class="control-group">
+            <label>Stroke Type:</label>
+            <select id="strokeType">
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+            </select>
+            <div class="stroke-preview">
+              <div class="stroke-line" style="width: 80%;"></div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-title">
+            <i class="fas fa-sliders-h"></i> Effects
+          </div>
+          <div class="toggle-wrapper">
+            <label>Auto Smooth</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="autoSmooth" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="toggle-wrapper">
+            <label>Shadow Effect</label>
+            <label class="toggle-switch">
+              <input type="checkbox" id="shadow-effect">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div class="control-group">
+            <label>Fill Pattern:</label>
+            <div class="pattern-options">
+              <div class="pattern-option active" data-pattern="none">
+                <div style="width: 100%; height: 100%; background: transparent;"></div>
+              </div>
+              <div class="pattern-option" data-pattern="dots">
+                <div class="pattern-dots"></div>
+              </div>
+              <div class="pattern-option" data-pattern="lines">
+                <div class="pattern-lines"></div>
+              </div>
+              <div class="pattern-option" data-pattern="zigzag">
+                <div class="pattern-zigzag"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="panel-section">
+          <div class="panel-title">
+            <i class="fas fa-save"></i> Actions
+          </div>
+          <div class="btn-group">
+            <button class="btn" id="export-png">Export PNG</button>
+            <button class="btn btn-secondary" id="export-svg">Export SVG</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="footer">
+    <div class="canvas-info">Canvas: 800 × 800</div>
+    <div class="history-buttons">
+      <button class="history-btn" id="undo-btn" disabled>
+        <i class="fas fa-undo"></i>
+      </button>
+      <button class="history-btn" id="redo-btn" disabled>
+        <i class="fas fa-redo"></i>
+      </button>
+    </div>
+  </div>
+  
+  <div class="modal" id="save-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Save/Export Design</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="control-group">
+          <label>Filename:</label>
+          <input type="text" id="filename" value="my-symmetrical-design" style="width: 100%; padding: 8px; background: #2d3748; border: none; color: white; border-radius: 4px;">
+        </div>
+        <div class="control-group">
+          <label>Format:</label>
+          <div class="download-options">
+            <button class="btn" id="download-png">PNG Image</button>
+            <button class="btn btn-secondary" id="download-jpeg">JPEG Image</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary modal-close-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Canvas and Context
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // State Variables
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    let startX = 0;
+    let startY = 0;
+    let currentX = 0;
+    let currentY = 0;
+    let currentTool = 'pen';
+    let currentColor = '#000000';
+    let currentOpacity = 1;
+    let brushSize = 2;
+    let symmetryCount = 6;
+    let symmetryType = 'radial';
+    let rotation = 0;
+    let strokeType = 'solid';
+    let showGuide = false;
+    let dynamicCenter = false;
+    let centerX = canvas.width / 2;
+    let centerY = canvas.height / 2;
+    let shadowEffect = false;
+    let patternType = 'none';
+    
+    // History for undo/redo
+    const history = [];
+    let historyIndex = -1;
+    const maxHistorySteps = 50;
+    
+    // Save initial state
+    saveState();
+    
+    // Tool Buttons
+    document.querySelectorAll('.tool-btn[data-tool]').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.tool-btn[data-tool]').forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        currentTool = button.getAttribute('data-tool');
+        
+        // Update cursor based on tool
+        if (currentTool === 'eraser') {
+          canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'black\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M20 20H7L3 16c-.8-.8-.8-2 0-2.8L13.8 2.4c.8-.8 2-.8 2.8 0L20 6l-7.6 7.6 4 4 3.6-3.6V20z\'/%3E%3C/svg%3E") 0 24, auto';
+        } else if (currentTool === 'eyedropper') {
+          canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'black\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M15.2 14.8L7.7 7.3 6.3 8.7c-.4.4-.4 1 0 1.4l7.5 7.5c.4.4 1 .4 1.4 0l1.4-1.4c.4-.4.4-1 0-1.4z\'/%3E%3Cpath d=\'M10.8 7.8l6.8-6.8c.4-.4 1-.4 1.4 0l2 2c.4.4.4 1 0 1.4l-6.8 6.8\'/%3E%3Cpath d=\'M15 11l3 3\'/%3E%3C/svg%3E") 0 24, auto';
+        } else if (currentTool === 'fill') {
+          canvas.style.cursor = 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'black\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M12 3v18\'/%3E%3Cpath d=\'M3 12h18\'/%3E%3C/svg%3E") 12 12, crosshair';
+        } else {
+          canvas.style.cursor = 'crosshair';
+        }
+      });
+    });
+    
+    // Color Options
+    document.querySelectorAll('.color-option').forEach(option => {
+      option.addEventListener('click', () => {
+        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        const color = option.getAttribute('data-color');
+        currentColor = color;
+        document.getElementById('color-picker').value = color;
+        updateStrokePreview();
+      });
+    });
+    
+    // Custom Color Picker
+    document.getElementById('color-picker').addEventListener('input', (e) => {
+      currentColor = e.target.value;
+      document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+      updateStrokePreview();
+    });
+    
+    // Opacity Control
+    document.getElementById('opacity').addEventListener('input', (e) => {
+      currentOpacity = parseFloat(e.target.value);
+      document.querySelector('.opacity-value').textContent = Math.round(currentOpacity * 100) + '%';
+      updateStrokePreview();
+    });
+    
+    // Symmetry Type Selection
+    document.querySelectorAll('.symmetry-type').forEach(option => {
+      option.addEventListener('click', () => {
+        document.querySelectorAll('.symmetry-type').forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        symmetryType = option.getAttribute('data-type');
+        
+        // Show/hide relevant controls based on symmetry type
+        if (symmetryType === 'mirror') {
+          document.getElementById('rotation-control').style.display = 'block';
+        } else if (symmetryType === 'kaleidoscope') {
+          document.getElementById('rotation-control').style.display = 'block';
+        } else {
+          document.getElementById('rotation-control').style.display = 'none';
+        }
+        
+        drawGuides();
+      });
+    });
+    
+    // Symmetry Count Control
+    document.getElementById('symmetry').addEventListener('input', (e) => {
+      symmetryCount = parseInt(e.target.value);
+      document.getElementById('symmetry-value').textContent = symmetryCount;
+      drawGuides();
+    });
+    
+    // Rotation Control
+    document.getElementById('rotation').addEventListener('input', (e) => {
+      rotation = parseInt(e.target.value);
+      document.getElementById('rotation-value').textContent = rotation + '°';
+      drawGuides();
+    });
+    
+    // Brush Size Control
+    document.getElementById('weight').addEventListener('input', (e) => {
+      brushSize = parseInt(e.target.value);
+      document.getElementById('size-value').textContent = brushSize;
+      
+      // Update brush preview
+      const brushDot = document.querySelector('.brush-dot');
+      brushDot.style.width = brushSize + 'px';
+      brushDot.style.height = brushSize + 'px';
+      updateStrokePreview();
+    });
+    
+    // Stroke Cap Control
+    document.getElementById('strokeCap').addEventListener('change', (e) => {
+      updateStrokePreview();
+    });
+    
+    // Stroke Type Control
+    document.getElementById('strokeType').addEventListener('change', (e) => {
+      strokeType = e.target.value;
+      updateStrokePreview();
+    });
+    
+    // Toggle Show Guide
+    document.getElementById('show-guide').addEventListener('change', (e) => {
+      showGuide = e.target.checked;
+      drawGuides();
+    });
+    
+    // Toggle Dynamic Center
+    document.getElementById('dynamic-center').addEventListener('change', (e) => {
+      dynamicCenter = e.target.checked;
+    });
+    
+    // Toggle Shadow Effect
+    document.getElementById('shadow-effect').addEventListener('change', (e) => {
+      shadowEffect = e.target.checked;
+    });
+    
+    // Pattern Selection
+    document.querySelectorAll('.pattern-option').forEach(option => {
+      option.addEventListener('click', () => {
+        document.querySelectorAll('.pattern-option').forEach(opt => opt.classList.remove('active'));
+        option.classList.add('active');
+        patternType = option.getAttribute('data-pattern');
+      });
+    });
+    
+    // Clear Canvas Button
+    document.getElementById('clear-canvas').addEventListener('click', () => {
+      if (confirm('Are you sure you want to clear the canvas?')) {
+        clearCanvas();
+        saveState();
+      }
+    });
+    
+    // Save Button
+    document.getElementById('save-btn').addEventListener('click', () => {
+      document.getElementById('save-modal').style.display = 'flex';
+    });
+    
+    // Close Modal
+    document.querySelector('.modal-close').addEventListener('click', () => {
+      document.getElementById('save-modal').style.display = 'none';
+    });
+    
+    document.querySelector('.modal-close-btn').addEventListener('click', () => {
+      document.getElementById('save-modal').style.display = 'none';
+    });
+    
+    // Export PNG
+    document.getElementById('export-png').addEventListener('click', () => {
+      exportImage('png');
+    });
+    
+    // Export SVG
+    document.getElementById('export-svg').addEventListener('click', () => {
+      alert('SVG export is a premium feature (coming soon)');
+    });
+    
+    // Download PNG
+    document.getElementById('download-png').addEventListener('click', () => {
+      const filename = document.getElementById('filename').value || 'my-symmetrical-design';
+      downloadCanvas(filename, 'png');
+      document.getElementById('save-modal').style.display = 'none';
+    });
+    
+    // Download JPEG
+    document.getElementById('download-jpeg').addEventListener('click', () => {
+      const filename = document.getElementById('filename').value || 'my-symmetrical-design';
+      downloadCanvas(filename, 'jpeg');
+      document.getElementById('save-modal').style.display = 'none';
+    });
+    
+    // Undo Button
+    document.getElementById('undo-btn').addEventListener('click', undo);
+    
+    // Redo Button
+    document.getElementById('redo-btn').addEventListener('click', redo);
+    
+    // Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+      // Prevent shortcuts when typing in input fields
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') {
+        return;
+      }
+      
+      switch (e.key.toLowerCase()) {
+        case 'b':
+          selectTool('pen');
+          break;
+        case 'l':
+          selectTool('line');
+          break;
+        case 'c':
+          selectTool('circle');
+          break;
+        case 'r':
+          selectTool('rect');
+          break;
+        case 'p':
+          selectTool('polygon');
+          break;
+        case 'e':
+          selectTool('eraser');
+          break;
+        case 'f':
+          selectTool('fill');
+          break;
+        case 'i':
+          selectTool('eyedropper');
+          break;
+        case 'z':
+          if (e.ctrlKey || e.metaKey) {
+            if (e.shiftKey) {
+              redo();
+            } else {
+              undo();
+            }
+          }
+          break;
+        case 'y':
+          if (e.ctrlKey || e.metaKey) {
+            redo();
+          }
+          break;
+        case '[':
+          decreaseBrushSize();
+          break;
+        case ']':
+          increaseBrushSize();
+          break;
+      }
+    });
+    
+    // Canvas mouse events
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDrawing);
+    canvas.addEventListener('mouseout', () => {
+      if (isDrawing) {
+        endDrawing();
+      }
+    });
+    
+    // Add touch support
+    canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+    
+    // Functions
+    
+    function selectTool(tool) {
+      const toolBtn = document.querySelector(`.tool-btn[data-tool="${tool}"]`);
+      if (toolBtn) {
+        toolBtn.click();
+      }
+    }
+    
+    function startDrawing(e) {
+      isDrawing = true;
+      
+      const rect = canvas.getBoundingClientRect();
+      startX = e.clientX - rect.left;
+      startY = e.clientY - rect.top;
+      lastX = startX;
+      lastY = startY;
+      
+      // If dynamic center is enabled, set the center at the starting point
+      if (dynamicCenter && (currentTool === 'pen' || currentTool === 'eraser')) {
+        centerX = startX;
+        centerY = startY;
+        drawGuides();
+      }
+      
+      if (currentTool === 'eyedropper') {
+        pickColor(startX, startY);
+      } else if (currentTool === 'fill') {
+        fillCanvas(startX, startY);
+      } else if (currentTool === 'pen' || currentTool === 'eraser') {
+        ctx.beginPath();
+        drawPoint(startX, startY);
+      }
+    }
+    
+    function draw(e) {
+      if (!isDrawing) return;
+      
+      const rect = canvas.getBoundingClientRect();
+      currentX = e.clientX - rect.left;
+      currentY = e.clientY - rect.top;
+      
+      if (currentTool === 'pen' || currentTool === 'eraser') {
+        drawPen();
+      } else if (currentTool === 'line' || currentTool === 'circle' || currentTool === 'rect' || currentTool === 'polygon') {
+        // Just update the live preview
+        drawCanvas();
+        drawPreview();
+      }
+      
+      lastX = currentX;
+      lastY = currentY;
+    }
+    
+    function endDrawing() {
+      if (!isDrawing) return;
+      
+      if (currentTool === 'line' || currentTool === 'circle' || currentTool === 'rect' || currentTool === 'polygon') {
+        drawShape();
+      }
+      
+      isDrawing = false;
+      saveState();
+    }
+    
+    function handleTouchStart(e) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousedown', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+      }
+    }
+    
+    function handleTouchMove(e) {
+      e.preventDefault();
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent('mousemove', {
+          clientX: touch.clientX,
+          clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+      }
+    }
+    
+    function handleTouchEnd(e) {
+      e.preventDefault();
+      const mouseEvent = new MouseEvent('mouseup', {});
+      canvas.dispatchEvent(mouseEvent);
+    }
+    
+    function clearCanvas() {
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      drawGuides();
+    }
+    
+    function saveState() {
+      // Limit history size
+      if (historyIndex < history.length - 1) {
+        history.splice(historyIndex + 1);
+      }
+      
+      if (history.length >= maxHistorySteps) {
+        history.shift();
+      } else {
+        historyIndex++;
+      }
+      
+      history.push(canvas.toDataURL());
+      updateHistoryButtons();
+    }
+    
+    function undo() {
+      if (historyIndex > 0) {
+        historyIndex--;
+        loadState();
+      }
+    }
+    
+    function redo() {
+      if (historyIndex < history.length - 1) {
+        historyIndex++;
+        loadState();
+      }
+    }
+    
+    function loadState() {
+      const img = new Image();
+      img.src = history[historyIndex];
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0);
+        updateHistoryButtons();
+      };
+    }
+    
+    function updateHistoryButtons() {
+      document.getElementById('undo-btn').disabled = historyIndex <= 0;
+      document.getElementById('redo-btn').disabled = historyIndex >= history.length - 1;
+    }
+    
+    function drawCanvas() {
+      // Use the most recent state from history
+      if (history.length > 0) {
+        const img = new Image();
+        img.src = history[historyIndex];
+        ctx.drawImage(img, 0, 0);
+      }
+    }
+    
+    function drawGuides() {
+      drawCanvas();
+      
+      if (!showGuide) return;
+      
+      ctx.save();
+      ctx.strokeStyle = 'rgba(100, 100, 100, 0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 5]);
+      
+      if (symmetryType === 'radial') {
+        // Draw radial guides
+        for (let i = 0; i < symmetryCount; i++) {
+          const angle = i * (2 * Math.PI / symmetryCount);
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(
+            centerX + Math.cos(angle) * canvas.width,
+            centerY + Math.sin(angle) * canvas.width
+          );
+          ctx.stroke();
+        }
+      } else if (symmetryType === 'mirror') {
+        // Draw mirror guide
+        const radians = rotation * Math.PI / 180;
+        ctx.beginPath();
+        ctx.moveTo(
+          centerX - Math.cos(radians) * canvas.width,
+          centerY - Math.sin(radians) * canvas.width
+        );
+        ctx.lineTo(
+          centerX + Math.cos(radians) * canvas.width,
+          centerY + Math.sin(radians) * canvas.width
+        );
+        ctx.stroke();
+      } else if (symmetryType === 'kaleidoscope') {
+        // Draw kaleidoscope guides (combination of radial + mirrors)
+        for (let i = 0; i < symmetryCount; i++) {
+          const angle = rotation * Math.PI / 180 + i * (Math.PI / symmetryCount);
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(
+            centerX + Math.cos(angle) * canvas.width,
+            centerY + Math.sin(angle) * canvas.width
+          );
+          ctx.stroke();
+        }
+      }
+      
+      // Draw center point
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+      ctx.fill();
+      
+      ctx.restore();
+    }
+    
+    function applyStrokeStyle() {
+      ctx.strokeStyle = currentTool === 'eraser' ? 'white' : hexToRgba(currentColor, currentOpacity);
+      ctx.fillStyle = hexToRgba(currentColor, currentOpacity);
+      ctx.lineWidth = brushSize;
+      ctx.lineCap = document.getElementById('strokeCap').value;
+      ctx.lineJoin = document.getElementById('autoSmooth').checked ? 'round' : 'miter';
+      
+      if (shadowEffect) {
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = brushSize / 2;
+        ctx.shadowOffsetX = brushSize / 6;
+        ctx.shadowOffsetY = brushSize / 6;
+      } else {
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+      }
+      
+      // Apply stroke type
+      if (strokeType === 'dashed') {
+        ctx.setLineDash([brushSize * 2, brushSize]);
+      } else if (strokeType === 'dotted') {
+        ctx.setLineDash([brushSize, brushSize * 2]);
+      } else {
+        ctx.setLineDash([]);
+      }
+    }
+    
+    function drawPoint(x, y) {
+      applyStrokeStyle();
+      
+      if (symmetryType === 'radial') {
+        drawRadialSymmetry(x, y, x, y);
+      } else if (symmetryType === 'mirror') {
+        drawMirrorSymmetry(x, y, x, y);
+      } else if (symmetryType === 'kaleidoscope') {
+        drawKaleidoscopeSymmetry(x, y, x, y);
+      }
+    }
+    
+    function drawPen() {
+      applyStrokeStyle();
+      
+      if (symmetryType === 'radial') {
+        drawRadialSymmetry(lastX, lastY, currentX, currentY);
+      } else if (symmetryType === 'mirror') {
+        drawMirrorSymmetry(lastX, lastY, currentX, currentY);
+      } else if (symmetryType === 'kaleidoscope') {
+        drawKaleidoscopeSymmetry(lastX, lastY, currentX, currentY);
+      }
+    }
+    
+    function drawPreview() {
+      ctx.save();
+      
+      // Use a semi-transparent stroke for the preview
+      ctx.globalAlpha = 0.6;
+      applyStrokeStyle();
+      
+      if (currentTool === 'line') {
+        if (symmetryType === 'radial') {
+          drawRadialSymmetry(startX, startY, currentX, currentY, true);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorSymmetry(startX, startY, currentX, currentY, true);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopeSymmetry(startX, startY, currentX, currentY, true);
+        }
+      } else if (currentTool === 'circle') {
+        const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+        if (symmetryType === 'radial') {
+          drawRadialCircles(startX, startY, radius);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorCircles(startX, startY, radius);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopeCircles(startX, startY, radius);
+        }
+      } else if (currentTool === 'rect') {
+        if (symmetryType === 'radial') {
+          drawRadialRects(startX, startY, currentX - startX, currentY - startY);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorRects(startX, startY, currentX - startX, currentY - startY);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopeRects(startX, startY, currentX - startX, currentY - startY);
+        }
+      } else if (currentTool === 'polygon') {
+        const sides = symmetryCount;
+        const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+        const startAngle = Math.atan2(currentY - startY, currentX - startX);
+        
+        if (symmetryType === 'radial') {
+          drawRadialPolygons(startX, startY, radius, sides, startAngle);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorPolygons(startX, startY, radius, sides, startAngle);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopePolygons(startX, startY, radius, sides, startAngle);
+        }
+      }
+      
+      ctx.restore();
+    }
+    
+    function drawShape() {
+      applyStrokeStyle();
+      
+      if (currentTool === 'line') {
+        if (symmetryType === 'radial') {
+          drawRadialSymmetry(startX, startY, currentX, currentY);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorSymmetry(startX, startY, currentX, currentY);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopeSymmetry(startX, startY, currentX, currentY);
+        }
+      } else if (currentTool === 'circle') {
+        const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+        if (symmetryType === 'radial') {
+          drawRadialCircles(startX, startY, radius);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorCircles(startX, startY, radius);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopeCircles(startX, startY, radius);
+        }
+      } else if (currentTool === 'rect') {
+        if (symmetryType === 'radial') {
+          drawRadialRects(startX, startY, currentX - startX, currentY - startY);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorRects(startX, startY, currentX - startX, currentY - startY);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopeRects(startX, startY, currentX - startX, currentY - startY);
+        }
+      } else if (currentTool === 'polygon') {
+        const sides = symmetryCount;
+        const radius = Math.sqrt(Math.pow(currentX - startX, 2) + Math.pow(currentY - startY, 2));
+        const startAngle = Math.atan2(currentY - startY, currentX - startX);
+        
+        if (symmetryType === 'radial') {
+          drawRadialPolygons(startX, startY, radius, sides, startAngle);
+        } else if (symmetryType === 'mirror') {
+          drawMirrorPolygons(startX, startY, radius, sides, startAngle);
+        } else if (symmetryType === 'kaleidoscope') {
+          drawKaleidoscopePolygons(startX, startY, radius, sides, startAngle);
+        }
+      }
+    }
+    
+    // Symmetry Drawing Functions
+    
+    function drawRadialSymmetry(fromX, fromY, toX, toY, isPreview = false) {
+      const fromDX = fromX - centerX;
+      const fromDY = fromY - centerY;
+      const toDX = toX - centerX;
+      const toDY = toY - centerY;
+      
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = i * (2 * Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        const fromRotatedX = centerX + (fromDX * cos - fromDY * sin);
+        const fromRotatedY = centerY + (fromDX * sin + fromDY * cos);
+        const toRotatedX = centerX + (toDX * cos - toDY * sin);
+        const toRotatedY = centerY + (toDX * sin + toDY * cos);
+        
+        ctx.beginPath();
+        ctx.moveTo(fromRotatedX, fromRotatedY);
+        ctx.lineTo(toRotatedX, toRotatedY);
+        ctx.stroke();
+        
+        // Apply pattern if not preview and pattern is selected
+        if (!isPreview && patternType !== 'none') {
+          applyPattern(fromRotatedX, fromRotatedY, toRotatedX, toRotatedY);
+        }
+      }
+    }
+    
+    function drawMirrorSymmetry(fromX, fromY, toX, toY, isPreview = false) {
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Original line
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+      
+      // Apply pattern if not preview and pattern is selected
+      if (!isPreview && patternType !== 'none') {
+        applyPattern(fromX, fromY, toX, toY);
+      }
+      
+      // Calculate mirror points
+      // Translate to origin at center
+      const fromTransX = fromX - centerX;
+      const fromTransY = fromY - centerY;
+      const toTransX = toX - centerX;
+      const toTransY = toY - centerY;
+      
+      // Rotate to align with mirror axis
+      const cosRot = Math.cos(-rotationRad);
+      const sinRot = Math.sin(-rotationRad);
+      
+      const fromRotX = fromTransX * cosRot - fromTransY * sinRot;
+      const fromRotY = fromTransX * sinRot + fromTransY * cosRot;
+      const toRotX = toTransX * cosRot - toTransY * sinRot;
+      const toRotY = toTransX * sinRot + toTransY * cosRot;
+      
+      // Mirror by inverting Y
+      const fromMirrorRotY = -fromRotY;
+      const toMirrorRotY = -toRotY;
+      
+      // Rotate back
+      const fromMirrorX = centerX + (fromRotX * cosRot - fromMirrorRotY * sinRot);
+      const fromMirrorY = centerY + (fromRotX * sinRot + fromMirrorRotY * cosRot);
+      const toMirrorX = centerX + (toRotX * cosRot - toMirrorRotY * sinRot);
+      const toMirrorY = centerY + (toRotX * sinRot + toMirrorRotY * cosRot);
+      
+      // Draw mirrored line
+      ctx.beginPath();
+      ctx.moveTo(fromMirrorX, fromMirrorY);
+      ctx.lineTo(toMirrorX, toMirrorY);
+      ctx.stroke();
+      
+      // Apply pattern if not preview and pattern is selected
+      if (!isPreview && patternType !== 'none') {
+        applyPattern(fromMirrorX, fromMirrorY, toMirrorX, toMirrorY);
+      }
+    }
+    
+    function drawKaleidoscopeSymmetry(fromX, fromY, toX, toY, isPreview = false) {
+      const fromDX = fromX - centerX;
+      const fromDY = fromY - centerY;
+      const toDX = toX - centerX;
+      const toDY = toY - centerY;
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Draw in all kaleidoscope segments
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = rotationRad + i * (Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        // Original segment
+        const fromRotatedX = centerX + (fromDX * cos - fromDY * sin);
+        const fromRotatedY = centerY + (fromDX * sin + fromDY * cos);
+        const toRotatedX = centerX + (toDX * cos - toDY * sin);
+        const toRotatedY = centerY + (toDX * sin + toDY * cos);
+        
+        ctx.beginPath();
+        ctx.moveTo(fromRotatedX, fromRotatedY);
+        ctx.lineTo(toRotatedX, toRotatedY);
+        ctx.stroke();
+        
+        // Apply pattern if not preview and pattern is selected
+        if (!isPreview && patternType !== 'none') {
+          applyPattern(fromRotatedX, fromRotatedY, toRotatedX, toRotatedY);
+        }
+        
+        // Mirrored segment
+        const fromMirrorX = centerX + (fromDX * cos + fromDY * sin);
+        const fromMirrorY = centerY + (-fromDX * sin + fromDY * cos);
+        const toMirrorX = centerX + (toDX * cos + toDY * sin);
+        const toMirrorY = centerY + (-toDX * sin + toDY * cos);
+        
+        ctx.beginPath();
+        ctx.moveTo(fromMirrorX, fromMirrorY);
+        ctx.lineTo(toMirrorX, toMirrorY);
+        ctx.stroke();
+        
+        // Apply pattern if not preview and pattern is selected
+        if (!isPreview && patternType !== 'none') {
+          applyPattern(fromMirrorX, fromMirrorY, toMirrorX, toMirrorY);
+        }
+      }
+    }
+    
+    // Circle drawing functions
+    
+    function drawRadialCircles(x, y, radius) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = i * (2 * Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        const circleX = centerX + (dx * cos - dy * sin);
+        const circleY = centerY + (dx * sin + dy * cos);
+        
+        ctx.beginPath();
+        ctx.arc(circleX, circleY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Fill with pattern if selected
+        if (patternType !== 'none') {
+          fillWithPattern(circleX, circleY, radius);
+        }
+      }
+    }
+    
+    function drawMirrorCircles(x, y, radius) {
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Original circle
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Fill with pattern if selected
+      if (patternType !== 'none') {
+        fillWithPattern(x, y, radius);
+      }
+      
+      // Calculate mirror point
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      // Rotate to align with mirror axis
+      const cosRot = Math.cos(-rotationRad);
+      const sinRot = Math.sin(-rotationRad);
+      
+      const rotX = dx * cosRot - dy * sinRot;
+      const rotY = dx * sinRot + dy * cosRot;
+      
+      // Mirror by inverting Y
+      const mirrorRotY = -rotY;
+      
+      // Rotate back
+      const mirrorX = centerX + (rotX * cosRot - mirrorRotY * sinRot);
+      const mirrorY = centerY + (rotX * sinRot + mirrorRotY * cosRot);
+      
+      // Draw mirrored circle
+      ctx.beginPath();
+      ctx.arc(mirrorX, mirrorY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Fill with pattern if selected
+      if (patternType !== 'none') {
+        fillWithPattern(mirrorX, mirrorY, radius);
+      }
+    }
+    
+    function drawKaleidoscopeCircles(x, y, radius) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Draw in all kaleidoscope segments
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = rotationRad + i * (Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        // Original segment
+        const circleX = centerX + (dx * cos - dy * sin);
+        const circleY = centerY + (dx * sin + dy * cos);
+        
+        ctx.beginPath();
+        ctx.arc(circleX, circleY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Fill with pattern if selected
+        if (patternType !== 'none') {
+          fillWithPattern(circleX, circleY, radius);
+        }
+        
+        // Mirrored segment
+        const mirrorX = centerX + (dx * cos + dy * sin);
+        const mirrorY = centerY + (-dx * sin + dy * cos);
+        
+        ctx.beginPath();
+        ctx.arc(mirrorX, mirrorY, radius, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Fill with pattern if selected
+        if (patternType !== 'none') {
+          fillWithPattern(mirrorX, mirrorY, radius);
+        }
+      }
+    }
+    
+    // Rectangle drawing functions
+    
+    function drawRadialRects(x, y, width, height) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = i * (2 * Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        const rectX = centerX + (dx * cos - dy * sin);
+        const rectY = centerY + (dx * sin + dy * cos);
+        
+        ctx.save();
+        ctx.translate(rectX, rectY);
+        ctx.rotate(angle);
+        ctx.strokeRect(0, 0, width, height);
+        
+        // Fill with pattern if selected
+        if (patternType !== 'none') {
+          fillRectWithPattern(0, 0, width, height);
+        }
+        
+        ctx.restore();
+      }
+    }
+    
+    function drawMirrorRects(x, y, width, height) {
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Original rectangle
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.strokeRect(0, 0, width, height);
+      
+      // Fill with pattern if selected
+      if (patternType !== 'none') {
+        fillRectWithPattern(0, 0, width, height);
+      }
+      
+      ctx.restore();
+      
+      // Calculate mirror point
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      // Rotate to align with mirror axis
+      const cosRot = Math.cos(-rotationRad);
+      const sinRot = Math.sin(-rotationRad);
+      
+      const rotX = dx * cosRot - dy * sinRot;
+      const rotY = dx * sinRot + dy * cosRot;
+      
+      // Mirror by inverting Y
+      const mirrorRotY = -rotY;
+      
+      // Rotate back
+      const mirrorX = centerX + (rotX * cosRot - mirrorRotY * sinRot);
+      const mirrorY = centerY + (rotX * sinRot + mirrorRotY * cosRot);
+      
+      // Draw mirrored rectangle
+      ctx.save();
+      ctx.translate(mirrorX, mirrorY);
+      ctx.rotate(rotationRad * 2);
+      ctx.strokeRect(0, 0, width, -height);
+      
+      // Fill with pattern if selected
+      if (patternType !== 'none') {
+        fillRectWithPattern(0, 0, width, -height);
+      }
+      
+      ctx.restore();
+    }
+    
+    function drawKaleidoscopeRects(x, y, width, height) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Draw in all kaleidoscope segments
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = rotationRad + i * (Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        // Original segment
+        const rectX = centerX + (dx * cos - dy * sin);
+        const rectY = centerY + (dx * sin + dy * cos);
+        
+        ctx.save();
+        ctx.translate(rectX, rectY);
+        ctx.rotate(angle);
+        ctx.strokeRect(0, 0, width, height);
+        
+        // Fill with pattern if selected
+        if (patternType !== 'none') {
+          fillRectWithPattern(0, 0, width, height);
+        }
+        
+        ctx.restore();
+        
+        // Mirrored segment
+        const mirrorX = centerX + (dx * cos + dy * sin);
+        const mirrorY = centerY + (-dx * sin + dy * cos);
+        
+        ctx.save();
+        ctx.translate(mirrorX, mirrorY);
+        ctx.rotate(angle + Math.PI);
+        ctx.strokeRect(0, 0, width, height);
+        
+        // Fill with pattern if selected
+        if (patternType !== 'none') {
+          fillRectWithPattern(0, 0, width, height);
+        }
+        
+        ctx.restore();
+      }
+    }
+    
+    // Polygon drawing functions
+    
+    function drawPolygon(centerX, centerY, radius, sides, startAngle = 0) {
+      ctx.beginPath();
+      for (let i = 0; i < sides; i++) {
+        const angle = startAngle + i * (Math.PI * 2 / sides);
+        const x = centerX + radius * Math.cos(angle);
+        const y = centerY + radius * Math.sin(angle);
+        
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.closePath();
+      ctx.stroke();
+      
+      // Fill with pattern if selected
+      if (patternType !== 'none') {
+        fillPolygonWithPattern(centerX, centerY, radius);
+      }
+    }
+    
+    function drawRadialPolygons(x, y, radius, sides, startAngle) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = i * (2 * Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        const polyX = centerX + (dx * cos - dy * sin);
+        const polyY = centerY + (dx * sin + dy * cos);
+        
+        drawPolygon(polyX, polyY, radius, sides, startAngle + angle);
+      }
+    }
+    
+    function drawMirrorPolygons(x, y, radius, sides, startAngle) {
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Original polygon
+      drawPolygon(x, y, radius, sides, startAngle);
+      
+      // Calculate mirror point
+      const dx = x - centerX;
+      const dy = y - centerY;
+      
+      // Rotate to align with mirror axis
+      const cosRot = Math.cos(-rotationRad);
+      const sinRot = Math.sin(-rotationRad);
+      
+      const rotX = dx * cosRot - dy * sinRot;
+      const rotY = dx * sinRot + dy * cosRot;
+      
+      // Mirror by inverting Y
+      const mirrorRotY = -rotY;
+      
+      // Rotate back
+      const mirrorX = centerX + (rotX * cosRot - mirrorRotY * sinRot);
+      const mirrorY = centerY + (rotX * sinRot + mirrorRotY * cosRot);
+      
+      // Draw mirrored polygon
+      drawPolygon(mirrorX, mirrorY, radius, sides, 2 * rotationRad - startAngle);
+    }
+    
+    function drawKaleidoscopePolygons(x, y, radius, sides, startAngle) {
+      const dx = x - centerX;
+      const dy = y - centerY;
+      const rotationRad = rotation * Math.PI / 180;
+      
+      // Draw in all kaleidoscope segments
+      for (let i = 0; i < symmetryCount; i++) {
+        const angle = rotationRad + i * (Math.PI / symmetryCount);
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        
+        // Original segment
+        const polyX = centerX + (dx * cos - dy * sin);
+        const polyY = centerY + (dx * sin + dy * cos);
+        
+        drawPolygon(polyX, polyY, radius, sides, startAngle + angle);
+        
+        // Mirrored segment
+        const mirrorX = centerX + (dx * cos + dy * sin);
+        const mirrorY = centerY + (-dx * sin + dy * cos);
+        
+        drawPolygon(mirrorX, mirrorY, radius, sides, angle - startAngle + Math.PI);
+      }
+    }
+    
+    // Pattern functions
+    
+    function applyPattern(fromX, fromY, toX, toY) {
+      const dx = toX - fromX;
+      const dy = toY - fromY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx);
+      
+      if (patternType === 'dots') {
+        const spacing = brushSize * 3;
+        const numDots = Math.floor(distance / spacing);
+        
+        for (let i = 0; i <= numDots; i++) {
+          const dotX = fromX + dx * (i / numDots);
+          const dotY = fromY + dy * (i / numDots);
+          
+          ctx.beginPath();
+          ctx.arc(dotX, dotY, brushSize / 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (patternType === 'lines') {
+        const perpAngle = angle + Math.PI / 2;
+        const lineLength = brushSize * 2;
+        const spacing = brushSize * 4;
+        const numLines = Math.floor(distance / spacing);
+        
+        for (let i = 0; i <= numLines; i++) {
+          const lineX = fromX + dx * (i / numLines);
+          const lineY = fromY + dy * (i / numLines);
+          
+          ctx.beginPath();
+          ctx.moveTo(
+            lineX + Math.cos(perpAngle) * lineLength / 2,
+            lineY + Math.sin(perpAngle) * lineLength / 2
+          );
+          ctx.lineTo(
+            lineX - Math.cos(perpAngle) * lineLength / 2,
+            lineY - Math.sin(perpAngle) * lineLength / 2
+          );
+          ctx.stroke();
+        }
+      } else if (patternType === 'zigzag') {
+        const perpAngle = angle + Math.PI / 2;
+        const zigWidth = brushSize;
+        const numPoints = Math.floor(distance / (zigWidth * 2));
+        
+        ctx.beginPath();
+        ctx.moveTo(fromX, fromY);
+        
+        for (let i = 1; i <= numPoints; i++) {
+          const t = i / numPoints;
+          const mainX = fromX + dx * t;
+          const mainY = fromY + dy * t;
+          
+          if (i % 2 === 1) {
+            ctx.lineTo(
+              mainX + Math.cos(perpAngle) * zigWidth,
+              mainY + Math.sin(perpAngle) * zigWidth
+            );
+          } else {
+            ctx.lineTo(
+              mainX - Math.cos(perpAngle) * zigWidth,
+              mainY - Math.sin(perpAngle) * zigWidth
+            );
+          }
+        }
+        
+        ctx.stroke();
+      }
+    }
+    
+    function fillWithPattern(x, y, radius) {
+      if (patternType === 'dots') {
+        const spacing = brushSize * 2;
+        const rows = Math.ceil(radius * 2 / spacing);
+        
+        for (let i = -rows; i <= rows; i++) {
+          for (let j = -rows; j <= rows; j++) {
+            const dotX = x + i * spacing;
+            const dotY = y + j * spacing;
+            const distFromCenter = Math.sqrt(Math.pow(dotX - x, 2) + Math.pow(dotY - y, 2));
+            
+            if (distFromCenter <= radius) {
+              ctx.beginPath();
+              ctx.arc(dotX, dotY, brushSize / 3, 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
+      } else if (patternType === 'lines') {
+        const spacing = brushSize * 2;
+        const numLines = Math.ceil(radius * 2 / spacing);
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.clip();
+        
+        for (let i = -numLines; i <= numLines; i++) {
+          const lineY = y + i * spacing;
+          
+          ctx.beginPath();
+          ctx.moveTo(x - radius, lineY);
+          ctx.lineTo(x + radius, lineY);
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+      } else if (patternType === 'zigzag') {
+        const spacing = brushSize * 4;
+        const numLines = Math.ceil(radius * 2 / spacing);
+        const zigWidth = brushSize * 2;
+        
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.clip();
+        
+        for (let i = -numLines; i <= numLines; i++) {
+          const baseY = y + i * spacing;
+          
+          ctx.beginPath();
+          ctx.moveTo(x - radius, baseY);
+          
+          let zigX = x - radius + zigWidth;
+          while (zigX < x + radius) {
+            ctx.lineTo(zigX, baseY + zigWidth);
+            zigX += zigWidth;
+            
+            if (zigX > x + radius) break;
+            ctx.lineTo(zigX, baseY - zigWidth);
+            zigX += zigWidth;
+          }
+          
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+      }
+    }
+    
+    function fillRectWithPattern(x, y, width, height) {
+      if (patternType === 'dots') {
+        const spacing = brushSize * 2;
+        const cols = Math.ceil(width / spacing);
+        const rows = Math.ceil(height / spacing);
+        
+        for (let i = 0; i <= rows; i++) {
+          for (let j = 0; j <= cols; j++) {
+            const dotX = x + j * spacing;
+            const dotY = y + i * spacing;
+            
+            ctx.beginPath();
+            ctx.arc(dotX, dotY, brushSize / 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      } else if (patternType === 'lines') {
+        const spacing = brushSize * 2;
+        const numLines = Math.ceil(height / spacing);
+        
+        for (let i = 0; i <= numLines; i++) {
+          const lineY = y + i * spacing;
+          
+          ctx.beginPath();
+          ctx.moveTo(x, lineY);
+          ctx.lineTo(x + width, lineY);
+          ctx.stroke();
+        }
+      } else if (patternType === 'zigzag') {
+        const spacing = brushSize * 4;
+        const numLines = Math.ceil(height / spacing);
+        const zigWidth = brushSize * 2;
+        
+        for (let i = 0; i <= numLines; i++) {
+          const baseY = y + i * spacing;
+          
+          ctx.beginPath();
+          ctx.moveTo(x, baseY);
+          
+          let zigX = x + zigWidth;
+          while (zigX < x + width) {
+            ctx.lineTo(zigX, baseY + zigWidth);
+            zigX += zigWidth;
+            
+            if (zigX > x + width) break;
+            ctx.lineTo(zigX, baseY - zigWidth);
+            zigX += zigWidth;
+          }
+          
+          ctx.stroke();
+        }
+      }
+    }
+    
+    function fillPolygonWithPattern(x, y, radius) {
+      // Similar to fillWithPattern, but for polygons
+      // For simplicity, we use the circle pattern function since
+      // we're drawing within a circle's radius
+      fillWithPattern(x, y, radius);
+    }
+    
+    // Utility functions
+    
+    function hexToRgba(hex, opacity) {
+      hex = hex.replace('#', '');
+      
+      const r = parseInt(hex.substring(0, 2), 16);
+      const g = parseInt(hex.substring(2, 4), 16);
+      const b = parseInt(hex.substring(4, 6), 16);
+      
+      return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+    }
+    
+    function updateStrokePreview() {
+      const strokeLine = document.querySelector('.stroke-line');
+      strokeLine.style.backgroundColor = currentColor;
+      strokeLine.style.opacity = currentOpacity;
+      strokeLine.style.height = brushSize + 'px';
+      
+      if (strokeType === 'dashed') {
+        strokeLine.style.borderStyle = 'dashed';
+        strokeLine.style.borderWidth = '0 0 ' + brushSize + 'px 0';
+        strokeLine.style.height = '0';
+        strokeLine.style.borderColor = currentColor;
+      } else if (strokeType === 'dotted') {
+        strokeLine.style.borderStyle = 'dotted';
+        strokeLine.style.borderWidth = '0 0 ' + brushSize + 'px 0';
+        strokeLine.style.height = '0';
+        strokeLine.style.borderColor = currentColor;
+      } else {
+        strokeLine.style.borderStyle = 'none';
+      }
+    }
+    
+    function exportImage(type) {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      // Copy the main canvas to the temporary one
+      tempCtx.drawImage(canvas, 0, 0);
+      
+      // Create a link to download
+      const dataURL = tempCanvas.toDataURL('image/' + type);
+      const link = document.createElement('a');
+      link.download = 'symmetrical-drawing.' + type;
+      link.href = dataURL;
+      link.click();
+    }
+    
+    function downloadCanvas(filename, format) {
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = canvas.width;
+      tempCanvas.height = canvas.height;
+      const tempCtx = tempCanvas.getContext('2d');
+      
+      // Copy the main canvas to the temporary one
+      tempCtx.fillStyle = 'white';
+      tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+      tempCtx.drawImage(canvas, 0, 0);
+      
+      // Create a link to download
+      const dataURL = tempCanvas.toDataURL('image/' + format, 0.8);
+      const link = document.createElement('a');
+      link.download = filename + '.' + format;
+      link.href = dataURL;
+      link.click();
+    }
+    
+    function pickColor(x, y) {
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      const r = pixel[0];
+      const g = pixel[1];
+      const b = pixel[2];
+      const a = pixel[3] / 255;
+      
+      // Convert to hex
+      const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+      currentColor = hex;
+      document.getElementById('color-picker').value = hex;
+      
+      // Update opacity
+      currentOpacity = a;
+      document.getElementById('opacity').value = a;
+      document.querySelector('.opacity-value').textContent = Math.round(a * 100) + '%';
+      
+      // Update color options highlight
+      document.querySelectorAll('.color-option').forEach(opt => {
+        if (opt.getAttribute('data-color').toLowerCase() === hex.toLowerCase()) {
+          opt.classList.add('active');
+        } else {
+          opt.classList.remove('active');
+        }
+      });
+      
+      updateStrokePreview();
+    }
+    
+    function fillCanvas(x, y) {
+      // This is a simplified flood fill - in a real app, you'd use a proper flood fill algorithm
+      // For this demo, we'll just fill the entire canvas with the current color
+      ctx.save();
+      ctx.globalAlpha = currentOpacity / 4; // Make it semi-transparent
+      ctx.fillStyle = currentColor;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.restore();
+      
+      saveState();
+    }
+    
+    function increaseBrushSize() {
+      const weight = document.getElementById('weight');
+      if (parseInt(weight.value) < parseInt(weight.max)) {
+        weight.value = parseInt(weight.value) + 1;
+        brushSize = parseInt(weight.value);
+        document.getElementById('size-value').textContent = brushSize;
+        
+        // Update brush preview
+        const brushDot = document.querySelector('.brush-dot');
+        brushDot.style.width = brushSize + 'px';
+        brushDot.style.height = brushSize + 'px';
+        updateStrokePreview();
+      }
+    }
+    
+    function decreaseBrushSize() {
+      const weight = document.getElementById('weight');
+      if (parseInt(weight.value) > parseInt(weight.min)) {
+        weight.value = parseInt(weight.value) - 1;
+        brushSize = parseInt(weight.value);
+        document.getElementById('size-value').textContent = brushSize;
+        
+        // Update brush preview
+        const brushDot = document.querySelector('.brush-dot');
+        brushDot.style.width = brushSize + 'px';
+        brushDot.style.height = brushSize + 'px';
+        updateStrokePreview();
+      }
+    }
+    
+    // Initialize
+    clearCanvas();
+    updateStrokePreview();
+  </script>
+</body>
+</html>
