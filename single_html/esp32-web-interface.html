@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Moog Synth Control</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>ESP32 Moog-Style Synthesizer</h1>
+      <p>WiFi Control Interface</p>
+    </header>
+
+    <div class="main-controls">
+      <div class="keyboard-container">
+        <h2>Keyboard</h2>
+        <div class="keyboard">
+          <!-- Keyboard will be generated with JavaScript -->
+        </div>
+      </div>
+
+      <div class="section oscillator">
+        <h2>Oscillator</h2>
+        <div class="control-group">
+          <label for="osc-type">Type</label>
+          <select id="osc-type" class="control-input">
+            <option value="0">Sine</option>
+            <option value="1">Triangle</option>
+            <option value="2" selected>Saw</option>
+            <option value="3">Square</option>
+            <option value="4">Noise</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section filter">
+        <h2>Filter</h2>
+        <div class="control-group">
+          <label for="filter-cutoff">Cutoff</label>
+          <input type="range" id="filter-cutoff" class="control-input slider" min="20" max="10000" value="1000" step="1">
+          <span class="value-display">1000 Hz</span>
+        </div>
+        <div class="control-group">
+          <label for="filter-resonance">Resonance</label>
+          <input type="range" id="filter-resonance" class="control-input slider" min="0" max="0.99" value="0.7" step="0.01">
+          <span class="value-display">0.70</span>
+        </div>
+      </div>
+
+      <div class="section envelope">
+        <h2>Envelope</h2>
+        <div class="adsr-visualization">
+          <canvas id="adsr-canvas" width="200" height="100"></canvas>
+        </div>
+        <div class="control-group">
+          <label for="attack-time">Attack</label>
+          <input type="range" id="attack-time" class="control-input slider" min="0.001" max="2" value="0.1" step="0.001">
+          <span class="value-display">0.100 s</span>
+        </div>
+        <div class="control-group">
+          <label for="decay-time">Decay</label>
+          <input type="range" id="decay-time" class="control-input slider" min="0.001" max="2" value="0.2" step="0.001">
+          <span class="value-display">0.200 s</span>
+        </div>
+        <div class="control-group">
+          <label for="sustain-level">Sustain</label>
+          <input type="range" id="sustain-level" class="control-input slider" min="0" max="1" value="0.5" step="0.01">
+          <span class="value-display">0.50</span>
+        </div>
+        <div class="control-group">
+          <label for="release-time">Release</label>
+          <input type="range" id="release-time" class="control-input slider" min="0.001" max="3" value="0.3" step="0.001">
+          <span class="value-display">0.300 s</span>
+        </div>
+      </div>
+
+      <div class="section delay">
+        <h2>Delay</h2>
+        <div class="control-group">
+          <label for="delay-time">Time</label>
+          <input type="range" id="delay-time" class="control-input slider" min="0" max="1" value="0.3" step="0.01">
+          <span class="value-display">0.30 s</span>
+        </div>
+        <div class="control-group">
+          <label for="delay-feedback">Feedback</label>
+          <input type="range" id="delay-feedback" class="control-input slider" min="0" max="0.95" value="0.4" step="0.01">
+          <span class="value-display">0.40</span>
+        </div>
+      </div>
+
+      <div class="section granular">
+        <h2>Granular</h2>
+        <div class="control-group">
+          <label for="grain-size">Grain Size</label>
+          <input type="range" id="grain-size" class="control-input slider" min="0.01" max="0.5" value="0.1" step="0.01">
+          <span class="value-display">0.10 s</span>
+        </div>
+        <div class="control-group">
+          <label for="grain-density">Density</label>
+          <input type="range" id="grain-density" class="control-input slider" min="0" max="1" value="0.5" step="0.01">
+          <span class="value-display">0.50</span>
+        </div>
+        <div class="control-group">
+          <label for="grain-position">Position</label>
+          <input type="range" id="grain-position" class="control-input slider" min="0" max="1" value="0" step="0.01">
+          <span class="value-display">0.00</span>
+        </div>
+        <div class="control-group">
+          <label for="grain-pitch">Pitch</label>
+          <input type="range" id="grain-pitch" class="control-input slider" min="0.5" max="2" value="1" step="0.01">
+          <span class="value-display">1.00</span>
+        </div>
+        <div class="control-group">
+          <label for="effect-mix">Mix</label>
+          <input type="range" id="effect-mix" class="control-input slider" min="0" max="1" value="0.5" step="0.01">
+          <span class="value-display">0.50</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="section presets">
+      <h2>Presets</h2>
+      <div class="presets-container">
+        <div class="preset-controls">
+          <input type="text" id="preset-name" placeholder="Preset Name">
+          <button id="save-preset">Save</button>
+          <button id="load-preset">Load</button>
+        </div>
+        <select id="preset-list" size="5">
+          <!-- Presets will be populated dynamically -->
+        </select>
+      </div>
+    </div>
+
+    <div class="connection-status">
+      <div id="status-indicator"></div>
+      <span id="status-text">Connecting...</span>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
