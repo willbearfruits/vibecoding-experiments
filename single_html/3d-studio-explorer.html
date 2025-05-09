@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Studio Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+        }
+        #container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #instructions {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            max-width: 300px;
+            z-index: 10;
+        }
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+            width: 80%;
+            max-width: 500px;
+        }
+        #progress-container {
+            width: 100%;
+            height: 10px;
+            background: #333;
+            margin-top: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #4CAF50;
+            transition: width 0.3s;
+        }
+        .hidden {
+            display: none !important;
+        }
+        
+        /* File upload styling */
+        .file-upload {
+            padding: 10px;
+            margin: 20px 0;
+        }
+        .upload-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .upload-option {
+            position: relative;
+            margin-bottom: 5px;
+        }
+        .upload-label {
+            display: block;
+            background: #2c2c2c;
+            color: white;
+            padding: 12px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 5px;
+            transition: background 0.2s;
+            text-align: left;
+        }
+        .upload-label:hover {
+            background: #3c3c3c;
+        }
+        input[type="file"] {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+        }
+        .load-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        .load-button:hover {
+            background: #3d8b40;
+        }
+        .file-name {
+            display: block;
+            font-size: 12px;
+            margin-top: 5px;
+            color: #aaa;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+            text-align: left;
+        }
+        .note {
+            font-size: 13px;
+            color: #aaa;
+            margin-top: 5px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <div id="instructions">
+        <h3>Controls:</h3>
+        <p>WASD - Move around</p>
+        <p>SPACE - Jump</p>
+        <p>MOUSE - Look around</p>
+        <p>ESC - Toggle mouse lock</p>
+        <p>Click anywhere to start</p>
+    </div>
+    <div id="loading">
+        <h2>3D Model Loader</h2>
+        
+        <div id="file-selector" class="file-upload">
+            <h3>Select your 3D model:</h3>
+            <div class="upload-buttons">
+                <div class="upload-option">
+                    <label for="obj-input" class="upload-label">OBJ Model</label>
+                    <input type="file" id="obj-input" accept=".obj" />
+                </div>
+                <div class="upload-option">
+                    <label for="mtl-input" class="upload-label">MTL Material (Optional)</label>
+                    <input type="file" id="mtl-input" accept=".mtl" />
+                </div>
+                <div class="upload-option">
+                    <label for="texture-input" class="upload-label">Textures (Optional)</label>
+                    <input type="file" id="texture-input" accept=".jpg,.jpeg,.png,.bmp" multiple />
+                </div>
+                <div class="upload-option">
+                    <label for="gltf-input" class="upload-label">GLTF/GLB Model</label>
+                    <input type="file" id="gltf-input" accept=".gltf,.glb" />
+                </div>
+                <p class="note">* For photogrammetry models, GLB format usually works best</p>
+                <button id="load-model-btn" class="load-button">Load Model</button>
+            </div>
+        </div>
+        
+        <div id="loading-progress" class="hidden">
+            <h3>Loading Model...</h3>
+            <div id="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+            <p id="progress-text">0%</p>
+        </div>
+    </div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+    
+    <script type="module">
+        import * as THREE from 'three';
+        import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+        import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+
+        // Configuration for physics parameters
+        const CONFIG = {
+            physics: {
+                gravity: 0.08,
+                jumpForce: 0.5,
+                playerHeight: 1.8,
+                playerRadius: 0.3,
+                moveSpeed: 0.1,
+                lookSpeed: 0.002,
+                cameraHeight: 1.6
+            }
+        };
+
+        // Main application
+        class StudioExplorer {
+            constructor() {
+                // Setup
+                this.container = document.getElementById('container');
+                this.loadingElement = document.getElementById('loading');
+                this.fileSelector = document.getElementById('file-selector');
+                this.loadingProgress = document.getElementById('loading-progress');
+                this.progressBar = document.getElementById('progress-bar');
+                this.progressText = document.getElementById('progress-text');
+                
+                // File inputs
+                this.objInput = document.getElementById('obj-input');
+                this.mtlInput = document.getElementById('mtl-input');
+                this.textureInput = document.getElementById('texture-input');
+                this.gltfInput = document.getElementById('gltf-input');
+                this.loadModelBtn = document.getElementById('load-model-btn');
+                
+                // File storage
+                this.files = {
+                    obj: null,
+                    mtl: null,
+                    textures: [],
+                    gltf: null
+                };
+
+                // Three.js components
+                this.scene = new THREE.Scene();
+                this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+                this.renderer = new THREE.WebGLRenderer({ antialias: true });
+                
+                // Player state
+                this.player = {
+                    position: new THREE.Vector3(0, CONFIG.physics.playerHeight / 2, 0),
+                    velocity: new THREE.Vector3(0, 0, 0),
+                    onGround: false,
+                    rotation: new THREE.Euler(0, 0, 0, 'YXZ'),
+                    direction: new THREE.Vector3()
+                };
+                
+                // Controls state
+                this.controls = {
+                    moveForward: false,
+                    moveBackward: false,
+                    moveLeft: false,
+                    moveRight: false,
+                    jump: false,
+                    pointerLocked: false
+                };
+                
+                // Game state
+                this.gameState = {
+                    clock: new THREE.Clock(),
+                    deltaTime: 0,
+                    collisionObjects: [],
+                    modelLoaded: false
+                };
+
+                // Initialize
+                this.setupRenderer();
+                this.setupLights();
+                this.setupFileInputs();
+                this.setupEventListeners();
+                this.animate();
+            }
+
+            setupRenderer() {
+                this.renderer.setSize(window.innerWidth, window.innerHeight);
+                this.renderer.setClearColor(0x87ceeb); // Sky blue background
+                this.renderer.shadowMap.enabled = true;
+                this.container.appendChild(this.renderer.domElement);
+
+                // Set initial camera position and rotation
+                this.camera.position.set(0, CONFIG.physics.cameraHeight, 5);
+                this.scene.add(this.camera);
+                
+                // Add a permanent ground plane that will stay even after model loads
+                const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
+                const groundMaterial = new THREE.MeshStandardMaterial({ 
+                    color: 0x555555,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+                ground.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+                ground.position.y = -0.1; // Slightly below origin
+                ground.receiveShadow = true;
+                ground.name = "PermanentGround";
+                this.scene.add(ground);
+                this.gameState.collisionObjects.push(ground);
+            }
+
+            setupLights() {
+                // Add ambient light
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+                this.scene.add(ambientLight);
+
+                // Add directional light (sun)
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+                directionalLight.position.set(10, 20, 10);
+                directionalLight.castShadow = true;
+                directionalLight.shadow.mapSize.width = 2048;
+                directionalLight.shadow.mapSize.height = 2048;
+                directionalLight.shadow.camera.left = -15;
+                directionalLight.shadow.camera.right = 15;
+                directionalLight.shadow.camera.top = 15;
+                directionalLight.shadow.camera.bottom = -15;
+                this.scene.add(directionalLight);
+            }
+
+            setupFileInputs() {
+                // Handle file selection for OBJ
+                this.objInput.addEventListener('change', (event) => {
+                    if (event.target.files.length > 0) {
+                        this.files.obj = event.target.files[0];
+                        // Add filename display
+                        const fileNameElem = this.objInput.parentElement.querySelector('.file-name');
+                        if (fileNameElem) {
+                            fileNameElem.textContent = this.files.obj.name;
+                        } else {
+                            const fileNameSpan = document.createElement('span');
+                            fileNameSpan.className = 'file-name';
+                            fileNameSpan.textContent = this.files.obj.name;
+                            this.objInput.parentElement.appendChild(fileNameSpan);
+                        }
+                    }
+                });
+                
+                // Handle file selection for MTL
+                this.mtlInput.addEventListener('change', (event) => {
+                    if (event.target.files.length > 0) {
+                        this.files.mtl = event.target.files[0];
+                        // Add filename display
+                        const fileNameElem = this.mtlInput.parentElement.querySelector('.file-name');
+                        if (fileNameElem) {
+                            fileNameElem.textContent = this.files.mtl.name;
+                        } else {
+                            const fileNameSpan = document.createElement('span');
+                            fileNameSpan.className = 'file-name';
+                            fileNameSpan.textContent = this.files.mtl.name;
+                            this.mtlInput.parentElement.appendChild(fileNameSpan);
+                        }
+                    }
+                });
+                
+                // Handle file selection for textures
+                this.textureInput.addEventListener('change', (event) => {
+                    if (event.target.files.length > 0) {
+                        this.files.textures = Array.from(event.target.files);
+                        // Add filename display
+                        const fileNameElem = this.textureInput.parentElement.querySelector('.file-name');
+                        const fileCount = this.files.textures.length;
+                        const fileText = fileCount === 1 
+                            ? this.files.textures[0].name 
+                            : `${fileCount} texture files selected`;
+                            
+                        if (fileNameElem) {
+                            fileNameElem.textContent = fileText;
+                        } else {
+                            const fileNameSpan = document.createElement('span');
+                            fileNameSpan.className = 'file-name';
+                            fileNameSpan.textContent = fileText;
+                            this.textureInput.parentElement.appendChild(fileNameSpan);
+                        }
+                    }
+                });
+                
+                // Handle file selection for GLTF/GLB
+                this.gltfInput.addEventListener('change', (event) => {
+                    if (event.target.files.length > 0) {
+                        this.files.gltf = event.target.files[0];
+                        // Add filename display
+                        const fileNameElem = this.gltfInput.parentElement.querySelector('.file-name');
+                        if (fileNameElem) {
+                            fileNameElem.textContent = this.files.gltf.name;
+                        } else {
+                            const fileNameSpan = document.createElement('span');
+                            fileNameSpan.className = 'file-name';
+                            fileNameSpan.textContent = this.files.gltf.name;
+                            this.gltfInput.parentElement.appendChild(fileNameSpan);
+                        }
+                    }
+                });
+                
+                // Handle load button click
+                this.loadModelBtn.addEventListener('click', () => {
+                    if (this.files.obj || this.files.gltf) {
+                        this.fileSelector.classList.add('hidden');
+                        this.loadingProgress.classList.remove('hidden');
+                        this.loadModel();
+                    } else {
+                        alert('Please select either an OBJ or GLTF/GLB model file to load.');
+                    }
+                });
+            }
+
+            setupEventListeners() {
+                // Handle window resizing
+                window.addEventListener('resize', () => {
+                    this.camera.aspect = window.innerWidth / window.innerHeight;
+                    this.camera.updateProjectionMatrix();
+                    this.renderer.setSize(window.innerWidth, window.innerHeight);
+                });
+
+                // Pointer lock handling
+                this.container.addEventListener('click', () => {
+                    if (!this.controls.pointerLocked) {
+                        this.container.requestPointerLock = this.container.requestPointerLock || 
+                                                           this.container.mozRequestPointerLock || 
+                                                           this.container.webkitRequestPointerLock;
+                        this.container.requestPointerLock();
+                    }
+                });
+
+                document.addEventListener('pointerlockchange', this.onPointerLockChange.bind(this));
+                document.addEventListener('mozpointerlockchange', this.onPointerLockChange.bind(this));
+                document.addEventListener('webkitpointerlockchange', this.onPointerLockChange.bind(this));
+
+                // Mouse movement
+                document.addEventListener('mousemove', this.onMouseMove.bind(this));
+
+                // Keyboard controls
+                document.addEventListener('keydown', this.onKeyDown.bind(this));
+                document.addEventListener('keyup', this.onKeyUp.bind(this));
+            }
+
+            onPointerLockChange() {
+                this.controls.pointerLocked = document.pointerLockElement === this.container || 
+                                              document.mozPointerLockElement === this.container || 
+                                              document.webkitPointerLockElement === this.container;
+            }
+
+            onMouseMove(event) {
+                if (!this.controls.pointerLocked) return;
+
+                const movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
+                const movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+
+                // Update player rotation based on mouse movement
+                this.player.rotation.y -= movementX * CONFIG.physics.lookSpeed;
+                this.player.rotation.x -= movementY * CONFIG.physics.lookSpeed;
+                
+                // Clamp vertical rotation to prevent over-rotation
+                this.player.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, this.player.rotation.x));
+            }
+
+            onKeyDown(event) {
+                switch (event.code) {
+                    case 'KeyW':
+                        this.controls.moveForward = true;
+                        break;
+                    case 'KeyS':
+                        this.controls.moveBackward = true;
+                        break;
+                    case 'KeyA':
+                        this.controls.moveLeft = true;
+                        break;
+                    case 'KeyD':
+                        this.controls.moveRight = true;
+                        break;
+                    case 'Space':
+                        if (this.player.onGround) {
+                            this.player.velocity.y = CONFIG.physics.jumpForce;
+                            this.player.onGround = false;
+                        }
+                        break;
+                    case 'Escape':
+                        if (this.controls.pointerLocked) {
+                            document.exitPointerLock = document.exitPointerLock || 
+                                                      document.mozExitPointerLock || 
+                                                      document.webkitExitPointerLock;
+                            document.exitPointerLock();
+                        }
+                        break;
+                }
+            }
+
+            onKeyUp(event) {
+                switch (event.code) {
+                    case 'KeyW':
+                        this.controls.moveForward = false;
+                        break;
+                    case 'KeyS':
+                        this.controls.moveBackward = false;
+                        break;
+                    case 'KeyA':
+                        this.controls.moveLeft = false;
+                        break;
+                    case 'KeyD':
+                        this.controls.moveRight = false;
+                        break;
+                }
+            }
+            
+            loadModel() {
+                // Show loading progress and hide file selector
+                this.progressBar.style.width = '0%';
+                this.progressText.textContent = '0%';
+                
+                const onProgress = (xhr) => {
+                    if (xhr.lengthComputable) {
+                        const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+                        this.progressBar.style.width = percentComplete + '%';
+                        this.progressText.textContent = percentComplete + '%';
+                        console.log("Loading progress: " + percentComplete + "%");
+                    }
+                };
+                
+                const onError = (error) => {
+                    console.error('Error loading model:', error);
+                    this.progressText.textContent = 'Error loading model: ' + error.message;
+                };
+                
+                const onLoad = (object) => {
+                    console.log("Model loaded successfully, processing...");
+                    this.progressText.textContent = "Processing model...";
+                    
+                    // Process the loaded model
+                    object.traverse((child) => {
+                        if (child.isMesh) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            
+                            // Add mesh to collision objects if it's not too small
+                            const bbox = new THREE.Box3().setFromObject(child);
+                            const size = new THREE.Vector3();
+                            bbox.getSize(size);
+                            
+                            // Only add reasonably sized objects to collision detection
+                            if (size.x > 0.2 && size.y > 0.2 && size.z > 0.2) {
+                                this.gameState.collisionObjects.push(child);
+                            }
+                        }
+                    });
+                    
+                    // Center the model
+                    console.log("Centering model...");
+                    const bbox = new THREE.Box3().setFromObject(object);
+                    const center = new THREE.Vector3();
+                    bbox.getCenter(center);
+                    
+                    // Move model to be centered in X and Z but keep Y as is
+                    // This keeps the model on the ground
+                    object.position.x -= center.x;
+                    object.position.z -= center.z;
+                    
+                    // Scale the model if it's very large or very small
+                    const size = new THREE.Vector3();
+                    bbox.getSize(size);
+                    
+                    const maxDimension = Math.max(size.x, size.y, size.z);
+                    if (maxDimension > 100) {
+                        // Scale down very large models
+                        const scale = 50 / maxDimension;
+                        object.scale.set(scale, scale, scale);
+                        console.log("Model was very large, scaled down by", scale);
+                    } else if (maxDimension < 5) {
+                        // Scale up very small models
+                        const scale = 10 / maxDimension;
+                        object.scale.set(scale, scale, scale);
+                        console.log("Model was very small, scaled up by", scale);
+                    }
+                    
+                    this.scene.add(object);
+                    
+                    // Position the player at a suitable start position
+                    // Always start a little in front of the model
+                    this.player.position.set(0, CONFIG.physics.playerHeight / 2 + 0.5, size.z + 5);
+                    
+                    console.log("Model ready, entering exploration mode");
+                    
+                    // Mark model as loaded and hide loading screen
+                    this.gameState.modelLoaded = true;
+                    this.loadingElement.classList.add('hidden');
+                };
+                
+                // Create object URLs for the loaded files
+                const createObjectURLs = () => {
+                    console.log("Creating object URLs for files");
+                    const urls = {};
+                    if (this.files.obj) urls.obj = URL.createObjectURL(this.files.obj);
+                    if (this.files.mtl) urls.mtl = URL.createObjectURL(this.files.mtl);
+                    if (this.files.gltf) urls.gltf = URL.createObjectURL(this.files.gltf);
+                    
+                    // Create texture URLs and build a lookup map
+                    urls.textures = {};
+                    this.files.textures.forEach(texture => {
+                        const textureUrl = URL.createObjectURL(texture);
+                        urls.textures[texture.name] = textureUrl;
+                    });
+                    
+                    return urls;
+                };
+                
+                // Load the model based on which files were provided
+                if (this.files.gltf) {
+                    // GLTF/GLB model loading
+                    const urls = createObjectURLs();
+                    const loader = new GLTFLoader();
+                    
+                    // Add Draco compression support
+                    const dracoLoader = new DRACOLoader();
+                    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.5/');
+                    loader.setDRACOLoader(dracoLoader);
+                    
+                    loader.load(urls.gltf, (gltf) => {
+                        onLoad(gltf.scene);
+                        // Clean up the URL after loading
+                        URL.revokeObjectURL(urls.gltf);
+                    }, onProgress, onError);
+                } 
+                else if (this.files.obj) {
+                    // OBJ model loading
+                    const urls = createObjectURLs();
+                    console.log("Loading OBJ file:", this.files.obj.name);
+                    this.progressText.textContent = "Loading OBJ file...";
+                    
+                    try {
+                        const objLoader = new OBJLoader();
+                        console.log("OBJ loader created successfully");
+                        
+                        // Handle materials if MTL file was provided
+                        if (this.files.mtl) {
+                            console.log("Loading MTL file:", this.files.mtl.name);
+                            this.progressText.textContent = "Loading MTL file...";
+                            
+                            const mtlLoader = new MTLLoader();
+                            console.log("MTL loader created successfully");
+                            
+                            mtlLoader.load(urls.mtl, (materials) => {
+                                console.log("MTL loaded successfully");
+                                this.progressText.textContent = "MTL loaded, processing OBJ...";
+                                
+                                materials.preload();
+                                objLoader.setMaterials(materials);
+                                
+                                objLoader.load(urls.obj, (object) => {
+                                    console.log("OBJ loaded successfully");
+                                    this.progressText.textContent = "OBJ loaded, processing model...";
+                                    
+                                    onLoad(object);
+                                    URL.revokeObjectURL(urls.obj);
+                                    URL.revokeObjectURL(urls.mtl);
+                                }, onProgress, (error) => {
+                                    console.error("Error loading OBJ:", error);
+                                    this.progressText.textContent = "Error loading OBJ: " + error.message;
+                                });
+                            }, onProgress, (error) => {
+                                console.warn("MTL loading failed:", error);
+                                this.progressText.textContent = "MTL failed, loading OBJ without materials...";
+                                
+                                // MTL loading failed, load OBJ anyway
+                                objLoader.load(urls.obj, (object) => {
+                                    console.log("OBJ loaded without materials");
+                                    onLoad(object);
+                                    URL.revokeObjectURL(urls.obj);
+                                }, onProgress, onError);
+                            });
+                            
+                        } else {
+                            // No MTL file, just load the OBJ with default material
+                            this.progressText.textContent = "Loading OBJ (no materials)...";
+                            
+                            objLoader.load(urls.obj, (object) => {
+                                console.log("OBJ loaded successfully (no materials)");
+                                // Apply a default material to each mesh in the object
+                                object.traverse((child) => {
+                                    if (child.isMesh) {
+                                        child.material = new THREE.MeshStandardMaterial({
+                                            color: 0x888888,
+                                            roughness: 0.8,
+                                            metalness: 0.2
+                                        });
+                                    }
+                                });
+                                
+                                onLoad(object);
+                                URL.revokeObjectURL(urls.obj);
+                            }, onProgress, onError);
+                        }
+                    } catch (err) {
+                        console.error("Fatal error creating loader:", err);
+                        this.progressText.textContent = "Fatal error: " + err.message;
+                    }
+                }
+            }
+
+            updatePlayer() {
+                const deltaTime = this.gameState.deltaTime;
+                
+                // Apply gravity
+                if (!this.player.onGround) {
+                    this.player.velocity.y -= CONFIG.physics.gravity * deltaTime;
+                }
+                
+                // Reset movement direction
+                this.player.direction.set(0, 0, 0);
+                
+                // Calculate movement direction based on controls
+                if (this.controls.moveForward) this.player.direction.z = -1;
+                if (this.controls.moveBackward) this.player.direction.z = 1;
+                if (this.controls.moveLeft) this.player.direction.x = -1;
+                if (this.controls.moveRight) this.player.direction.x = 1;
+                
+                // Normalize direction vector for consistent speed in all directions
+                if (this.player.direction.length() > 0) {
+                    this.player.direction.normalize();
+                }
+                
+                // Rotate direction vector based on camera rotation
+                const rotationMatrix = new THREE.Matrix4();
+                rotationMatrix.makeRotationY(this.player.rotation.y);
+                this.player.direction.applyMatrix4(rotationMatrix);
+                
+                // Apply movement speed
+                this.player.direction.multiplyScalar(CONFIG.physics.moveSpeed * deltaTime);
+                
+                // Create a future position to test for collisions
+                const futurePosition = this.player.position.clone();
+                
+                // Test X movement
+                if (this.player.direction.x !== 0) {
+                    futurePosition.x += this.player.direction.x;
+                    if (!this.checkCollision(futurePosition)) {
+                        this.player.position.x += this.player.direction.x;
+                    }
+                    futurePosition.x = this.player.position.x;
+                }
+                
+                // Test Z movement
+                if (this.player.direction.z !== 0) {
+                    futurePosition.z += this.player.direction.z;
+                    if (!this.checkCollision(futurePosition)) {
+                        this.player.position.z += this.player.direction.z;
+                    }
+                    futurePosition.z = this.player.position.z;
+                }
+                
+                // Test Y movement (gravity/jumping)
+                const wasOnGround = this.player.onGround;
+                this.player.onGround = false;
+                
+                // Apply gravity velocity
+                const futureY = this.player.position.y + this.player.velocity.y * deltaTime;
+                futurePosition.y = futureY;
+                
+                if (this.checkCollision(futurePosition)) {
+                    // We hit something below or above
+                    if (this.player.velocity.y < 0) {
+                        // We're falling and hit something below
+                        this.player.onGround = true;
+                        this.player.velocity.y = 0;
+                        
+                        // Ensure we're exactly on the ground
+                        // Find the ground height at current position
+                        const groundY = this.findGroundHeight();
+                        if (groundY !== null) {
+                            this.player.position.y = groundY + CONFIG.physics.playerHeight / 2;
+                        }
+                    } else {
+                        // We're jumping and hit something above
+                        this.player.velocity.y = 0;
+                    }
+                } else {
+                    // No collision, update Y position
+                    this.player.position.y = futureY;
+                    
+                    // Safety check - if we're below the ground, reset position
+                    if (this.player.position.y < CONFIG.physics.playerHeight / 2) {
+                        this.player.position.y = CONFIG.physics.playerHeight / 2;
+                        this.player.velocity.y = 0;
+                        this.player.onGround = true;
+                    }
+                }
+                
+                // Update camera position
+                this.camera.position.copy(this.player.position);
+                this.camera.position.y += CONFIG.physics.cameraHeight - CONFIG.physics.playerHeight / 2;
+                
+                // Update camera rotation
+                this.camera.rotation.copy(this.player.rotation);
+            }
+            
+            findGroundHeight() {
+                // Cast a ray downward to find the ground
+                const raycaster = new THREE.Raycaster();
+                raycaster.ray.origin.copy(this.player.position);
+                raycaster.ray.direction.set(0, -1, 0);
+                
+                // Get all intersections with the ray
+                const intersections = raycaster.intersectObjects(this.gameState.collisionObjects, true);
+                
+                // Find the closest intersection that's below us
+                for (let i = 0; i < intersections.length; i++) {
+                    const intersection = intersections[i];
+                    if (intersection.distance < CONFIG.physics.playerHeight) {
+                        return intersection.point.y;
+                    }
+                }
+                
+                return null;
+            }
+
+            checkCollision(position) {
+                // Simple collision detection using raycasting
+                const playerRadius = CONFIG.physics.playerRadius;
+                const playerHeight = CONFIG.physics.playerHeight;
+                
+                // Create a sphere representing the player
+                const sphere = new THREE.Sphere(position, playerRadius);
+                
+                // Check each collision object
+                for (let i = 0; i < this.gameState.collisionObjects.length; i++) {
+                    const object = this.gameState.collisionObjects[i];
+                    
+                    // Skip objects that don't have geometry
+                    if (!object.geometry) continue;
+                    
+                    // Check bbox first for performance
+                    const bbox = new THREE.Box3().setFromObject(object);
+                    
+                    // Expand bbox by player radius for rough check
+                    bbox.min.sub(new THREE.Vector3(playerRadius, playerRadius, playerRadius));
+                    bbox.max.add(new THREE.Vector3(playerRadius, playerRadius, playerRadius));
+                    
+                    if (bbox.containsPoint(position)) {
+                        // More detailed collision check with geometry
+                        const geometry = object.geometry;
+                        
+                        // Create a sphere representing the player
+                        const sphereCenter = position.clone();
+                        
+                        // Check for floor collisions (beneath player)
+                        if (position.y - playerHeight / 2 <= bbox.max.y && 
+                            position.x >= bbox.min.x && position.x <= bbox.max.x &&
+                            position.z >= bbox.min.z && position.z <= bbox.max.z) {
+                            return true;
+                        }
+                        
+                        // Check for ceiling collisions (above player)
+                        if (position.y + playerHeight / 2 >= bbox.min.y && 
+                            position.x >= bbox.min.x && position.x <= bbox.max.x &&
+                            position.z >= bbox.min.z && position.z <= bbox.max.z) {
+                            return true;
+                        }
+                        
+                        // Wall collisions (simple approximation)
+                        // This is a simplified check - for more complex models you would need to check against actual geometry
+                        if (sphereCenter.distanceTo(new THREE.Vector3(bbox.min.x, sphereCenter.y, sphereCenter.z)) <= playerRadius ||
+                            sphereCenter.distanceTo(new THREE.Vector3(bbox.max.x, sphereCenter.y, sphereCenter.z)) <= playerRadius ||
+                            sphereCenter.distanceTo(new THREE.Vector3(sphereCenter.x, sphereCenter.y, bbox.min.z)) <= playerRadius ||
+                            sphereCenter.distanceTo(new THREE.Vector3(sphereCenter.x, sphereCenter.y, bbox.max.z)) <= playerRadius) {
+                            return true;
+                        }
+                    }
+                }
+                
+                return false;
+            }
+
+            animate() {
+                requestAnimationFrame(this.animate.bind(this));
+                
+                // Calculate delta time
+                this.gameState.deltaTime = Math.min(0.1, this.gameState.clock.getDelta()) * 60; // Cap at 10fps equivalent
+                
+                // Update player physics if pointer is locked
+                if (this.controls.pointerLocked) {
+                    this.updatePlayer();
+                }
+                
+                // Render scene
+                this.renderer.render(this.scene, this.camera);
+            }
+        }
+
+        // Initialize the application when the page loads
+        window.addEventListener('load', () => {
+            window.app = new StudioExplorer();
+        });
+    </script>
+</body>
+</html>
