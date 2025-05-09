@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG to Real-life Metric Size Converter for CNC</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+        }
+        h1 {
+            font-size: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+            color: #333;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+        @media (min-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .upload-area:hover {
+            background-color: #f9f9f9;
+        }
+        .upload-icon {
+            font-size: 48px;
+            color: #ccc;
+        }
+        .filename {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .panel {
+            background-color: #f5f5f5;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        .panel h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        .panel-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .dimensions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .input-group {
+            display: flex;
+        }
+        .input-group input {
+            border-top-right-radius: 0;
+            border-bottom-right-radius: 0;
+            flex: 1;
+        }
+        .input-group-append {
+            background-color: #eee;
+            border: 1px solid #ddd;
+            border-left: none;
+            padding: 8px;
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .checkbox-group input {
+            margin-right: 8px;
+        }
+        .info-text {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .button-group {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-primary {
+            background-color: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        .btn-success {
+            background-color: #22c55e;
+            color: white;
+        }
+        .btn-success:hover:not(:disabled) {
+            background-color: #16a34a;
+        }
+        .alert {
+            padding: 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 16px;
+        }
+        .alert-success {
+            background-color: #dcfce7;
+            color: #166534;
+        }
+        .alert-danger {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        .preview {
+            background-color: #f5f5f5;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .preview-area {
+            flex: 1;
+            min-height: 300px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            overflow: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+        }
+        .preview-note {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+        }
+        .instructions {
+            margin-top: 24px;
+            font-size: 14px;
+            color: #666;
+        }
+        .instructions h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        .instructions ol {
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 4px;
+        }
+        .hidden {
+            display: none;
+        }
+        .icon {
+            margin-right: 4px;
+        }
+        .radio-group {
+            margin-bottom: 15px;
+        }
+        .radio-option {
+            margin-right: 15px;
+            display: inline-flex;
+            align-items: center;
+        }
+        .radio-option input {
+            margin-right: 5px;
+        }
+        textarea.svg-code {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            font-size: 12px;
+            margin-top: 10px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .advanced-toggle {
+            text-align: center;
+            margin-top: 10px;
+            color: #3b82f6;
+            cursor: pointer;
+            font-size: 14px;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SVG to Real-life Metric Size Converter for CNC</h1>
+        
+        <div class="grid">
+            <div>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p>Click to upload SVG or drag and drop</p>
+                    <p style="font-size: 12px; color: #666;">SVG files only</p>
+                    <input type="file" id="fileInput" accept=".svg" class="hidden">
+                </div>
+                
+                <div id="filename" class="filename"></div>
+                
+                <div class="panel" style="margin-top: 16px;">
+                    <h3>📏 Current Dimensions</h3>
+                    <div class="panel-grid">
+                        <div style="font-size: 14px;">
+                            <span style="color: #666;">Width:</span> 
+                            <span id="originalWidth">-</span>
+                        </div>
+                        <div style="font-size: 14px;">
+                            <span style="color: #666;">Height:</span> 
+                            <span id="originalHeight">-</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="panel">
+                    <h3>↔️ Target Dimensions</h3>
+                    
+                    <div class="dimensions-grid">
+                        <div>
+                            <label for="targetWidth">Width</label>
+                            <div class="input-group">
+                                <input type="number" id="targetWidth" value="100" step="0.1" min="0.1">
+                                <span class="input-group-append" id="widthUnit">mm</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label for="targetHeight">Height</label>
+                            <div class="input-group">
+                                <input type="number" id="targetHeight" value="100" step="0.1" min="0.1">
+                                <span class="input-group-append" id="heightUnit">mm</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="maintainAspectRatio" checked>
+                        <label for="maintainAspectRatio" style="margin-bottom: 0;">
+                            Maintain aspect ratio
+                        </label>
+                    </div>
+                    
+                    <div class="radio-group">
+                        <label style="margin-bottom: 5px;">Scaling Method:</label>
+                        <div>
+                            <label class="radio-option">
+                                <input type="radio" name="scaleMethod" value="exact" checked>
+                                Exact Size
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="scaleMethod" value="viewBox">
+                                Use ViewBox
+                            </label>
+                            <label class="radio-option">
+                                <input type="radio" name="scaleMethod" value="flat">
+                                Flat Scale (for FlatCAM)
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="dimensions-grid">
+                        <div>
+                            <label for="units">Units</label>
+                            <select id="units">
+                                <option value="mm">Millimeters (mm)</option>
+                                <option value="cm">Centimeters (cm)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="convertBtn" class="btn btn-primary" disabled>
+                        <span class="icon">⬆️</span> Convert SVG
+                    </button>
+                    
+                    <button id="downloadBtn" class="btn btn-success" disabled>
+                        <span class="icon">💾</span> Download for CNC
+                    </button>
+                </div>
+                
+                <div class="advanced-toggle" id="advancedToggle">Show SVG Code</div>
+                <textarea id="svgCode" class="svg-code" readonly></textarea>
+                
+                <div id="message" class="alert" style="display: none;"></div>
+            </div>
+            
+            <div class="preview">
+                <h3 style="margin-bottom: 8px;">SVG Preview</h3>
+                <div class="preview-area" id="previewArea">
+                    <p style="color: #ccc; font-size: 14px;">Upload an SVG to see preview</p>
+                </div>
+                <div class="preview-note">
+                    <p>Ready for FlatCAM and CNC machining with correct metric dimensions.</p>
+                    <p style="margin-top: 4px;">
+                        When importing to FlatCAM, make sure to set the correct units (<span id="noteUnits">mm</span>).
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Upload your SVG file by clicking in the upload area</li>
+                <li>Set your desired real-world dimensions in <span id="instructionUnits">mm</span></li>
+                <li>Choose the scaling method that works best for your CNC workflow:
+                    <ul style="margin-left: 20px; margin-top: 5px;">
+                        <li><strong>Exact Size:</strong> Sets precise physical dimensions (best for most uses)</li>
+                        <li><strong>Use ViewBox:</strong> Uses viewBox for scaling (helps with complex SVGs)</li>
+                        <li><strong>Flat Scale:</strong> Creates a simplified SVG optimized for FlatCAM</li>
+                    </ul>
+                </li>
+                <li>Click "Convert SVG" to resize the SVG to your specifications</li>
+                <li>Download the converted file for use in FlatCAM</li>
+                <li>If you see duplicated lines or artifacts, try a different scaling method</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const filename = document.getElementById('filename');
+        const originalWidth = document.getElementById('originalWidth');
+        const originalHeight = document.getElementById('originalHeight');
+        const targetWidth = document.getElementById('targetWidth');
+        const targetHeight = document.getElementById('targetHeight');
+        const maintainAspectRatio = document.getElementById('maintainAspectRatio');
+        const units = document.getElementById('units');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewArea = document.getElementById('previewArea');
+        const message = document.getElementById('message');
+        const widthUnit = document.getElementById('widthUnit');
+        const heightUnit = document.getElementById('heightUnit');
+        const noteUnits = document.getElementById('noteUnits');
+        const instructionUnits = document.getElementById('instructionUnits');
+        const svgCode = document.getElementById('svgCode');
+        const advancedToggle = document.getElementById('advancedToggle');
+        
+        // State
+        let originalSvgContent = '';
+        let svgContent = '';
+        let svgDimensions = { width: 0, height: 0 };
+        let originalFilename = '';
+        let parser = new DOMParser();
+
+        // Event listeners
+        uploadArea.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', handleFileUpload);
+        targetWidth.addEventListener('input', handleWidthChange);
+        targetHeight.addEventListener('input', handleHeightChange);
+        units.addEventListener('change', handleUnitsChange);
+        convertBtn.addEventListener('click', convertSVG);
+        downloadBtn.addEventListener('click', downloadSVG);
+        advancedToggle.addEventListener('click', toggleSvgCode);
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f0f0f0';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileUpload({ target: fileInput });
+            }
+        });
+
+        // Functions
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !file.name.toLowerCase().endsWith('.svg')) {
+                showMessage('Please select a valid SVG file', 'danger');
+                return;
+            }
+            
+            originalFilename = file.name;
+            filename.textContent = `File: ${originalFilename}`;
+            
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                originalSvgContent = e.target.result;
+                svgContent = originalSvgContent;
+                
+                try {
+                    // Parse SVG to get dimensions
+                    const svgDoc = parser.parseFromString(svgContent, "image/svg+xml");
+                    const svgElement = svgDoc.querySelector("svg");
+                    
+                    if (svgElement) {
+                        // Try to get width and height
+                        let width = svgElement.getAttribute('width');
+                        let height = svgElement.getAttribute('height');
+                        
+                        // Remove units if present
+                        if (width) {
+                            width = width.replace(/[^0-9.-]/g, '');
+                        }
+                        
+                        if (height) {
+                            height = height.replace(/[^0-9.-]/g, '');
+                        }
+                        
+                        // If width/height not available, try viewBox
+                        if (!width || !height) {
+                            const viewBox = svgElement.getAttribute('viewBox');
+                            if (viewBox) {
+                                const viewBoxValues = viewBox.split(/[\s,]+/).map(parseFloat);
+                                if (viewBoxValues.length === 4) {
+                                    width = viewBoxValues[2];
+                                    height = viewBoxValues[3];
+                                }
+                            }
+                        }
+                        
+                        // Set default values if still not found
+                        width = parseFloat(width) || 100;
+                        height = parseFloat(height) || 100;
+                        
+                        svgDimensions = { width, height };
+                        
+                        // Update display
+                        originalWidth.textContent = width;
+                        originalHeight.textContent = height;
+                        
+                        // Initialize target dimensions
+                        targetWidth.value = width;
+                        targetHeight.value = height;
+                    }
+                } catch (error) {
+                    console.error("Error parsing SVG:", error);
+                    showMessage("Error parsing SVG file. Please check if it's valid.", 'danger');
+                }
+                
+                // Update preview
+                updatePreview();
+                updateSvgCode();
+                
+                // Enable buttons
+                convertBtn.disabled = false;
+                downloadBtn.disabled = false;
+                
+                showMessage('SVG loaded successfully', 'success');
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        function updatePreview() {
+            if (svgContent) {
+                previewArea.innerHTML = svgContent;
+                const svgElement = previewArea.querySelector('svg');
+                if (svgElement) {
+                    svgElement.style.maxWidth = '100%';
+                    svgElement.style.maxHeight = '300px';
+                }
+            } else {
+                previewArea.innerHTML = '<p style="color: #ccc; font-size: 14px;">Upload an SVG to see preview</p>';
+            }
+        }
+        
+        function updateSvgCode() {
+            svgCode.value = svgContent;
+        }
+        
+        function toggleSvgCode() {
+            if (svgCode.style.display === 'none' || !svgCode.style.display) {
+                svgCode.style.display = 'block';
+                advancedToggle.textContent = 'Hide SVG Code';
+            } else {
+                svgCode.style.display = 'none';
+                advancedToggle.textContent = 'Show SVG Code';
+            }
+        }
+        
+        function handleWidthChange() {
+            const width = parseFloat(targetWidth.value);
+            
+            if (maintainAspectRatio.checked && svgDimensions.width && svgDimensions.height) {
+                const aspectRatio = svgDimensions.width / svgDimensions.height;
+                targetHeight.value = (width / aspectRatio).toFixed(2);
+            }
+        }
+        
+        function handleHeightChange() {
+            const height = parseFloat(targetHeight.value);
+            
+            if (maintainAspectRatio.checked && svgDimensions.width && svgDimensions.height) {
+                const aspectRatio = svgDimensions.width / svgDimensions.height;
+                targetWidth.value = (height * aspectRatio).toFixed(2);
+            }
+        }
+        
+        function handleUnitsChange() {
+            const currentUnit = units.value;
+            widthUnit.textContent = currentUnit;
+            heightUnit.textContent = currentUnit;
+            noteUnits.textContent = currentUnit;
+            instructionUnits.textContent = currentUnit;
+        }
+        
+        function convertSVG() {
+            if (!svgContent) {
+                showMessage('Please upload an SVG file first', 'danger');
+                return;
+            }
+            
+            try {
+                const currentUnit = units.value;
+                const width = parseFloat(targetWidth.value);
+                const height = parseFloat(targetHeight.value);
+                const scaleMethod = document.querySelector('input[name="scaleMethod"]:checked').value;
+                
+                // Parse SVG
+                const svgDoc = parser.parseFromString(svgContent, "image/svg+xml");
+                const svgElement = svgDoc.querySelector("svg");
+                
+                if (!svgElement) {
+                    showMessage('Invalid SVG structure', 'danger');
+                    return;
+                }
+                
+                // Apply different scaling methods
+                if (scaleMethod === 'exact') {
+                    // Method 1: Set exact dimensions
+                    svgElement.setAttribute('width', `${width}${currentUnit}`);
+                    svgElement.setAttribute('height', `${height}${currentUnit}`);
+                    
+                    // Make sure viewBox is set properly if it exists
+                    if (!svgElement.hasAttribute('viewBox')) {
+                        svgElement.setAttribute('viewBox', `0 0 ${svgDimensions.width} ${svgDimensions.height}`);
+                    }
+                    
+                } else if (scaleMethod === 'viewBox') {
+                    // Method 2: Use viewBox for scaling
+                    svgElement.setAttribute('width', `${width}${currentUnit}`);
+                    svgElement.setAttribute('height', `${height}${currentUnit}`);
+                    
+                    // Set or update viewBox
+                    const viewBox = svgElement.getAttribute('viewBox');
+                    if (viewBox) {
+                        const values = viewBox.split(/[\s,]+/).map(parseFloat);
+                        if (values.length === 4) {
+                            svgElement.setAttribute('viewBox', `${values[0]} ${values[1]} ${values[2]} ${values[3]}`);
+                        }
+                    } else {
+                        svgElement.setAttribute('viewBox', `0 0 ${svgDimensions.width} ${svgDimensions.height}`);
+                    }
+                    
+                    svgElement.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                    
+                } else if (scaleMethod === 'flat') {
+                    // Method 3: Flatten the SVG for FlatCAM (create new paths with actual dimensions)
+                    // Remove existing width/height/viewBox
+                    svgElement.removeAttribute('viewBox');
+                    
+                    // Set exact dimensions
+                    svgElement.setAttribute('width', `${width}${currentUnit}`);
+                    svgElement.setAttribute('height', `${height}${currentUnit}`);
+                    
+                    // Calculate scale factors
+                    const scaleX = width / svgDimensions.width;
+                    const scaleY = height / svgDimensions.height;
+                    
+                    // Apply transform directly to all paths
+                    const paths = svgElement.querySelectorAll('path, rect, circle, ellipse, line, polyline, polygon');
+                    paths.forEach(path => {
+                        const transform = path.getAttribute('transform') || '';
+                        path.setAttribute('transform', `scale(${scaleX}, ${scaleY}) ${transform}`);
+                    });
+                }
+                
+                // Convert back to string
+                svgContent = new XMLSerializer().serializeToString(svgDoc);
+                
+                // Update preview & code view
+                updatePreview();
+                updateSvgCode();
+                
+                showMessage(`SVG resized to ${width}${currentUnit} x ${height}${currentUnit} using ${scaleMethod} method`, 'success');
+            } catch (error) {
+                console.error("Error converting SVG:", error);
+                showMessage(`Error: ${error.message}`, 'danger');
+            }
+        }
+        
+        function downloadSVG() {
+            if (!svgContent) {
+                showMessage('No SVG content to download', 'danger');
+                return;
+            }
+            
+            const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            // Create a filename with cnc_ prefix
+            const downloadFilename = originalFilename 
+                ? `cnc_${originalFilename}` 
+                : 'cnc_resized.svg';
+                
+            link.download = downloadFilename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            showMessage('SVG downloaded successfully', 'success');
+        }
+        
+        function showMessage(text, type) {
+            message.textContent = text;
+            message.style.display = 'block';
+            
+            if (type === 'success') {
+                message.className = 'alert alert-success';
+            } else if (type === 'danger') {
+                message.className = 'alert alert-danger';
+            }
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
