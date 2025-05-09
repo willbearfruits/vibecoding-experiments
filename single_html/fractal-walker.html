@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Dithering Surface</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: monospace;
+            color: white;
+            background-color: #000;
+        }
+        canvas {
+            display: block;
+        }
+        #info {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            z-index: 100;
+            pointer-events: none;
+            text-shadow: 0 0 3px black;
+            color: white;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            text-align: left;
+            z-index: 100;
+            pointer-events: none;
+            text-shadow: 0 0 3px black;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">Fractal Dithering Surface</div>
+    <div id="controls">
+        WASD/Arrows - Move<br>
+        Mouse - Rotate View<br>
+        P - Toggle palette<br>
+        D - Toggle dithering<br>
+        F - Toggle fog
+    </div>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Basic setup
+        let width, height;
+        let mouse = { x: 0, y: 0, down: false };
+        let cameraPos = { x: 0, y: 20, z: 0 };
+        let cameraRot = { x: 0, y: 0 };
+        let keys = {};
+        
+        // Rendering settings
+        let useDithering = true;
+        let useFog = true;
+        let paletteIndex = 0;
+        let time = 0;
+        
+        // Color palettes (5 colors each)
+        const palettes = [
+            // Blue palette
+            [
+                [0, 0, 25],
+                [0, 25, 76],
+                [25, 76, 127],
+                [76, 127, 178],
+                [153, 204, 255]
+            ],
+            // Warm palette
+            [
+                [25, 0, 0],
+                [76, 25, 0],
+                [127, 76, 25],
+                [178, 127, 51],
+                [255, 204, 102]
+            ],
+            // Green palette
+            [
+                [0, 25, 0],
+                [0, 51, 0],
+                [25, 102, 25],
+                [51, 153, 51],
+                [102, 204, 102]
+            ],
+            // Purple palette
+            [
+                [25, 0, 25],
+                [76, 25, 76],
+                [127, 51, 127],
+                [178, 102, 178],
+                [230, 153, 230]
+            ]
+        ];
+        
+        // 4x4 Bayer dithering matrix
+        const bayerMatrix = [
+            [0, 8, 2, 10],
+            [12, 4, 14, 6],
+            [3, 11, 1, 9],
+            [15, 7, 13, 5]
+        ];
+        
+        // Initialize
+        function init() {
+            // Set canvas size
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Mouse tracking
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mousedown', () => { mouse.down = true; });
+            canvas.addEventListener('mouseup', () => { mouse.down = false; });
+            
+            // Keyboard controls
+            window.addEventListener('keydown', (e) => { keys[e.code] = true; handleSpecialKeys(e); });
+            window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // Handle special key presses (toggles)
+        function handleSpecialKeys(e) {
+            if (e.code === 'KeyP') {
+                paletteIndex = (paletteIndex + 1) % palettes.length;
+            } else if (e.code === 'KeyD') {
+                useDithering = !useDithering;
+            } else if (e.code === 'KeyF') {
+                useFog = !useFog;
+            }
+        }
+        
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+        
+        function handleMouseMove(e) {
+            if (mouse.down) {
+                // Camera rotation based on mouse movement
+                cameraRot.y += (e.clientX - mouse.x) * 0.005;
+                cameraRot.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, cameraRot.x + (e.clientY - mouse.y) * 0.005));
+            }
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        }
+        
+        // Generate noise using a simple hash function
+        function noise(x, z) {
+            const X = Math.floor(x);
+            const Z = Math.floor(z);
+            
+            x -= X;
+            z -= Z;
+            
+            // Hash function for random values
+            const hash = (a, b) => {
+                const h = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453;
+                return h - Math.floor(h);
+            };
+            
+            // Get corner values
+            const a = hash(X, Z);
+            const b = hash(X + 1, Z);
+            const c = hash(X, Z + 1);
+            const d = hash(X + 1, Z + 1);
+            
+            // Smooth interpolation
+            const sx = x * x * (3 - 2 * x);
+            const sz = z * z * (3 - 2 * z);
+            
+            // Bilinear interpolation
+            return a * (1 - sx) * (1 - sz) +
+                   b * sx * (1 - sz) +
+                   c * (1 - sx) * sz +
+                   d * sx * sz;
+        }
+        
+        // Fractal Brownian Motion (multiple layers of noise)
+        function fbm(x, z, octaves = 5) {
+            let value = 0;
+            let amplitude = 0.5;
+            let frequency = 0.01;
+            
+            for (let i = 0; i < octaves; i++) {
+                value += amplitude * noise(x * frequency, z * frequency);
+                amplitude *= 0.5;
+                frequency *= 2;
+            }
+            
+            return value;
+        }
+        
+        // Get terrain height at a specific point
+        function getTerrainHeight(x, z) {
+            return 15 * fbm(x, z) - 5;
+        }
+        
+        // Apply dithering to a color value
+        function applyDither(value, x, y) {
+            if (!useDithering) return value;
+            
+            // Ensure x and y are valid integers between 0-3
+            const bx = Math.abs(Math.floor(x)) % 4;
+            const by = Math.abs(Math.floor(y)) % 4;
+            
+            const threshold = bayerMatrix[by][bx] / 16;
+            return value < threshold ? Math.floor(value * 5) / 5 : Math.ceil(value * 5) / 5;
+        }
+        
+        // Update camera position based on keyboard input
+        function updateCamera(deltaTime) {
+            const speed = 20 * deltaTime;
+            const forward = {};
+            const right = {};
+            
+            // Calculate forward and right vectors based on camera rotation
+            forward.x = Math.sin(cameraRot.y);
+            forward.z = Math.cos(cameraRot.y);
+            
+            right.x = Math.sin(cameraRot.y + Math.PI/2);
+            right.z = Math.cos(cameraRot.y + Math.PI/2);
+            
+            // Handle keyboard movement
+            if (keys['KeyW'] || keys['ArrowUp']) {
+                cameraPos.x += forward.x * speed;
+                cameraPos.z += forward.z * speed;
+            }
+            if (keys['KeyS'] || keys['ArrowDown']) {
+                cameraPos.x -= forward.x * speed;
+                cameraPos.z -= forward.z * speed;
+            }
+            if (keys['KeyA'] || keys['ArrowLeft']) {
+                cameraPos.x -= right.x * speed;
+                cameraPos.z -= right.z * speed;
+            }
+            if (keys['KeyD'] || keys['ArrowRight']) {
+                cameraPos.x += right.x * speed;
+                cameraPos.z += right.z * speed;
+            }
+            
+            // Update Y position based on terrain
+            const terrainY = getTerrainHeight(cameraPos.x, cameraPos.z);
+            cameraPos.y = terrainY + 2; // 2 units above terrain
+        }
+        
+        // Render the scene
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+            
+            // Create sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, 'rgb(20, 24, 82)');
+            gradient.addColorStop(1, 'rgb(102, 145, 204)');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, width, height);
+            
+            // Generate a grid of points for the terrain
+            const gridSize = 40;
+            const resolution = 2;
+            
+            // Calculate visible area based on camera position and rotation
+            for (let gx = -gridSize; gx <= gridSize; gx += resolution) {
+                for (let gz = -gridSize; gz <= gridSize; gz += resolution) {
+                    // World coordinates
+                    const wx = cameraPos.x + gx;
+                    const wz = cameraPos.z + gz + 20; // Offset to see terrain ahead
+                    
+                    // Skip points behind the camera
+                    if (wz - cameraPos.z < 0) continue;
+                    
+                    // Get terrain height
+                    const wy = getTerrainHeight(wx, wz);
+                    
+                    // Project 3D point to 2D screen
+                    const scale = 300 / (wz - cameraPos.z);
+                    const sx = width/2 + (wx - cameraPos.x) * scale;
+                    const sy = height/2 - (wy - cameraPos.y) * scale;
+                    
+                    // Skip points outside the canvas
+                    if (sx < 0 || sx >= width || sy < 0 || sy >= height) continue;
+                    
+                    // Calculate normalized height for color
+                    const normalizedHeight = (wy + 5) / 20;
+                    
+                    // Apply dithering
+                    const ditheredHeight = applyDither(normalizedHeight, sx, sy);
+                    
+                    // Get color from palette
+                    const colorIndex = Math.min(4, Math.max(0, Math.floor(ditheredHeight * 5)));
+                    let color = palettes[paletteIndex][colorIndex];
+                    
+                    // Apply fog (distance fading)
+                    if (useFog) {
+                        const dist = Math.sqrt((wx - cameraPos.x) ** 2 + (wz - cameraPos.z) ** 2);
+                        const fogFactor = Math.min(1, dist / 80);
+                        color = color.map(c => Math.floor(c * (1 - fogFactor) + 0 * fogFactor));
+                    }
+                    
+                    // Draw pixel
+                    ctx.fillStyle = `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
+                    ctx.fillRect(sx, sy, resolution + 1, resolution + 1);
+                }
+            }
+            
+            // Display current settings
+            ctx.fillStyle = 'white';
+            ctx.font = '12px monospace';
+            ctx.fillText(`Palette: ${paletteIndex+1}/${palettes.length} | Dithering: ${useDithering ? 'ON' : 'OFF'} | Fog: ${useFog ? 'ON' : 'OFF'}`, 10, 20);
+        }
+        
+        // Animation loop
+        let lastTime = 0;
+        function animate(timestamp = 0) {
+            const deltaTime = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            
+            time += deltaTime;
+            updateCamera(deltaTime);
+            render();
+            
+            requestAnimationFrame(animate);
+        }
+        
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
