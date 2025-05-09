@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skeleton & Pig vs. The Mundane</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <style>
+        body { display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #1a1a1a; margin: 0; font-family: 'Press Start 2P', cursive; color: #fff; flex-direction: column; overflow: hidden; }
+        h1 { margin-bottom: 15px; font-size: 1.2em; text-shadow: 2px 2px #000; }
+        #gameContainer { overflow: hidden; width: 80vw; max-width: 960px; border: 2px solid #444; box-shadow: 0 0 10px rgba(0, 0, 0, 0.5); background-color: #2c3e50; }
+        canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; image-rendering: -moz-crisp-edges; image-rendering: crisp-edges; cursor: pointer; }
+        #controls { margin-top: 10px; font-size: 0.7em; }
+        #messageBox { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.8); color: white; padding: 8px 15px; border-radius: 3px; font-size: 0.8em; display: none; z-index: 100; border: 1px solid #555; }
+        #ui { position: absolute; top: 10px; left: 10px; font-size: 0.8em; color: white; text-shadow: 1px 1px #000; z-index: 50; }
+
+        /* Overlay Styles */
+        .overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: rgba(0, 0, 0, 0.85); padding: 30px 50px; border-radius: 10px; font-size: 1.5em; text-align: center; display: none; z-index: 110; text-shadow: 2px 2px #000; }
+        #levelCompleteOverlay { color: #0f0; border: 3px solid #0f0; }
+        #gameOverOverlay { color: #f00; border: 3px solid #f00; }
+        #gameCompleteOverlay { color: #ff0; border: 3px solid #ff0; } /* Style for Game Complete */
+        #restartButton { display: block; margin: 20px auto 0; padding: 10px 20px; font-family: 'Press Start 2P', cursive; font-size: 0.7em; color: #fff; background-color: #555; border: 2px solid #888; border-radius: 5px; cursor: pointer; text-shadow: 1px 1px #000; }
+        #restartButton:hover { background-color: #777; }
+    </style>
+</head>
+<body>
+    <h1>Skeleton & Pig vs. The Mundane</h1>
+    <div id="ui">Health: <span id="healthDisplay">--</span> | Level: <span id="levelDisplay">1</span></div> <div id="gameContainer">
+        <canvas id="gameCanvas" width="320" height="180" title="Click to enable sound"></canvas>
+    </div>
+    <div id="levelCompleteOverlay" class="overlay">LEVEL COMPLETE!</div>
+    <div id="gameOverOverlay" class="overlay">
+        GAME OVER!
+        <button id="restartButton">Restart Level</button>
+    </div>
+     <div id="gameCompleteOverlay" class="overlay"> GAME COMPLETE!
+        <button id="restartGameButton">Play Again?</button> </div>
+    <div id="controls">Arrows/Space: Move/Jump | Tab: Switch | X: Attack</div>
+    <div id="messageBox"></div>
+
+    <script>
+        // --- Game Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const gameContainer = document.getElementById('gameContainer');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+        const healthDisplay = document.getElementById('healthDisplay');
+        const levelDisplay = document.getElementById('levelDisplay'); // Level UI element
+        const levelCompleteOverlay = document.getElementById('levelCompleteOverlay');
+        const gameOverOverlay = document.getElementById('gameOverOverlay');
+        const gameCompleteOverlay = document.getElementById('gameCompleteOverlay'); // Game Complete overlay
+        const restartButton = document.getElementById('restartButton');
+        const restartGameButton = document.getElementById('restartGameButton'); // Button on game complete screen
+        let audioStarted = false;
+
+        // --- Sound Effects Setup (Tone.js) ---
+        let jumpSynth, shootSynth, hitEnemySynth, playerHurtSynth, powerupSynth, enemyDefeatSynth, enemyShootSynth, speedBoostSynth, levelCompleteSynth, gameOverSynth, particlePopSynth, gameCompleteSynth; // Added gameCompleteSynth
+        function setupSynths() { /* ... setupSynths remains the same ... */ jumpSynth = new Tone.Synth({ volume: -8, oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination(); shootSynth = new Tone.Synth({ volume: -12, oscillator: { type: "square" }, envelope: { attack: 0.005, decay: 0.05, sustain: 0, release: 0.1 } }).toDestination(); hitEnemySynth = new Tone.Synth({ volume: -7, oscillator: { type: "sawtooth" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(); playerHurtSynth = new Tone.Synth({ volume: -6, oscillator: { type: "sine", frequency: "C3" }, envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.1 } }).toDestination(); powerupSynth = new Tone.Synth({ volume: -8, oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.2 } }).toDestination(); enemyDefeatSynth = new Tone.NoiseSynth({ volume: -10, noise: { type: 'white' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination(); enemyShootSynth = new Tone.Synth({ volume: -15, oscillator: { type: "triangle", frequency: "A3" }, envelope: { attack: 0.01, decay: 0.08, sustain: 0, release: 0.1 } }).toDestination(); speedBoostSynth = new Tone.Synth({ volume: -8, oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.3 } }).toDestination(); levelCompleteSynth = new Tone.Synth({ volume: -5, oscillator: { type: "sine" }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.8, release: 0.5 } }).toDestination(); gameOverSynth = new Tone.Synth({ volume: -5, oscillator: { type: "sawtooth" }, envelope: { attack: 0.1, decay: 1.0, sustain: 0, release: 0.5 } }).toDestination(); particlePopSynth = new Tone.NoiseSynth({ volume: -15, noise: { type: 'pink' }, envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 } }).toDestination(); gameCompleteSynth = new Tone.Synth({ volume: -3, oscillator: { type: "triangle" }, envelope: { attack: 0.2, decay: 1.0, sustain: 0.8, release: 1.0 } }).toDestination(); } // Synth for game complete
+        function playSound(synth, note, duration) { /* ... function remains the same ... */ if (audioStarted && synth) { try { if (note) { synth.triggerAttackRelease(note, duration, Tone.now()); } else { synth.triggerAttackRelease(duration, Tone.now()); } } catch (error) { console.error("Error playing sound:", error); if (Tone.context.state === 'suspended') { Tone.start(); } } } }
+        function startAudio() { /* ... function remains the same ... */ if (!audioStarted) { Tone.start().then(() => { setupSynths(); audioStarted = true; console.log("Audio Context Started"); showMessage("Sound Enabled!", 1500); canvas.removeEventListener('click', startAudio); window.removeEventListener('keydown', startAudio); }).catch(e => { console.error("Error starting Tone.js:", e); showMessage("Could not enable sound.", 2000); }); } }
+        canvas.addEventListener('click', startAudio);
+        window.addEventListener('keydown', startAudio, { once: true });
+        // --- End Sound Effects Setup ---
+
+        // --- Game World Settings ---
+        // Moved level-specific stuff into the levels array
+        const skyColor = '#2c3e50'; // Default sky
+        const buildingColors = ['#34495e', '#5d6d7e', '#4a6072'];
+        const windowColor = '#f1c40f';
+        const parallaxFactor = 0.5;
+
+        // --- Camera ---
+        const camera = { x: 0, y: 0, width: canvasWidth, height: canvasHeight, update(target, levelW) { let targetCamX = target.x + target.width / 2 - this.width / 2; this.x = Math.max(0, Math.min(targetCamX, levelW - this.width)); } }; // Pass level width
+
+        // Game settings (Constants)
+        const gravity = 0.25;
+        const maxJumps = 2;
+        const speedBoostMultiplier = 1.8;
+        const speedBoostDuration = 5000;
+        const attackCooldown = 300;
+        const attackEffectDuration = 100;
+        const projectileSpeed = 4;
+        const enemyProjectileSpeed = 2.5;
+        const hitFlashDuration = 100;
+        const playerInvincibilityDuration = 1000;
+        const enemyDamage = 1;
+        const turretDamage = 1;
+        const spikeDamage = 3;
+        const turretFireRate = 1500;
+        const turretRange = 120;
+        const enemyDeathDuration = 200;
+        const chaserSpeed = 0.8;
+        const chaserRange = 100;
+        const walkFrameDuration = 150;
+
+        // Game state
+        let keys = {};
+        let lastAttackTime = 0;
+        let projectiles = [];
+        let enemyProjectiles = [];
+        let hazards = [];
+        let particles = [];
+        let levelComplete = false;
+        let gameOver = false;
+        let gameComplete = false; // Flag for completing all levels
+        let currentLevelIndex = 0; // Start at level 0
+        let screenShakeDuration = 0;
+        let screenShakeMagnitude = 0;
+        let currentLevelWidth = 0; // Track current level width for camera etc.
+        let currentGoalX = 0; // Track current level goal X
+
+        // --- Message Box Function ---
+        function showMessage(message, duration = 2000) { /* ... function remains the same ... */ const messageBox = document.getElementById('messageBox'); messageBox.textContent = message; messageBox.style.display = 'block'; setTimeout(() => { messageBox.style.display = 'none'; }, duration); }
+
+        // --- Sprite Drawing Function ---
+        function drawSprite(spriteData, x, y, flipped = false, pixelSize = 1) { /* ... function remains the same ... */ ctx.save(); ctx.translate(Math.floor(x), Math.floor(y)); if (flipped) { ctx.scale(-1, 1); ctx.translate(-spriteData.width * pixelSize, 0); } for (let row = 0; row < spriteData.data.length; row++) { for (let col = 0; col < spriteData.data[row].length; col++) { const colorCode = spriteData.data[row][col]; if (colorCode !== 0) { ctx.fillStyle = colorCode; ctx.fillRect( col * pixelSize, row * pixelSize, pixelSize, pixelSize ); } } } ctx.restore(); }
+
+        // --- Sprites ---
+        // ... (All existing sprite data remains the same) ...
+        const skeletonSpriteIdle = { width: 16, height: 24, data: [ /* SKELETON IDLE DATA */ [0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#333','#333','#333','#333','#333','#eee','#eee','#eee','#eee',0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,'#eee','#eee','#eee',0,0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,'#eee','#eee','#eee',0,0,0,0,0,0,'#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee',0,0,0,0,0,0,'#eee','#eee','#eee',0,0],[0,'#eee','#eee','#eee',0,0,0,0,0,0,0,0,'#eee','#eee','#eee',0],[0,'#eee','#eee','#eee',0,0,0,0,0,0,0,0,'#eee','#eee','#eee',0] ] };
+        const skeletonSpriteWalk1 = { width: 16, height: 24, data: [ /* SKELETON WALK 1 DATA */ [0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#333','#333','#333','#333','#333','#eee','#eee','#eee','#eee',0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0,0],[0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0,0],[0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0,0,0],[0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0,0,0] ] };
+        const skeletonSpriteWalk2 = { width: 16, height: 24, data: [ /* SKELETON WALK 2 DATA */ [0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#333','#333','#333','#333','#333','#eee','#eee','#eee','#eee',0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,'#eee','#eee','#eee',0,0,0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,'#eee','#eee','#eee',0,0,0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,'#eee','#eee','#eee',0,0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,0,'#eee','#eee','#eee',0,0],[0,0,0,'#eee','#eee','#eee',0,0,0,0,0,'#eee','#eee','#eee',0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,0,0,'#eee','#eee','#eee',0,0] ] };
+        const skeletonSpriteJump = { width: 16, height: 24, data: [ /* SKELETON JUMP DATA */ [0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#333','#333','#eee','#eee','#eee','#333','#333','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,0,'#eee','#eee','#eee','#333','#333','#333','#333','#333','#eee','#eee','#eee','#eee',0,0],[0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0,0,'#eee','#eee','#eee','#eee',0],[0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee','#eee',0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,0,0,'#eee','#eee','#eee',0,0,'#eee','#eee','#eee',0,0,0,0],[0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,0,0,'#eee','#eee','#eee','#eee','#eee','#eee','#eee',0,0,0,0,0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee',0,0,0,0,0,0],[0,0,0,0,0,'#eee','#eee','#eee','#eee','#eee',0,0,0,0,0,0],[0,0,0,0,0,0,'#eee','#eee','#eee',0,0,0,0,0,0,0],[0,0,0,0,0,0,'#eee','#eee','#eee',0,0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] ] };
+        const pigSpriteIdle = { width: 20, height: 16, data: [ /* PIG IDLE DATA */ [0,0,0,0,'#f7a','#f7a',0,0,0,0,0,0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0,0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0],[0,0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0,0],[0,'#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a',0],['#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#333','#f9c','#333','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,0],[0,'#f7a','#f7a',0,0,0,0,'#f7a','#f7a','#f7a',0,0,0,0,0,'#f7a','#f7a',0,0,0] ] };
+        const pigSpriteWalk1 = { width: 20, height: 16, data: [ /* PIG WALK 1 DATA */ [0,0,0,0,'#f7a','#f7a',0,0,0,0,0,0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0,0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0],[0,0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0,0],[0,'#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a',0],['#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#333','#f9c','#333','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,'#f7a','#f7a',0,0,0,'#f7a','#f7a',0,0,0,0,'#f7a','#f7a',0,0,0,0,0],[0,'#f7a','#f7a',0,0,0,0,'#f7a','#f7a',0,0,0,0,'#f7a','#f7a',0,0,0,0,0],[0,'#f7a',0,0,0,0,0,'#f7a',0,0,0,0,0,'#f7a',0,0,0,0,0,0] ] };
+        const pigSpriteWalk2 = { width: 20, height: 16, data: [ /* PIG WALK 2 DATA */ [0,0,0,0,'#f7a','#f7a',0,0,0,0,0,0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0,0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0],[0,0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0,0],[0,'#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a',0],['#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#333','#f9c','#333','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a',0,0,0,'#f7a','#f7a',0,0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a',0,0,0,'#f7a','#f7a',0,0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,0,'#f7a',0,0,0,0,'#f7a',0,0,0,0,0,'#f7a',0,0,0,0] ] };
+        const pigSpriteJump = { width: 20, height: 16, data: [ /* PIG JUMP DATA */ [0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0,0,0,0,'#f7a','#f7a','#f7a','#f7a',0,0,0],[0,0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0,0],[0,'#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a',0],['#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#333','#333','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#333','#f9c','#333','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],['#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f9c','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a'],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,'#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a','#f7a',0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,'#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a','#f7a',0,0,'#f7a','#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,'#f7a','#f7a',0,0,0,'#f7a','#f7a','#f7a',0,0,0,'#f7a','#f7a',0,0,0,0],[0,0,0,0,'#f7a',0,0,0,0,'#f7a','#f7a',0,0,0,0,'#f7a',0,0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] ] };
+        const dustBunnySprite = { width: 10, height: 10, data: [ /* DUST BUNNY DATA */ [0,0,'#888','#888','#888','#888','#888','#888',0,0],[0,'#888','#666','#666','#666','#666','#666','#666','#888',0],['#888','#666','#888','#888','#888','#888','#888','#888','#666','#888'],['#888','#666','#888','#333','#333','#333','#333','#888','#666','#888'],['#888','#666','#888','#888','#888','#888','#888','#888','#666','#888'],['#888','#666','#666','#666','#666','#666','#666','#666','#666','#888'],['#888','#888','#888','#888','#888','#888','#888','#888','#888','#888'],[0,'#888','#aaa','#aaa','#aaa','#aaa','#aaa','#aaa','#888',0],[0,0,'#888','#888','#888','#888','#888','#888',0,0],[0,0,0,'#888','#888','#888','#888',0,0,0] ] };
+        const trashCanSprite = { width: 15, height: 20, data: [ /* TRASH CAN DATA */ [0,0,'#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5',0,0,0],[0,'#5a5','#494','#494','#494','#494','#494','#494','#494','#494','#494','#494','#5a5',0,0],['#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0],['#5a5','#494','#5a5','#fff','#fff',0,0,0,0,0,'#fff','#fff','#5a5','#494','#5a5'],['#5a5','#494','#5a5','#fff','#fff',0,0,0,0,0,'#fff','#fff','#5a5','#494','#5a5'],['#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0],[0,'#5a5','#494','#494','#494','#494','#494','#494','#494','#494','#494','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#494','#5a5',0,0],[0,'#5a5','#494','#494','#494','#494','#494','#494','#494','#494','#494','#494','#5a5',0,0],[0,'#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5','#5a5',0,0],[0,0,'#444','#444','#444','#444','#444','#444','#444','#444','#444','#444',0,0,0],[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0] ] };
+        const heartSprite = { width: 9, height: 8, data: [ /* HEART DATA */ [0,'#f00','#f00',0,'#f00','#f00',0,0,0],['#f00','#f00','#f00','#f00','#f00','#f00','#f00',0,0],['#f00','#f00','#f00','#f00','#f00','#f00','#f00',0,0],['#f00','#f00','#f00','#f00','#f00','#f00','#f00',0,0],[0,'#f00','#f00','#f00','#f00','#f00',0,0,0],[0,0,'#f00','#f00','#f00',0,0,0,0],[0,0,0,'#f00',0,0,0,0,0],[0,0,0,0,0,0,0,0,0] ]};
+        const bulletSprite = { width: 5, height: 3, data: [ /* BULLET DATA */ [0,'#ff0','#ff0','#ff0',0],['#ff0','#ff0','#ff0','#ff0','#ff0'],[0,'#ff0','#ff0','#ff0',0] ]};
+        const turretSprite = { width: 14, height: 14, data: [ /* TURRET DATA */ [0,0,0,'#666','#666','#666','#666','#666','#666','#666',0,0,0,0],[0,0,'#666','#888','#888','#888','#888','#888','#888','#888','#666',0,0,0],[0,'#666','#888','#aaa','#aaa','#aaa','#aaa','#aaa','#aaa','#aaa','#888','#666',0,0],['#666','#888','#aaa','#ccc','#ccc','#ccc','#ccc','#ccc','#ccc','#ccc','#aaa','#888','#666',0],['#666','#888','#aaa','#ccc','#c00','#c00','#c00','#c00','#c00','#ccc','#aaa','#888','#666',0],['#666','#888','#aaa','#ccc','#c00','#f00','#f00','#f00','#c00','#ccc','#aaa','#888','#666',0],['#666','#888','#aaa','#ccc','#c00','#c00','#c00','#c00','#c00','#ccc','#aaa','#888','#666',0],['#666','#888','#aaa','#ccc','#ccc','#ccc','#ccc','#ccc','#ccc','#ccc','#aaa','#888','#666',0],[0,'#666','#888','#aaa','#aaa','#aaa','#aaa','#aaa','#aaa','#aaa','#888','#666',0,0],[0,0,'#666','#888','#888','#888','#888','#888','#888','#888','#666',0,0,0],[0,0,0,'#666','#666','#666','#666','#666','#666','#666',0,0,0,0],[0,0,'#444','#444','#444','#444','#444','#444','#444','#444','#444','#444',0,0],[0,'#444','#444','#444','#444','#444','#444','#444','#444','#444','#444','#444','#444',0],['#444','#444','#444','#444','#444','#444','#444','#444','#444','#444','#444','#444','#444','#444'] ]};
+        const enemyBulletSprite = { width: 4, height: 4, data: [ /* ENEMY BULLET DATA */ [0,'#f00','#f00',0],['#f00','#f00','#f00','#f00'],['#f00','#f00','#f00','#f00'],[0,'#f00','#f00',0] ]};
+        const speedSprite = { width: 9, height: 9, data: [ /* SPEED BOOST DATA */ [0,0,0,0,'#0ff',0,0,0,0],[0,0,0,'#0ff','#0ff',0,0,0,0],[0,0,'#0ff','#0ff',0,0,0,0,0],[0,'#0ff','#0ff',0,0,0,0,0,0],['#0ff','#0ff',0,'#0ff','#0ff',0,0,0,0],[0,0,0,0,'#0ff','#0ff',0,0,0],[0,0,0,0,0,'#0ff','#0ff',0,0],[0,0,0,0,0,'#0ff','#0ff','#0ff',0],[0,0,0,0,0,0,'#0ff',0,0] ]};
+        const spikeSprite = { width: 8, height: 8, data: [ /* SPIKE DATA */ [0,0,0,'#ccc', '#ccc',0,0,0],[0,0,'#ccc','#ccc', '#ccc','#ccc',0,0],[0,'#ccc','#ccc','#ccc', '#ccc','#ccc','#ccc',0],['#ccc','#ccc','#ccc','#ccc', '#ccc','#ccc','#ccc','#ccc'],['#ccc','#ccc','#ccc','#ccc', '#ccc','#ccc','#ccc','#ccc'],['#888','#888','#888','#888', '#888','#888','#888','#888'],['#888','#888','#888','#888', '#888','#888','#888','#888'],['#888','#888','#888','#888', '#888','#888','#888','#888'] ]};
+        const attackEffectSprite = { width: 8, height: 8, data: [ /* ATTACK FX DATA */ [0,0,0,'#ff0', '#ff0',0,0,0],[0,0,'#ff0','#ff0', '#ff0','#ff0',0,0],[0,'#ff0','#ff0','#ff0', '#ff0','#ff0','#ff0',0],['#ff0','#ff0','#ff0','#ff0', '#ff0','#ff0','#ff0','#ff0'],['#ff0','#ff0','#ff0','#ff0', '#ff0','#ff0','#ff0','#ff0'],[0,'#ff0','#ff0','#ff0', '#ff0','#ff0','#ff0',0],[0,0,'#ff0','#ff0', '#ff0','#ff0',0,0],[0,0,0,'#ff0', '#ff0',0,0,0] ]};
+        const goalSprite = { width: 16, height: 32, data: [ /* GOAL SPRITE DATA */ [0,0,0,0,0,0,0,0,0,0,'#fff','#000','#fff','#000','#fff','#000'],[0,0,0,0,0,0,0,0,0,0,'#000','#fff','#000','#fff','#000','#fff'],[0,0,0,0,0,0,0,0,0,0,'#fff','#000','#fff','#000','#fff','#000'],[0,0,0,0,0,0,0,0,0,0,'#000','#fff','#000','#fff','#000','#fff'],[0,0,0,0,0,0,0,0,0,0,'#fff','#000','#fff','#000','#fff','#000'],[0,0,0,0,0,0,0,0,0,0,'#000','#fff','#000','#fff','#000','#fff'],[0,0,0,0,0,0,0,0,0,0,'#fff','#000','#fff','#000','#fff','#000'],[0,0,0,0,0,0,0,0,0,0,'#000','#fff','#000','#fff','#000','#fff'],[0,0,0,0,0,0,0,0,0,0,'#fff','#000','#fff','#000','#fff','#000'],[0,0,0,0,0,0,0,0,0,0,'#000','#fff','#000','#fff','#000','#fff'],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0],[0,0,0,0,0,0,0,0,0,'#888',0,0,0,0,0,0] ]};
+        const slimeSprite = { width: 12, height: 8, data: [ /* SLIME DATA */ [0,0,'#0a0','#0a0','#0a0','#0a0','#0a0','#0a0','#0a0',0,0,0],[0,'#0a0','#0c0','#0c0','#0c0','#0c0','#0c0','#0c0','#0c0','#0a0',0,0],['#0a0','#0c0','#0f0','#0f0','#333','#0f0','#0f0','#333','#0f0','#0c0','#0a0',0],['#0a0','#0c0','#0f0','#0f0','#333','#0f0','#0f0','#333','#0f0','#0c0','#0a0',0],['#0a0','#0c0','#0c0','#0f0','#0f0','#0f0','#0f0','#0f0','#0c0','#0c0','#0a0',0],['#0a0','#0a0','#0c0','#0c0','#0c0','#0c0','#0c0','#0c0','#0c0','#0a0','#0a0',0],[0,'#0a0','#0a0','#0a0','#0a0','#0a0','#0a0','#0a0','#0a0','#0a0',0,0],[0,0,'#080','#080','#080','#080','#080','#080','#080',0,0,0] ]};
+
+        // --- Player Object ---
+        const player = { /* ... player object remains the same ... */
+             activeCharacter: 'skeleton',
+             skeleton: { name: 'skeleton', x: 50, y: 130, width: skeletonSpriteIdle.width, height: skeletonSpriteIdle.height, velocityX: 0, velocityY: 0, isGrounded: false, facing: 'right', sprites: { idle: skeletonSpriteIdle, walk1: skeletonSpriteWalk1, walk2: skeletonSpriteWalk2, jump: skeletonSpriteJump }, health: 5, maxHealth: 5, isHit: false, hitTimer: 0, isWalking: false, currentFrame: 0, frameTimer: 0, jumpsRemaining: maxJumps, speedBoostActive: false, speedBoostTimer: 0, isAttacking: false, attackAnimTimer: 0, baseMoveSpeed: 1.5, jumpPower: 5.5, attackDamage: 1 },
+             pig: { name: 'pig', x: 50, y: 130, width: pigSpriteIdle.width, height: pigSpriteIdle.height, velocityX: 0, velocityY: 0, isGrounded: false, facing: 'right', sprites: { idle: pigSpriteIdle, walk1: pigSpriteWalk1, walk2: pigSpriteWalk2, jump: pigSpriteJump }, health: 7, maxHealth: 7, isHit: false, hitTimer: 0, isWalking: false, currentFrame: 0, frameTimer: 0, jumpsRemaining: maxJumps, speedBoostActive: false, speedBoostTimer: 0, isAttacking: false, attackAnimTimer: 0, baseMoveSpeed: 1.4, jumpPower: 5, attackDamage: 2 },
+             getActive() { return this[this.activeCharacter]; },
+             switchCharacter() { const currentActive = this.getActive(); this.activeCharacter = (this.activeCharacter === 'skeleton') ? 'pig' : 'skeleton'; const newActive = this.getActive(); newActive.x = currentActive.x; newActive.y = currentActive.y; newActive.velocityX = 0; newActive.velocityY = currentActive.velocityY; newActive.isGrounded = currentActive.isGrounded; newActive.facing = currentActive.facing; newActive.isHit = false; newActive.hitTimer = 0; newActive.jumpsRemaining = currentActive.jumpsRemaining; newActive.speedBoostActive = currentActive.speedBoostActive; newActive.speedBoostTimer = currentActive.speedBoostTimer; newActive.isAttacking = false; newActive.attackAnimTimer = 0; showMessage(`Switched to ${this.activeCharacter}`, 1000); },
+             draw() { const active = this.getActive(); let currentSprite; if (!active.isGrounded) { currentSprite = active.sprites.jump; } else if (active.isWalking) { currentSprite = (active.currentFrame === 0) ? active.sprites.walk1 : active.sprites.walk2; } else { currentSprite = active.sprites.idle; } ctx.save(); if (active.isHit) { ctx.globalAlpha = (Math.floor(active.hitTimer / 50) % 2 === 0) ? 0.5 : 1.0; } drawSprite(currentSprite, active.x, active.y, active.facing === 'left'); ctx.restore(); if (active.isAttacking) { let effectX = (active.facing === 'right') ? active.x + active.width : active.x - attackEffectSprite.width; let effectY = active.y + active.height / 2 - attackEffectSprite.height / 2; drawSprite(attackEffectSprite, effectX, effectY); } },
+             update(platforms, hazards, deltaTime) { const active = this.getActive(); if (active.isHit) { active.hitTimer -= deltaTime; if (active.hitTimer <= 0) { active.isHit = false; } } if (active.speedBoostActive) { active.speedBoostTimer -= deltaTime; if (active.speedBoostTimer <= 0) { active.speedBoostActive = false; console.log("Speed boost ended"); } } if (active.isAttacking) { active.attackAnimTimer -= deltaTime; if (active.attackAnimTimer <= 0) { active.isAttacking = false; } } const currentBaseSpeed = active.baseMoveSpeed; const currentMoveSpeed = active.speedBoostActive ? currentBaseSpeed * speedBoostMultiplier : currentBaseSpeed; active.velocityX = 0; if (keys['ArrowLeft']) { active.velocityX = -currentMoveSpeed; active.facing = 'left'; } if (keys['ArrowRight']) { active.velocityX = currentMoveSpeed; active.facing = 'right'; } active.x = Math.max(0, Math.min(active.x + active.velocityX, currentLevelWidth - active.width)); /* Use currentLevelWidth */ active.isWalking = active.velocityX !== 0 && active.isGrounded; if (active.isWalking) { active.frameTimer += deltaTime; if (active.frameTimer >= walkFrameDuration) { active.frameTimer -= walkFrameDuration; active.currentFrame = (active.currentFrame + 1) % 2; } } else { active.frameTimer = 0; active.currentFrame = 0; } active.velocityY += gravity; active.y += active.velocityY; const previousGrounded = active.isGrounded; active.isGrounded = false; platforms.forEach(platform => { if (active.x < platform.x + platform.width && active.x + active.width > platform.x && active.y < platform.y + platform.height && active.y + active.height > platform.y) { const previousBottom = active.y + active.height - active.velocityY; if (active.velocityY >= 0 && previousBottom <= platform.y) { active.y = platform.y - active.height; active.velocityY = 0; active.isGrounded = true; } else if (active.velocityY < 0 && active.y - active.velocityY >= platform.y + platform.height) { active.y = platform.y + platform.height; active.velocityY = 0; } else { if (active.velocityX > 0 && active.x + active.width - active.velocityX <= platform.x) { active.x = platform.x - active.width; active.velocityX = 0; } else if (active.velocityX < 0 && active.x - active.velocityX >= platform.x + platform.width) { active.x = platform.x + platform.width; active.velocityX = 0; } } } }); if (active.y + active.height > levelHeight) { active.y = levelHeight - active.height; active.velocityY = 0; active.isGrounded = true; } if (active.y < 0) { active.y = 0; active.velocityY = 0; } if (active.isGrounded && !previousGrounded) { active.jumpsRemaining = maxJumps; } if (!active.isHit) { hazards.forEach(hazard => { if (hazard.type === 'spikes') { if (active.x < hazard.x + hazard.width && active.x + active.width > hazard.x && active.y < hazard.y + hazard.height && active.y + active.height > hazard.y) { this.takeDamage(spikeDamage); active.velocityY = -active.jumpPower * 0.6; active.isGrounded = false; active.jumpsRemaining = Math.min(active.jumpsRemaining, maxJumps - 1); } } }); } },
+             jump() { const active = this.getActive(); if (active.jumpsRemaining > 0) { active.velocityY = -active.jumpPower; active.isGrounded = false; active.jumpsRemaining--; playSound(jumpSynth, "C5", "8n"); } },
+             attack() { const now = Date.now(); if (now - lastAttackTime < attackCooldown) { return; } const active = this.getActive(); lastAttackTime = now; active.isAttacking = true; active.attackAnimTimer = attackEffectDuration; let projX, projY, projVelX; projY = active.y + active.height / 2 - bulletSprite.height / 2; if (active.facing === 'right') { projX = active.x + active.width; projVelX = projectileSpeed; } else { projX = active.x - bulletSprite.width; projVelX = -projectileSpeed; } projectiles.push({ x: projX, y: projY, width: bulletSprite.width, height: bulletSprite.height, velocityX: projVelX, sprite: bulletSprite, damage: active.attackDamage, owner: active.name }); playSound(shootSynth, "G5", "16n"); },
+             takeDamage(damage) { const active = this.getActive(); if (!active.isHit) { active.health -= damage; active.isHit = true; active.hitTimer = playerInvincibilityDuration; triggerScreenShake(150, 1.5); if (active.health < 0) active.health = 0; console.log(`${active.name} took ${damage} damage. Health: ${active.health}`); playSound(playerHurtSynth, "C3", "4n"); if (active.health <= 0) { gameOver = true; gameOverOverlay.style.display = 'block'; playSound(gameOverSynth, "C2", "1n"); console.log("GAME OVER"); } } },
+             heal(amount) { /* ... heal logic remains same ... */ const active = this.getActive(); active.health += amount; if (active.health > active.maxHealth) { active.health = active.maxHealth; } showMessage(`Healed! Health: ${active.health}`, 1500); playSound(powerupSynth, "E5", "4n"); },
+             activateSpeedBoost() { /* ... speed boost logic remains same ... */ const active = this.getActive(); active.speedBoostActive = true; active.speedBoostTimer = speedBoostDuration; showMessage("Speed Boost!", speedBoostDuration); playSound(speedBoostSynth, "C6", "2n"); }
+        };
+
+        // --- Level Data ---
+        const levels = [
+            // Level 0 Data
+            {
+                levelWidth: 1920,
+                goalX: 1920 - 30,
+                playerStartX: 50,
+                playerStartY: 130,
+                platforms: [ { type: 'ground', x: 0, y: levelHeight - 20, width: 480, height: 20, color: '#6a5acd' },{ type: 'ground', x: 512, y: levelHeight - 20, width: 700, height: 20, color: '#6a5acd' },{ type: 'ground', x: 1260, y: levelHeight - 20, width: 1920 - 1260, height: 20, color: '#6a5acd' },{ type: 'platform', x: 80, y: levelHeight - 60, width: 70, height: 10, color: '#8b4513' },{ type: 'bench', x: 180, y: levelHeight - 40, width: 50, height: 12, color: '#a0522d' },{ type: 'platform', x: 250, y: levelHeight - 140, width: 60, height: 10, color: '#8b4513' },{ type: 'sign', x: 400, y: levelHeight - 70, width: 8, height: 50, color: '#778899' },{ type: 'sign_top', x: 384, y: levelHeight - 80, width: 40, height: 15, color: '#f4a460' },{ type: 'platform', x: 550, y: levelHeight - 120, width: 80, height: 10, color: '#8b4513' },{ type: 'bench', x: 650, y: levelHeight - 40, width: 60, height: 12, color: '#a0522d' },{ type: 'platform', x: 800, y: levelHeight - 100, width: 90, height: 10, color: '#8b4513' },{ type: 'platform', x: 900, y: levelHeight - 50, width: 60, height: 10, color: '#8b4513' },{ type: 'platform', x: 1000, y: levelHeight - 90, width: 100, height: 10, color: '#8b4513' },{ type: 'sign', x: 1150, y: levelHeight - 60, width: 8, height: 40, color: '#778899' },{ type: 'sign_top', x: 1134, y: levelHeight - 70, width: 40, height: 15, color: '#f4a460' },{ type: 'bench', x: 1300, y: levelHeight - 40, width: 70, height: 12, color: '#a0522d' },{ type: 'platform', x: 1400, y: levelHeight - 80, width: 100, height: 10, color: '#8b4513' },{ type: 'platform', x: 1550, y: levelHeight - 120, width: 80, height: 10, color: '#8b4513' },{ type: 'platform', x: 1700, y: levelHeight - 60, width: 150, height: 10, color: '#8b4513' },{ type: 'platform', x: 1850, y: levelHeight - 100, width: 70, height: 10, color: '#8b4513' }, ],
+                initialEnemyData: [ { id: 0, x: 200, y: levelHeight - 40, width: dustBunnySprite.width, height: dustBunnySprite.height, sprite: dustBunnySprite, type: 'bunny', velocityY: -1, initialY: levelHeight - 40, bounceHeight: 15, health: 2 }, { id: 1, x: 450, y: levelHeight - 100, width: trashCanSprite.width, height: trashCanSprite.height, sprite: trashCanSprite, type: 'trashcan', velocityX: 0.5, range: 50, initialX: 450, health: 4 }, { id: 7, x: 580, y: levelHeight - 120 - turretSprite.height, width: turretSprite.width, height: turretSprite.height, sprite: turretSprite, type: 'turret', health: 5 }, { id: 2, x: 700, y: levelHeight - 40, width: dustBunnySprite.width, height: dustBunnySprite.height, sprite: dustBunnySprite, type: 'bunny', velocityY: -0.8, initialY: levelHeight - 40, bounceHeight: 10, health: 2 }, { id: 9, x: 850, y: levelHeight - 40, width: slimeSprite.width, height: slimeSprite.height, sprite: slimeSprite, type: 'chaser', velocityX: 0, velocityY: 0, health: 3, isGrounded: false }, { id: 3, x: 1050, y: levelHeight - 40, width: trashCanSprite.width, height: trashCanSprite.height, sprite: trashCanSprite, type: 'trashcan', velocityX: -0.6, range: 60, initialX: 1050, health: 5 }, { id: 8, x: 1420, y: levelHeight - 80 - turretSprite.height, width: turretSprite.width, height: turretSprite.height, sprite: turretSprite, type: 'turret', health: 6 }, { id: 10, x: 1500, y: levelHeight - 40, width: slimeSprite.width, height: slimeSprite.height, sprite: slimeSprite, type: 'chaser', velocityX: 0, velocityY: 0, health: 3, isGrounded: false }, { id: 4, x: 1350, y: levelHeight - 40, width: dustBunnySprite.width, height: dustBunnySprite.height, sprite: dustBunnySprite, type: 'bunny', velocityY: -1.2, initialY: levelHeight - 40, bounceHeight: 20, health: 3 }, { id: 5, x: 1750, y: levelHeight - 80, width: trashCanSprite.width, height: trashCanSprite.height, sprite: trashCanSprite, type: 'trashcan', velocityX: 0.7, range: 70, initialX: 1750, health: 4 }, { id: 6, x: 1880, y: levelHeight - 40, width: dustBunnySprite.width, height: dustBunnySprite.height, sprite: dustBunnySprite, type: 'bunny', velocityY: -0.9, initialY: levelHeight - 40, bounceHeight: 15, health: 2 }, ],
+                initialPowerUps: [ { id: 0, type: 'health', x: 300, y: levelHeight - 160, width: heartSprite.width, height: heartSprite.height, sprite: heartSprite, value: 2 },{ id: 1, type: 'health', x: 930, y: levelHeight - 70, width: heartSprite.width, height: heartSprite.height, sprite: heartSprite, value: 2 },{ id: 2, type: 'health', x: 1600, y: levelHeight - 140, width: heartSprite.width, height: heartSprite.height, sprite: heartSprite, value: 2 },{ id: 3, type: 'speed', x: 680, y: levelHeight - 60, width: speedSprite.width, height: speedSprite.height, sprite: speedSprite },{ id: 4, type: 'speed', x: 1450, y: levelHeight - 100, width: speedSprite.width, height: speedSprite.height, sprite: speedSprite }, ],
+                initialHazards: [ { type: 'spikes', x: 480, width: 32 }, { type: 'spikes', x: 1212, width: 48 } ] // Simplified hazard definition
+            },
+            // Level 1 Data (New Level)
+            {
+                levelWidth: 1280, // Shorter level
+                goalX: 1280 - 30,
+                playerStartX: 40,
+                playerStartY: 100, // Start higher?
+                platforms: [
+                    { type: 'ground', x: 0, y: levelHeight - 20, width: 200, height: 20, color: '#5a8d6a' }, // Different ground color
+                    // Gap
+                    { type: 'ground', x: 280, y: levelHeight - 20, width: 300, height: 20, color: '#5a8d6a' },
+                    // Gap
+                    { type: 'ground', x: 650, y: levelHeight - 20, width: 1280 - 650, height: 20, color: '#5a8d6a' },
+                    // Floating platforms - more verticality?
+                    { type: 'platform', x: 150, y: levelHeight - 80, width: 80, height: 10, color: '#8b4513' },
+                    { type: 'platform', x: 350, y: levelHeight - 100, width: 100, height: 10, color: '#8b4513' },
+                    { type: 'platform', x: 500, y: levelHeight - 70, width: 70, height: 10, color: '#8b4513' },
+                    { type: 'platform', x: 700, y: levelHeight - 90, width: 90, height: 10, color: '#8b4513' },
+                    { type: 'platform', x: 850, y: levelHeight - 130, width: 60, height: 10, color: '#8b4513' },
+                    { type: 'platform', x: 1000, y: levelHeight - 60, width: 100, height: 10, color: '#8b4513' },
+                    { type: 'platform', x: 1150, y: levelHeight - 100, width: 80, height: 10, color: '#8b4513' }, // Near goal
+                ],
+                initialEnemyData: [
+                    { id: 11, x: 180, y: levelHeight - 40, width: slimeSprite.width, height: slimeSprite.height, sprite: slimeSprite, type: 'chaser', velocityX: 0, velocityY: 0, health: 3 },
+                    { id: 12, x: 400, y: levelHeight - 120, width: turretSprite.width, height: turretSprite.height, sprite: turretSprite, type: 'turret', health: 4 },
+                    { id: 13, x: 520, y: levelHeight - 40, width: dustBunnySprite.width, height: dustBunnySprite.height, sprite: dustBunnySprite, type: 'bunny', velocityY: -1, initialY: levelHeight - 40, bounceHeight: 15, health: 2 },
+                    { id: 14, x: 750, y: levelHeight - 40, width: trashCanSprite.width, height: trashCanSprite.height, sprite: trashCanSprite, type: 'trashcan', velocityX: 0.6, range: 40, initialX: 750, health: 4 },
+                    { id: 15, x: 900, y: levelHeight - 150, width: turretSprite.width, height: turretSprite.height, sprite: turretSprite, type: 'turret', health: 5 },
+                    { id: 16, x: 1050, y: levelHeight - 40, width: slimeSprite.width, height: slimeSprite.height, sprite: slimeSprite, type: 'chaser', velocityX: 0, velocityY: 0, health: 4 },
+                ],
+                initialPowerUps: [
+                    { id: 5, type: 'health', x: 170, y: levelHeight - 100, width: heartSprite.width, height: heartSprite.height, sprite: heartSprite, value: 2 },
+                    { id: 6, type: 'speed', x: 730, y: levelHeight - 110, width: speedSprite.width, height: speedSprite.height, sprite: speedSprite },
+                    { id: 7, type: 'health', x: 1180, y: levelHeight - 120, width: heartSprite.width, height: heartSprite.height, sprite: heartSprite, value: 3 },
+                ],
+                initialHazards: [
+                     { type: 'spikes', x: 200, width: 80 }, // Wider spike pit
+                     { type: 'spikes', x: 580, width: 70 },
+                ]
+            }
+            // Add more level objects here later
+        ];
+
+        // --- Hazards ---
+        function createHazards(levelData) {
+            hazards = []; // Clear existing hazards
+            levelData.initialHazards.forEach(hazardData => {
+                 if (hazardData.type === 'spikes') {
+                      for (let x = hazardData.x; x < hazardData.x + hazardData.width; x += spikeSprite.width) {
+                         hazards.push({ type: 'spikes', x: x, y: levelHeight - spikeSprite.height, width: spikeSprite.width, height: spikeSprite.height, sprite: spikeSprite });
+                     }
+                 }
+                 // Add other hazard types here
+            });
+        }
+        function drawHazards() { /* ... function remains the same ... */ hazards.forEach(hazard => { if (hazard.type === 'spikes') { for(let x = hazard.x; x < hazard.x + hazard.width; x += hazard.sprite.width) { drawSprite(hazard.sprite, x, hazard.y); } } }); }
+
+        // --- Powerups ---
+        let powerUps = [];
+        function resetPowerUps(levelData) {
+            powerUps = JSON.parse(JSON.stringify(levelData.initialPowerUps)); // Use level data
+        }
+
+        // --- Background Buildings ---
+        const backgroundBuildings = [];
+        function generateBuildings() { /* ... function remains the same ... */ backgroundBuildings.length = 0; let currentX = 0; while (currentX < currentLevelWidth /* Use current level width */) { const buildingWidth = Math.floor(Math.random() * 50) + 30; const buildingHeight = Math.floor(Math.random() * 80) + 40; const colorIndex = Math.floor(Math.random() * buildingColors.length); backgroundBuildings.push({ x: currentX, y: levelHeight - buildingHeight - 20, width: buildingWidth, height: buildingHeight, color: buildingColors[colorIndex] }); currentX += buildingWidth + Math.floor(Math.random() * 10) + 5; } }
+        function drawBackgroundBuildings() { /* ... function remains the same ... */ backgroundBuildings.forEach(building => { ctx.fillStyle = building.color; const buildX = Math.floor(building.x); const buildY = Math.floor(building.y); const buildW = building.width; const buildH = building.height; ctx.fillRect(buildX, buildY, buildW, buildH); ctx.fillStyle = windowColor; const windowSize = 4; const windowGap = 6; for (let wy = buildY + windowGap; wy < buildY + buildH - windowGap; wy += windowSize + windowGap) { for (let wx = buildX + windowGap; wx < buildX + buildW - windowGap; wx += windowSize + windowGap) { if (Math.random() > 0.3) { ctx.fillRect(wx, wy, windowSize, windowSize); } } } }); }
+        function drawPlatforms(levelPlatforms) { /* ... function remains the same, takes platforms as arg ... */ levelPlatforms.forEach(platform => { ctx.fillStyle = platform.color; if (platform.type === 'ground' || platform.type === 'platform') { ctx.fillRect(Math.floor(platform.x), Math.floor(platform.y), platform.width, platform.height); } else if (platform.type === 'bench') { ctx.fillRect(Math.floor(platform.x), Math.floor(platform.y), platform.width, platform.height); ctx.fillStyle = '#654321'; ctx.fillRect(Math.floor(platform.x + 2), Math.floor(platform.y + platform.height), 4, 8); ctx.fillRect(Math.floor(platform.x + platform.width - 6), Math.floor(platform.y + platform.height), 4, 8); } else if (platform.type === 'sign') { ctx.fillRect(Math.floor(platform.x), Math.floor(platform.y), platform.width, platform.height); } else if (platform.type === 'sign_top') { ctx.fillRect(Math.floor(platform.x), Math.floor(platform.y), platform.width, platform.height); } }); }
+        function drawPowerUps() { /* ... function remains the same ... */ powerUps.forEach(pu => { const alpha = 0.7 + (Math.sin(Date.now() / 200) + 1) * 0.15; ctx.save(); ctx.globalAlpha = alpha; drawSprite(pu.sprite, pu.x, pu.y); ctx.restore(); }); }
+        function updatePowerUps() { /* ... function remains the same ... */ const activePlayer = player.getActive(); powerUps = powerUps.filter(pu => { if (activePlayer.x < pu.x + pu.width && activePlayer.x + activePlayer.width > pu.x && activePlayer.y < pu.y + pu.height && activePlayer.y + activePlayer.height > pu.y) { if (pu.type === 'health') { player.heal(pu.value); } else if (pu.type === 'speed') { player.activateSpeedBoost(); } return false; } return true; }); }
+
+        // --- Projectiles ---
+        function updateProjectiles(deltaTime) { /* ... function remains the same ... */ projectiles.forEach(p => { p.x += p.velocityX; let hit = false; enemies.forEach(enemy => { if (p.remove || enemy.isHit || enemy.isDying) return; if (p.x < enemy.x + enemy.width && p.x + p.width > enemy.x && p.y < enemy.y + enemy.height && p.y + p.height > enemy.y) { enemy.health -= player.getActive().attackDamage; enemy.isHit = true; enemy.hitTimer = hitFlashDuration; p.remove = true; hit = true; playSound(hitEnemySynth, "A4", "16n"); console.log(`Enemy ${enemy.id} hit by projectile! Health: ${enemy.health}`); if (enemy.health <= 0 && !enemy.isDying) { enemy.isDying = true; enemy.dyingTimer = enemyDeathDuration; playSound(enemyDefeatSynth, null, "8n"); spawnParticles(enemy.x + enemy.width / 2, enemy.y + enemy.height / 2, 10, '#888'); } } }); }); projectiles = projectiles.filter(p => !p.remove && p.x > 0 && p.x < currentLevelWidth); }
+        function drawProjectiles() { /* ... draw logic remains same ... */ projectiles.forEach(p => { drawSprite(p.sprite, p.x, p.y); }); }
+
+        // --- Enemy Projectiles ---
+        function updateEnemyProjectiles(deltaTime) { /* ... function remains the same ... */ const activePlayer = player.getActive(); enemyProjectiles.forEach(p => { p.x += p.velocityX; p.y += p.velocityY; let hit = false; if (!activePlayer.isHit) { if (p.x < activePlayer.x + activePlayer.width && p.x + p.width > activePlayer.x && p.y < activePlayer.y + activePlayer.height && p.y + p.height > activePlayer.y) { player.takeDamage(p.damage); p.remove = true; hit = true; } } }); enemyProjectiles = enemyProjectiles.filter(p => !p.remove && p.x > 0 && p.x < currentLevelWidth && p.y > 0 && p.y < levelHeight); }
+        function drawEnemyProjectiles() { /* ... draw logic remains same ... */ enemyProjectiles.forEach(p => { drawSprite(p.sprite, p.x, p.y); }); }
+
+        // --- Particles ---
+        function spawnParticles(x, y, count, color) { /* ... function remains the same ... */ playSound(particlePopSynth, null, "32n"); for (let i = 0; i < count; i++) { particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 3, vy: (Math.random() - 0.5) * 3 - 1, life: Math.random() * 300 + 200, color: color, size: Math.random() * 2 + 1 }); } }
+        function updateParticles(deltaTime) { /* ... function remains the same ... */ particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += gravity * 0.5; p.life -= deltaTime; }); particles = particles.filter(p => p.life > 0); }
+        function drawParticles() { /* ... function remains the same ... */ particles.forEach(p => { ctx.fillStyle = p.color; ctx.globalAlpha = Math.max(0, p.life / 300); ctx.fillRect(Math.floor(p.x - p.size / 2), Math.floor(p.y - p.size / 2), p.size, p.size); ctx.globalAlpha = 1.0; }); }
+
+        // --- Enemies ---
+        let enemies = []; // Current enemies in level
+
+        function resetEnemies(levelData) {
+            enemies = JSON.parse(JSON.stringify(levelData.initialEnemyData)).map(enemy => ({
+                ...enemy, isHit: false, hitTimer: 0, isDying: false, dyingTimer: 0, lastShotTime: 0, isGrounded: false // Initialize dynamic states
+            }));
+        }
+
+        function updateEnemies(platforms, deltaTime, currentTime) {
+            const activePlayer = player.getActive();
+            const playerCenterX = activePlayer.x + activePlayer.width / 2;
+            const playerCenterY = activePlayer.y + activePlayer.height / 2;
+
+            // Update remaining enemies
+            enemies.forEach(enemy => {
+                if (enemy.isDying) { enemy.dyingTimer -= deltaTime; return; }
+
+                // Movement & Behavior
+                if (enemy.type === 'bunny') { /* ... bunny movement ... */ enemy.y += enemy.velocityY; if (enemy.y <= enemy.initialY - enemy.bounceHeight || enemy.y >= enemy.initialY) { enemy.velocityY *= -1; enemy.y = Math.max(enemy.initialY - enemy.bounceHeight, Math.min(enemy.initialY, enemy.y)); } }
+                else if (enemy.type === 'trashcan') { /* ... trashcan movement ... */ enemy.x += enemy.velocityX; if (enemy.x <= enemy.initialX - enemy.range || enemy.x + enemy.width >= enemy.initialX + enemy.range) { enemy.velocityX *= -1; enemy.x = Math.max(enemy.initialX - enemy.range, Math.min(enemy.initialX + enemy.range - enemy.width, enemy.x)); } enemy.x = Math.max(0, Math.min(enemy.x, currentLevelWidth - enemy.width)); }
+                else if (enemy.type === 'turret') { /* ... turret shooting logic ... */ const dx = playerCenterX - (enemy.x + enemy.width / 2); const dy = playerCenterY - (enemy.y + enemy.height / 2); const distance = Math.sqrt(dx * dx + dy * dy); if (distance < turretRange && currentTime - enemy.lastShotTime > turretFireRate) { enemy.lastShotTime = currentTime; const angle = Math.atan2(dy, dx); const projVelX = Math.cos(angle) * enemyProjectileSpeed; const projVelY = Math.sin(angle) * enemyProjectileSpeed; const projX = enemy.x + enemy.width / 2 - enemyBulletSprite.width / 2; const projY = enemy.y + enemy.height / 2 - enemyBulletSprite.height / 2; enemyProjectiles.push({ x: projX, y: projY, width: enemyBulletSprite.width, height: enemyBulletSprite.height, velocityX: projVelX, velocityY: projVelY, sprite: enemyBulletSprite, damage: turretDamage }); playSound(enemyShootSynth, "A3", "16n"); } }
+                else if (enemy.type === 'chaser') {
+                    const dx = playerCenterX - (enemy.x + enemy.width / 2);
+                    const distance = Math.abs(dx);
+                    enemy.velocityX = 0;
+                    if (distance < chaserRange && distance > 5) { // Chase if player in range, avoid getting stuck on top
+                        enemy.velocityX = Math.sign(dx) * chaserSpeed;
+                    }
+                    enemy.x += enemy.velocityX;
+                    // Gravity & Platform Collision
+                    enemy.velocityY += gravity; enemy.y += enemy.velocityY; enemy.isGrounded = false;
+                    platforms.forEach(platform => { if (enemy.x < platform.x + platform.width && enemy.x + enemy.width > platform.x && enemy.y < platform.y + platform.height && enemy.y + enemy.height > platform.y) { const previousBottom = enemy.y + enemy.height - enemy.velocityY; if (enemy.velocityY >= 0 && previousBottom <= platform.y) { enemy.y = platform.y - enemy.height; enemy.velocityY = 0; enemy.isGrounded = true; } } });
+                    if (enemy.y + enemy.height > levelHeight) { enemy.y = levelHeight - enemy.height; enemy.velocityY = 0; enemy.isGrounded = true; }
+                     enemy.x = Math.max(0, Math.min(enemy.x, currentLevelWidth - enemy.width));
+                }
+
+                // Update hit timer
+                if (enemy.isHit) { enemy.hitTimer -= deltaTime; if (enemy.hitTimer <= 0) { enemy.isHit = false; } }
+
+                // --- Check collision with Player (Enemy deals damage) ---
+                 if (enemy.type !== 'turret' && !activePlayer.isHit) { if (activePlayer.x < enemy.x + enemy.width && activePlayer.x + activePlayer.width > enemy.x && activePlayer.y < enemy.y + enemy.height && activePlayer.y + activePlayer.height > enemy.y) { player.takeDamage(enemyDamage); } }
+            });
+
+            // Filter out enemies whose dying timer has run out
+            enemies = enemies.filter(enemy => !enemy.isDying || enemy.dyingTimer > 0);
+        }
+
+        function drawEnemies() { /* ... drawEnemies remains largely the same ... */ enemies.forEach(enemy => { ctx.save(); let flipped = false; if (enemy.type === 'trashcan' && enemy.velocityX < 0) flipped = true; if (enemy.type === 'chaser' && enemy.velocityX < 0) flipped = true; if (enemy.isDying) { const deathProgress = Math.max(0, enemy.dyingTimer / enemyDeathDuration); ctx.globalAlpha = deathProgress * 0.8; const scale = deathProgress; const drawX = enemy.x + enemy.width * (1 - scale) / 2; const drawY = enemy.y + enemy.height * (1 - scale) / 2; ctx.translate(drawX, drawY); ctx.scale(scale, scale); drawSprite(enemy.sprite, 0, 0, flipped); } else if (enemy.isHit) { ctx.globalAlpha = 0.7; ctx.fillStyle = 'white'; ctx.fillRect(Math.floor(enemy.x)-1, Math.floor(enemy.y)-1, enemy.width+2, enemy.height+2); drawSprite(enemy.sprite, enemy.x, enemy.y, flipped); } else { drawSprite(enemy.sprite, enemy.x, enemy.y, flipped); } ctx.restore(); }); }
+
+        // --- Goal ---
+        function drawGoal() { const goalDrawY = levelHeight - goalSprite.height - 20; drawSprite(goalSprite, currentGoalX, goalDrawY); } // Use currentGoalX
+
+        // --- Input Handling ---
+        window.addEventListener('keydown', (e) => { /* ... input handling remains the same ... */ if (!gameOver && !levelComplete && !gameComplete) { keys[e.code] = true; if (e.code === 'ArrowUp' || e.code === 'Space') { player.jump(); } if (e.code === 'Tab') { player.switchCharacter(); } if (e.code === 'KeyX' || e.code === 'ControlLeft') { player.attack(); } } if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'Tab', 'KeyX', 'ControlLeft'].includes(e.code)) { e.preventDefault(); } });
+        window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+        // --- Draw UI ---
+        function drawUI() {
+            const activePlayer = player.getActive();
+            healthDisplay.textContent = `${activePlayer.health} / ${activePlayer.maxHealth}`;
+            levelDisplay.textContent = currentLevelIndex + 1; // Show current level (1-based)
+        }
+
+        // --- Screen Shake ---
+        function triggerScreenShake(duration, magnitude) { screenShakeDuration = duration; screenShakeMagnitude = magnitude; }
+
+        // --- Level Loading ---
+        function loadLevel(levelIndex) {
+            if (levelIndex >= levels.length) {
+                console.error("Attempted to load invalid level index:", levelIndex);
+                return; // Or handle game completion
+            }
+            console.log(`Loading level ${levelIndex + 1}`);
+            currentLevelIndex = levelIndex;
+            const levelData = levels[levelIndex];
+
+            // Set level dimensions
+            currentLevelWidth = levelData.levelWidth;
+            currentGoalX = levelData.goalX;
+
+            // Reset Player State
+            Object.keys(player).forEach(key => {
+                if (typeof player[key] === 'object' && player[key] !== null && player[key].hasOwnProperty('health')) {
+                    player[key].health = player[key].maxHealth;
+                    player[key].x = levelData.playerStartX; player[key].y = levelData.playerStartY;
+                    player[key].velocityX = 0; player[key].velocityY = 0;
+                    player[key].isHit = false; player[key].hitTimer = 0;
+                    player[key].isAttacking = false; player[key].attackAnimTimer = 0;
+                    player[key].speedBoostActive = false; player[key].speedBoostTimer = 0;
+                    player[key].jumpsRemaining = maxJumps;
+                    player[key].isGrounded = false;
+                }
+            });
+            player.activeCharacter = 'skeleton'; // Always start as skeleton?
+
+            // Reset Enemies, Powerups, Hazards for the new level
+            resetEnemies(levelData);
+            resetPowerUps(levelData);
+            createHazards(levelData); // Create hazards based on level data
+
+            // Reset other game states
+            projectiles = [];
+            enemyProjectiles = [];
+            particles = [];
+            levelComplete = false;
+            gameOver = false;
+            gameComplete = false; // Ensure game complete is reset too
+            camera.x = 0; camera.y = 0; // Reset camera
+            lastAttackTime = 0;
+            lastTime = performance.now(); // Reset delta time base
+
+            // Hide overlays
+            levelCompleteOverlay.style.display = 'none';
+            gameOverOverlay.style.display = 'none';
+            gameCompleteOverlay.style.display = 'none';
+            keys = {};
+
+            // Regenerate background buildings based on new level width
+            generateBuildings();
+
+            showMessage(`Level ${levelIndex + 1}`, 2000);
+        }
+
+
+        // --- Game Restart ---
+        function restartCurrentLevel() {
+            console.log("Restarting current level...");
+            loadLevel(currentLevelIndex); // Simply reload the current level
+        }
+        function restartGameFromBeginning() {
+             console.log("Restarting game from beginning...");
+             loadLevel(0); // Load level 0
+        }
+
+        // Add event listeners for restart buttons
+        restartButton.addEventListener('click', restartCurrentLevel);
+        restartGameButton.addEventListener('click', restartGameFromBeginning);
+
+
+        // --- Game Loop ---
+        let lastTime = 0;
+        function gameLoop(currentTime) {
+            if (audioStarted && Tone.context.state === 'suspended') { Tone.context.resume(); }
+
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+
+            if (screenShakeDuration > 0) { screenShakeDuration -= deltaTime; }
+
+            // 1. Update game objects (only if game running)
+            if (!levelComplete && !gameOver && !gameComplete) {
+                player.update(levels[currentLevelIndex].platforms, hazards, deltaTime); // Pass current level platforms
+                updateProjectiles(deltaTime);
+                updateEnemyProjectiles(deltaTime);
+                updateEnemies(levels[currentLevelIndex].platforms, deltaTime, currentTime); // Pass current level platforms
+                updatePowerUps();
+                updateParticles(deltaTime);
+            }
+            camera.update(player.getActive(), currentLevelWidth); // Pass current level width
+
+            // --- Level/Game Completion Check ---
+            const activePlayer = player.getActive();
+            if (!levelComplete && !gameOver && !gameComplete && enemies.length === 0 && activePlayer.x + activePlayer.width / 2 > currentGoalX) {
+                levelComplete = true; // Mark level as complete first
+                const nextLevelIndex = currentLevelIndex + 1;
+                if (nextLevelIndex < levels.length) {
+                    // Go to next level
+                    levelCompleteOverlay.style.display = 'block';
+                    playSound(levelCompleteSynth, "C4", "1n");
+                    keys = {}; activePlayer.velocityX = 0; activePlayer.isWalking = false;
+                    // Load next level after a short delay
+                    setTimeout(() => {
+                        loadLevel(nextLevelIndex);
+                    }, 2000); // 2 second delay
+                } else {
+                    // All levels complete
+                    gameComplete = true;
+                    gameCompleteOverlay.style.display = 'block';
+                     playSound(gameCompleteSynth, "C5", "0.5n"); // Play game complete fanfare
+                     keys = {}; activePlayer.velocityX = 0; activePlayer.isWalking = false;
+                }
+            }
+
+            // --- Drawing ---
+            ctx.save();
+            if (screenShakeDuration > 0) { const shakeX = (Math.random() - 0.5) * screenShakeMagnitude * 2; const shakeY = (Math.random() - 0.5) * screenShakeMagnitude * 2; ctx.translate(Math.floor(shakeX), Math.floor(shakeY)); }
+
+            ctx.fillStyle = skyColor; ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            ctx.save(); ctx.translate(-Math.floor(camera.x * parallaxFactor), 0); drawBackgroundBuildings(); ctx.restore();
+            ctx.save(); ctx.translate(-Math.floor(camera.x), -Math.floor(camera.y));
+            drawPlatforms(levels[currentLevelIndex].platforms); // Pass current level platforms
+            drawHazards();
+            drawPowerUps();
+            drawProjectiles();
+            drawEnemyProjectiles();
+            drawEnemies();
+            drawParticles();
+            drawGoal();
+            player.draw();
+            ctx.restore();
+            ctx.restore(); // Restore after shake
+
+            drawUI(); // Draw UI last, unaffected by camera/shake
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initial setup and start loop
+        window.onload = function() {
+            loadLevel(0); // Load the first level initially
+            showMessage("Level 1! Clear enemies & reach the flag!", 4000);
+            // lastTime is set inside loadLevel now
+        }
+
+    </script>
+</body>
+</html>
