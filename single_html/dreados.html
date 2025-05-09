@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Creative Destruction Sound Machine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        /* Apply Press Start 2P font */
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1a1a; /* Dark background */
+            color: #e0e0e0; /* Light text */
+            overflow: hidden; /* Prevent scrolling */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            user-select: none; /* Prevent text selection */
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 900px; /* Max width for the game area */
+            padding: 1rem;
+            position: relative; /* For absolute positioning of game over screen */
+        }
+        .game-area {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            height: 70vh; /* Game area height */
+            min-height: 450px;
+            border: 3px solid #444;
+            background-color: #2a2a2a;
+            border-radius: 10px;
+            padding: 1rem;
+            gap: 1rem; /* Space between components and core */
+        }
+        .components-tray {
+            width: 25%; /* Width for the component tray */
+            height: 100%;
+            border: 2px dashed #555;
+            border-radius: 8px;
+            padding: 0.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.75rem; /* Space between components */
+            overflow-y: auto; /* Allow scrolling if needed */
+        }
+        .component {
+            width: 80%;
+            min-height: 50px;
+            background-color: #444;
+            border: 2px solid #666;
+            border-radius: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: grab;
+            text-align: center;
+            padding: 0.5rem;
+            font-size: 0.7rem;
+            transition: transform 0.1s ease-out, box-shadow 0.1s;
+        }
+        .component:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(200, 200, 255, 0.5);
+            z-index: 10; /* Bring to front while dragging */
+        }
+        .core-area {
+            width: 70%; /* Width for the core area */
+            height: 100%;
+            border: 2px solid #777;
+            border-radius: 8px;
+            background-color: #333;
+            position: relative; /* For placing components */
+            overflow: hidden; /* Hide overflow */
+        }
+        .core {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            background-color: #5a5a5a;
+            border: 3px solid #888;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 0.8rem;
+            box-shadow: 0 0 10px rgba(150, 150, 150, 0.3);
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+        .core.active {
+            background-color: #77dd77; /* Greenish when active */
+            box-shadow: 0 0 20px rgba(120, 255, 120, 0.6);
+        }
+        .core.dying {
+            background-color: #dd7777; /* Reddish when dying */
+            box-shadow: 0 0 20px rgba(255, 120, 120, 0.6);
+            animation: pulse-red 0.5s infinite alternate;
+        }
+        .attached-component {
+            position: absolute;
+            width: 60px; /* Smaller size when attached */
+            height: 60px;
+            background-color: #5f5f5f;
+            border: 2px solid #888;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column; /* Stack text and health bar */
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            font-size: 0.6rem;
+            padding: 2px;
+            cursor: pointer; /* Allow clicking to repair */
+            transition: background-color 0.2s, border-color 0.2s, opacity 0.3s;
+        }
+        .health-bar-container {
+            width: 80%;
+            height: 5px;
+            background-color: #333;
+            border-radius: 3px;
+            margin-top: 3px;
+            overflow: hidden;
+        }
+        .health-bar {
+            height: 100%;
+            width: 100%; /* Start at full health */
+            background-color: #4caf50; /* Green */
+            border-radius: 3px;
+            transition: width 0.5s linear, background-color 0.5s linear;
+        }
+        .attached-component.glitching {
+            animation: glitch 0.1s infinite alternate;
+            border-color: #ffcc00; /* Yellow border when glitching */
+        }
+        .attached-component.failing {
+            opacity: 0.5;
+            border-color: #ff6666; /* Red border when failing */
+        }
+        .status-bar {
+            width: 100%;
+            text-align: center;
+            margin-top: 1rem;
+            font-size: 1rem;
+            min-height: 1.5rem; /* Reserve space */
+        }
+        .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20; /* Above everything else */
+            text-align: center;
+            padding: 2rem;
+            border-radius: 10px; /* Match container */
+        }
+        .game-over-screen h2 {
+            font-size: 2rem;
+            color: #ff4444; /* Red */
+            margin-bottom: 1rem;
+        }
+        .game-over-screen p {
+            font-size: 1.2rem;
+            margin-bottom: 1.5rem;
+        }
+        .restart-button {
+            padding: 0.8rem 1.5rem;
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .restart-button:hover {
+            background-color: #45a049;
+        }
+
+        /* Animations */
+        @keyframes pulse-red {
+            from { box-shadow: 0 0 15px rgba(255, 100, 100, 0.5); }
+            to { box-shadow: 0 0 25px rgba(255, 100, 100, 0.9); }
+        }
+        @keyframes glitch {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-2px, 2px); }
+            50% { transform: translate(2px, -2px); }
+            75% { transform: translate(-1px, -1px); }
+            100% { transform: translate(1px, 1px); }
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container" class="game-container">
+        <h1 class="text-2xl mb-4">Creative Destruction Machine</h1>
+        <div class="status-bar">
+            <span id="status-message">Loading...</span> | Intensity: <span id="intensity">0</span> |
+            Time: <span id="timer">0</span>s
+        </div>
+        <div class="game-area">
+            <div id="components-tray" class="components-tray">
+                </div>
+            <div id="core-area" class="core-area">
+                <div id="core" class="core">CORE</div>
+                </div>
+        </div>
+
+        <div id="game-over-screen" class="game-over-screen hidden">
+            <h2>MACHINE COLLAPSED!</h2>
+            <p>Final Intensity: <span id="final-intensity">0</span></p>
+            <p>Survived for: <span id="final-time">0</span> seconds</p>
+            <button id="restart-button" class="restart-button">REBUILD?</button>
+        </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const gameContainer = document.getElementById('game-container');
+        const componentsTray = document.getElementById('components-tray');
+        const coreArea = document.getElementById('core-area');
+        const coreElement = document.getElementById('core');
+        const statusMessage = document.getElementById('status-message');
+        const intensityDisplay = document.getElementById('intensity');
+        const timerDisplay = document.getElementById('timer');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const finalIntensityDisplay = document.getElementById('final-intensity');
+        const finalTimeDisplay = document.getElementById('final-time');
+        const restartButton = document.getElementById('restart-button');
+
+        // --- Game State ---
+        let isDragging = false;
+        let draggedComponent = null;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let attachedComponents = []; // Store info about attached components
+        let nextComponentId = 0;
+        let gameInterval = null;
+        let timer = 0;
+        let intensity = 0;
+        let isGameOver = false;
+        let coreHealth = 100; // Core health, game over if it reaches 0
+        const CORE_DAMAGE_PER_FAILING = 0.5; // How much health core loses per failing component per tick
+
+        // --- Audio Setup (Tone.js) ---
+        let audioContextStarted = false;
+        // Declare variables globally, but don't initialize yet
+        let masterVolume, noiseSynth, droneOsc, metalSynth, glitchPlayer, glitchBuffer;
+
+        // --- Component Definitions ---
+        const componentTypes = [
+            { name: "Broken Speaker", type: "noise", health: 100, decayRate: 1.5, intensity: 2 },
+            { name: "Bent Metal", type: "metal", health: 120, decayRate: 1.2, intensity: 3 },
+            { name: "Old Motor", type: "drone", health: 150, decayRate: 1.0, intensity: 1 },
+            { name: "Glitchy Circuit", type: "glitch", health: 80, decayRate: 2.0, intensity: 4 },
+            { name: "Piezo Pickup", type: "noise", health: 90, decayRate: 1.8, intensity: 3 },
+            { name: "Leaky Capacitor", type: "drone", health: 110, decayRate: 1.4, intensity: 2 },
+        ];
+
+        // --- Game Functions ---
+
+        // Initialize or Reset the Game
+        function initGame() {
+            console.log("initGame called"); // Debug log
+            // Stop existing game loop
+            if (gameInterval) clearInterval(gameInterval);
+
+            // Reset state variables
+            isGameOver = false;
+            timer = 0;
+            intensity = 0;
+            coreHealth = 100;
+            attachedComponents = [];
+            nextComponentId = 0;
+
+            // Reset UI
+            coreArea.innerHTML = ''; // Clear attached components
+            coreArea.appendChild(coreElement); // Re-add core
+            coreElement.className = 'core'; // Reset core style
+            componentsTray.innerHTML = ''; // Clear tray
+            intensityDisplay.textContent = intensity;
+            timerDisplay.textContent = timer;
+            statusMessage.textContent = "Drag components to the CORE"; // Default message
+            gameOverScreen.classList.add('hidden');
+            gameContainer.style.animation = 'none'; // Stop any game over animation
+
+            // Populate components tray
+            populateTray();
+
+            // Start the game loop (updates health, intensity, timer)
+            gameInterval = setInterval(gameLoop, 1000 / 10); // Update 10 times per second
+
+            // Prompt user to start audio context only if Tone is loaded
+             if (typeof Tone !== 'undefined') {
+                 console.log("Tone is defined in initGame.");
+                 if (!audioContextStarted && Tone.context.state !== 'running') {
+                     statusMessage.textContent = "Click screen to start audio";
+                     // Make sure the listener isn't added multiple times on restarts
+                     document.body.removeEventListener('click', startAudioContext); // Remove previous if any
+                     document.body.addEventListener('click', startAudioContext, { once: true });
+                 } else if (audioContextStarted) {
+                     // If context already started (e.g. restart), ensure audio objects are ready
+                     if (!masterVolume) { // Check if objects need init
+                         initializeToneObjects();
+                     }
+                     startAudio(); // Restart background audio if needed
+                     statusMessage.textContent = "Drag components to the CORE"; // Set status
+                 } else {
+                     // Context exists but isn't running, likely needs interaction
+                     statusMessage.textContent = "Click screen to start audio";
+                     document.body.removeEventListener('click', startAudioContext); // Remove previous if any
+                     document.body.addEventListener('click', startAudioContext, { once: true });
+                 }
+             } else {
+                 // Tone.js hasn't loaded yet when initGame runs (shouldn't happen with window.onload, but check)
+                 console.error("Tone is not defined during initGame. Check script loading order/CDN.");
+                 statusMessage.textContent = "Error: Audio library failed to load.";
+             }
+        }
+
+        // Function to initialize Tone.js objects (called after context starts)
+        function initializeToneObjects() {
+            // Ensure Tone is defined before proceeding
+            if (typeof Tone === 'undefined') {
+                 console.error("Cannot initialize Tone objects: Tone is not defined.");
+                 statusMessage.textContent = "Error: Audio library failed."; // Update status
+                 return; // Exit if Tone isn't available
+            }
+            // Initialize only once
+            if (!masterVolume) {
+                console.log("Initializing Tone.js objects...");
+                try {
+                    masterVolume = new Tone.Volume(-12).toDestination();
+                    noiseSynth = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.1, release: 0.3 } }).connect(masterVolume);
+                    droneOsc = new Tone.FMOscillator({ frequency: 50, harmonicity: 0.5, modulationIndex: 5, detune: 0, type: "sine", modulationType : "square", envelope: { attack: 0.5, decay: 0.1, sustain: 1, release: 0.5 } }).connect(masterVolume);
+                    metalSynth = new Tone.MetalSynth({ frequency: 120, envelope: { attack: 0.01, decay: 0.4, release: 0.2 }, harmonicity: 3.1, modulationIndex: 16, resonance: 400, octaves: 1.5 }).connect(masterVolume);
+                    glitchPlayer = new Tone.Player().connect(masterVolume);
+
+                    // Create glitch buffer now that Tone.context is guaranteed
+                    glitchBuffer = Tone.context.createBuffer(1, Tone.context.sampleRate * 0.1, Tone.context.sampleRate);
+                    const data = glitchBuffer.getChannelData(0);
+                    for (let i = 0; i < data.length; i++) {
+                        data[i] = Math.random() * 2 - 1; // White noise
+                    }
+                    glitchPlayer.buffer = glitchBuffer;
+                    glitchPlayer.loop = false;
+                    console.log("Tone.js objects initialized successfully.");
+                } catch (e) {
+                    console.error("Error initializing Tone objects:", e);
+                    statusMessage.textContent = "Error initializing audio objects.";
+                    // Prevent game from continuing in a broken audio state?
+                    // Maybe set a flag or stop the game loop here.
+                }
+            }
+        }
+
+
+        // Start Tone.js Audio Context
+        async function startAudioContext() {
+            console.log("startAudioContext called"); // Debug log
+            // Check if Tone is loaded before trying to use it
+            if (typeof Tone === 'undefined') {
+                console.error("Tone is not defined. Cannot start audio context.");
+                statusMessage.textContent = "Error: Audio library failed to load.";
+                return;
+            }
+
+            // Prevent starting multiple times or if already started
+            if (audioContextStarted) {
+                console.log("Audio context already started.");
+                return;
+            }
+
+            if (Tone.context.state !== 'running') {
+                try {
+                    console.log("Attempting Tone.start()...");
+                    await Tone.start();
+                    console.log("Tone.start() successful. Audio context state:", Tone.context.state);
+                    audioContextStarted = true;
+                    initializeToneObjects(); // Initialize synths etc. NOW
+                    statusMessage.textContent = "Audio Ready! Drag components.";
+                    startAudio(); // Start background sounds
+                } catch (e) {
+                    console.error("Error starting Tone Audio Context:", e);
+                    statusMessage.textContent = "Audio failed to start. Click again?";
+                    // Reset listener potentially? Or guide user.
+                     document.body.removeEventListener('click', startAudioContext); // Remove listener to prevent issues
+                     // Optionally re-add after a delay or with different text
+                }
+            } else {
+                // Context was already running (e.g. browser resumed it)
+                 console.log("Audio context was already running.");
+                 audioContextStarted = true;
+                 initializeToneObjects(); // Ensure objects are initialized
+                 statusMessage.textContent = "Audio Ready! Drag components.";
+                 startAudio();
+            }
+        }
+
+        // Start initial background sounds
+        function startAudio() {
+            // Ensure objects are initialized and context is running
+            if (!audioContextStarted || !droneOsc) {
+                console.warn("Audio not ready or objects not initialized for startAudio.");
+                return;
+            }
+            // Start a low background drone if not already playing
+            if (droneOsc.state !== "started") {
+                try {
+                    droneOsc.triggerAttack();
+                    console.log("Drone oscillator started.");
+                } catch (e) {
+                    console.error("Error starting drone oscillator:", e);
+                }
+            }
+        }
+
+        // Populate the components tray
+        function populateTray() {
+            for (let i = 0; i < 5; i++) { // Add a few components initially
+                addComponentToTray();
+            }
+        }
+
+        // Add a random component to the tray
+        function addComponentToTray() {
+            const randomType = componentTypes[Math.floor(Math.random() * componentTypes.length)];
+            const componentEl = document.createElement('div');
+            componentEl.classList.add('component');
+            componentEl.draggable = true;
+            componentEl.textContent = randomType.name;
+            componentEl.dataset.type = randomType.type;
+            componentEl.dataset.componentInfo = JSON.stringify(randomType); // Store all info
+
+            componentEl.addEventListener('dragstart', handleDragStart);
+            componentsTray.appendChild(componentEl); // Append to the tray
+        }
+
+        // --- Drag and Drop Handlers ---
+        function handleDragStart(e) {
+            // Ensure audio context is started on first drag
+            if (!audioContextStarted) {
+                // Don't call startAudioContext directly here, rely on the click listener
+                // or prompt user if needed.
+                console.log("Drag started, audio context not yet running.");
+            }
+
+            isDragging = true;
+            draggedComponent = e.target;
+            dragOffsetX = e.offsetX;
+            dragOffsetY = e.offsetY;
+            e.dataTransfer.effectAllowed = 'move';
+            // Set data to enable drop in Firefox
+            try {
+                e.dataTransfer.setData('text/plain', draggedComponent.dataset.componentInfo);
+            } catch (err) {
+                console.error("Error setting drag data:", err);
+                // Fallback for environments where setData might fail early
+                e.dataTransfer.setData('text/plain', '{}');
+            }
+        }
+
+        // Prevent default behavior for dragover to allow drop
+        coreArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        // Handle dropping a component onto the core area
+        coreArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            if (!audioContextStarted) {
+                statusMessage.textContent = "Click screen first to enable audio!";
+                isDragging = false;
+                draggedComponent = null;
+                return; // Don't allow drops before audio is ready
+            }
+            if (isDragging && draggedComponent) {
+                 try {
+                    // Retrieve data - use setData content for cross-browser compatibility
+                    const componentInfoString = e.dataTransfer.getData('text/plain');
+                    // Basic check if data is valid JSON before parsing
+                    if (componentInfoString && componentInfoString.startsWith('{')) {
+                        const componentInfo = JSON.parse(componentInfoString);
+                        attachComponent(componentInfo, e.clientX, e.clientY);
+                        draggedComponent.remove(); // Remove from tray
+                        addComponentToTray(); // Replenish tray
+                    } else {
+                         console.warn("Invalid data transferred on drop.");
+                    }
+                 } catch (error) {
+                     console.error("Error parsing component info on drop:", error);
+                 }
+            }
+            isDragging = false;
+            draggedComponent = null;
+        });
+
+        // --- Component Management ---
+
+        // Attach a component to the core area
+        function attachComponent(componentInfo, dropX, dropY) {
+            // Check if componentInfo is valid
+            if (!componentInfo || !componentInfo.name) {
+                console.error("Attempted to attach invalid component info:", componentInfo);
+                return;
+            }
+
+            const coreRect = coreArea.getBoundingClientRect();
+            // Calculate position relative to the coreArea top-left
+            const x = dropX - coreRect.left - 30; // Adjust for component width/2
+            const y = dropY - coreRect.top - 30; // Adjust for component height/2
+
+            const componentId = nextComponentId++;
+            const newComponent = {
+                id: componentId,
+                ...componentInfo, // Spread properties from componentTypes
+                currentHealth: componentInfo.health,
+                element: null, // Will hold the DOM element
+                audioNode: null, // Will hold the Tone.js node if needed
+                isGlitching: false,
+                isFailing: false,
+                repairCooldown: 0 // Cooldown after repairing
+            };
+
+            // Create the visual element
+            const el = document.createElement('div');
+            el.classList.add('attached-component');
+            el.style.left = `${Math.max(0, Math.min(x, coreRect.width - 60))}px`; // Keep within bounds
+            el.style.top = `${Math.max(0, Math.min(y, coreRect.height - 60))}px`;
+            el.dataset.id = componentId;
+
+            const textEl = document.createElement('span');
+            textEl.textContent = componentInfo.name;
+            el.appendChild(textEl);
+
+            // Health bar
+            const healthContainer = document.createElement('div');
+            healthContainer.classList.add('health-bar-container');
+            const healthBar = document.createElement('div');
+            healthBar.classList.add('health-bar');
+            healthContainer.appendChild(healthBar);
+            el.appendChild(healthContainer);
+            el.healthBar = healthBar; // Store reference
+
+            // Add click listener for repair
+            el.addEventListener('click', () => repairComponent(componentId));
+
+            newComponent.element = el;
+            coreArea.appendChild(el);
+            attachedComponents.push(newComponent);
+
+            // Trigger sound effect for attaching
+            playAttachSound(componentInfo.type);
+        }
+
+        // Update component health and state
+        function updateComponent(component) {
+            if (!component || !component.element) return; // Safety check
+
+            if (component.repairCooldown > 0) {
+                component.repairCooldown -= 1; // Decrease cooldown
+                return; // Don't decay while on cooldown
+            }
+
+            component.currentHealth -= component.decayRate / 10; // Decay based on update rate (10/sec)
+            component.currentHealth = Math.max(0, component.currentHealth);
+
+            const healthPercentage = (component.currentHealth / component.health) * 100;
+
+             // Ensure healthBar exists before styling
+             if (component.element.healthBar) {
+                 component.element.healthBar.style.width = `${healthPercentage}%`;
+             } else {
+                 return; // Can't update visuals if healthbar is missing
+             }
+
+
+            // Update visual state and sound based on health
+            if (healthPercentage <= 0) {
+                component.isFailing = true;
+                component.isGlitching = false;
+                component.element.classList.add('failing');
+                component.element.classList.remove('glitching');
+                component.element.healthBar.style.backgroundColor = '#555'; // Dark grey when dead
+            } else if (healthPercentage < 30) {
+                component.isFailing = false;
+                component.isGlitching = true;
+                component.element.classList.add('glitching');
+                component.element.classList.remove('failing');
+                component.element.healthBar.style.backgroundColor = '#f44336'; // Red
+                // Trigger glitch sound occasionally
+                if (Math.random() < 0.05 && glitchPlayer && glitchPlayer.loaded) playGlitchSound(component.type); // Check glitchPlayer exists
+            } else if (healthPercentage < 60) {
+                component.isFailing = false;
+                component.isGlitching = false;
+                component.element.classList.remove('glitching', 'failing');
+                component.element.healthBar.style.backgroundColor = '#ff9800'; // Orange
+            } else {
+                component.isFailing = false;
+                component.isGlitching = false;
+                component.element.classList.remove('glitching', 'failing');
+                component.element.healthBar.style.backgroundColor = '#4caf50'; // Green
+            }
+        }
+
+        // Repair a component (player clicks on it)
+        function repairComponent(id) {
+            if (isGameOver) return;
+            const component = attachedComponents.find(c => c.id === id);
+            if (component && component.currentHealth > 0 && component.repairCooldown <= 0) {
+                const repairAmount = component.health * 0.3; // Repair 30%
+                component.currentHealth = Math.min(component.health, component.currentHealth + repairAmount);
+                component.repairCooldown = 50; // Cooldown for 5 seconds (50 ticks)
+                // Play repair sound (check if metalSynth exists)
+                if (audioContextStarted && metalSynth) metalSynth.triggerAttackRelease("C5", "16n", Tone.now());
+                // Briefly highlight repair
+                if (component.element) {
+                    component.element.style.backgroundColor = '#aaf0aa';
+                    setTimeout(() => {
+                        if (component.element) component.element.style.backgroundColor = '#5f5f5f';
+                    }, 150);
+                }
+            }
+        }
+
+        // --- Sound Functions ---
+        function playAttachSound(type) {
+             if (!audioContextStarted) return; // Don't play if context not ready
+             const now = Tone.now(); // Ensure Tone is defined here
+             try {
+                 switch(type) {
+                     case 'noise':
+                         if (noiseSynth) noiseSynth.triggerAttackRelease("8n", now);
+                         break;
+                     case 'metal':
+                         if (metalSynth) metalSynth.triggerAttackRelease("C4", "8n", now, 0.8);
+                         break;
+                     case 'drone':
+                         if (droneOsc && droneOsc.state === "started") {
+                             droneOsc.frequency.rampTo(droneOsc.frequency.value + Math.random()*10 - 5, 0.1);
+                         }
+                         break;
+                     case 'glitch':
+                         // Check if glitchPlayer and buffer are ready
+                         if (glitchPlayer && glitchPlayer.loaded) {
+                              glitchPlayer.start(now);
+                         } else {
+                              console.warn("Glitch player not ready.");
+                         }
+                         break;
+                 }
+             } catch (e) {
+                 console.error("Error playing attach sound:", e);
+             }
+        }
+
+        function playGlitchSound(type) {
+             // Check if glitchPlayer and buffer are ready
+             if (!audioContextStarted || !glitchPlayer || !glitchPlayer.loaded) return;
+             const now = Tone.now(); // Ensure Tone is defined here
+              try {
+                 switch(type) {
+                     case 'noise':
+                     case 'glitch':
+                         if (glitchPlayer.state !== 'started') glitchPlayer.start(now);
+                         break;
+                     case 'metal':
+                         if (metalSynth) metalSynth.triggerAttackRelease("C6", "32n", now, 0.5);
+                         break;
+                     case 'drone':
+                          if (noiseSynth) noiseSynth.triggerAttackRelease("16n", now, 0.3);
+                          break;
+                 }
+              } catch (e) {
+                  console.error("Error playing glitch sound:", e);
+              }
+        }
+
+        function updateOverallSound() {
+            // Ensure audio is ready and objects are initialized
+            if (!audioContextStarted || !masterVolume || !droneOsc || !noiseSynth || !metalSynth) return;
+
+            let currentIntensity = 0;
+            let activeNoises = 0;
+            let activeMetals = 0;
+            let activeDrones = 0;
+            let activeGlitches = 0;
+
+            attachedComponents.forEach(comp => {
+                if (comp && !comp.isFailing) {
+                    currentIntensity += comp.intensity * (comp.currentHealth / comp.health);
+                    switch(comp.type) {
+                        case 'noise': activeNoises++; break;
+                        case 'metal': activeMetals++; break;
+                        case 'drone': activeDrones++; break;
+                        case 'glitch': activeGlitches++; break;
+                    }
+                }
+            });
+
+            intensity = Math.floor(currentIntensity);
+            intensityDisplay.textContent = intensity;
+
+            try {
+                 // Adjust background drone
+                 if (droneOsc.state === "started") {
+                     const droneFreq = 50 + activeDrones * 5 + intensity * 0.5;
+                     droneOsc.frequency.rampTo(droneFreq, 0.1);
+                     droneOsc.volume.rampTo(Math.min(0, -15 + activeDrones * 2 + intensity * 0.1), 0.1);
+                 }
+
+                 // Control noise synth
+                 if (activeNoises > 0 || activeGlitches > 0) {
+                     if (noiseSynth.state !== "started") { noiseSynth.triggerAttack("+0.1"); } // Use state check
+                     noiseSynth.volume.rampTo(Math.min(-6, -25 + (activeNoises + activeGlitches) * 3 + intensity * 0.2), 0.1);
+                 } else {
+                      if (noiseSynth.state === "started") { noiseSynth.triggerRelease("+0.1"); } // Use state check
+                      noiseSynth.volume.rampTo(-Infinity, 0.5);
+                 }
+
+                // Trigger metallic sounds
+                if (activeMetals > 0 && Math.random() < (0.01 + activeMetals * 0.01)) {
+                     metalSynth.triggerAttackRelease(100 + Math.random()*300, "16n", Tone.now(), Math.random() * 0.5 + 0.2);
+                }
+            } catch (e) {
+                console.error("Error updating overall sound:", e);
+            }
+
+            // Update core visual
+            if (intensity > 0 && !coreElement.classList.contains('dying')) {
+                coreElement.classList.add('active');
+            } else if (intensity === 0 && !coreElement.classList.contains('dying')) {
+                 coreElement.classList.remove('active');
+            }
+        }
+
+        // --- Game Loop ---
+        function gameLoop() {
+            if (isGameOver) return;
+
+            timer += 0.1;
+            timerDisplay.textContent = timer.toFixed(1);
+
+            let failingCount = 0;
+            try {
+                // Iterate safely over attached components
+                for (let i = attachedComponents.length - 1; i >= 0; i--) {
+                     const comp = attachedComponents[i];
+                     if (comp) { // Check if component exists
+                         updateComponent(comp);
+                         if (comp.isFailing) { failingCount++; }
+                     } else {
+                         // Should not happen, but good to handle potential gaps if components were removed incorrectly
+                         console.warn("Undefined component found in attachedComponents array at index", i);
+                         attachedComponents.splice(i, 1); // Remove undefined entry
+                     }
+                }
+            } catch (error) {
+                console.error("Error during component update loop:", error);
+                // Consider stopping the loop or game if critical error
+            }
+
+            // Update sound only if audio is ready
+            if (audioContextStarted) {
+                updateOverallSound();
+            }
+
+            coreHealth -= failingCount * CORE_DAMAGE_PER_FAILING;
+            coreHealth = Math.max(0, coreHealth);
+
+            if (coreHealth <= 0) {
+                gameOver();
+            } else if (coreHealth < 30) {
+                coreElement.classList.add('dying');
+                coreElement.classList.remove('active');
+                 if (Math.random() < 0.2) {
+                    gameContainer.style.animation = 'glitch 0.1s 1';
+                    setTimeout(() => { if(gameContainer) gameContainer.style.animation = 'none'; }, 100);
+                 }
+            } else {
+                 coreElement.classList.remove('dying');
+            }
+
+            if (Math.random() < 0.01 && componentsTray.children.length < 8) {
+                addComponentToTray();
+            }
+        }
+
+        // --- Game Over ---
+        function gameOver() {
+            isGameOver = true;
+            clearInterval(gameInterval);
+            statusMessage.textContent = "SYSTEM FAILURE";
+
+             try {
+                 // Stop sounds only if objects were initialized and context started
+                 if (audioContextStarted) {
+                     if (droneOsc && droneOsc.state === "started") droneOsc.triggerRelease("+0.1");
+                     if (noiseSynth && noiseSynth.state === "started") noiseSynth.triggerRelease("+0.1");
+                     if (glitchPlayer && glitchPlayer.state === "started") glitchPlayer.stop("+0.1");
+                     // Play final sounds only if initialized
+                     if (metalSynth) metalSynth.triggerAttackRelease(50, "1s", Tone.now(), 1);
+                     if (noiseSynth) noiseSynth.triggerAttackRelease("2s", "+0.1", 0.5);
+                 }
+             } catch(e) {
+                 console.error("Error stopping sounds on game over:", e);
+             }
+
+            finalIntensityDisplay.textContent = intensity;
+            finalTimeDisplay.textContent = timer.toFixed(1);
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // --- Event Listeners ---
+        restartButton.addEventListener('click', initGame);
+
+        // --- Initialisation ---
+        // Use window.onload to wait for all resources including Tone.js
+        window.onload = initGame;
+
+    </script>
+</body>
+</html>
