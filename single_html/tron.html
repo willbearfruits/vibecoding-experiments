@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>3D Tron Light Cycle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background-color: #000;
+            color: #0ff;
+            font-family: 'Press Start 2P', cursive;
+            overflow: hidden; /* Prevent scrollbars */
+            display: flex; /* Use flexbox for centering */
+            justify-content: center; /* Center horizontally */
+            align-items: center; /* Center vertically */
+            min-height: 100vh; /* Full viewport height */
+        }
+
+        #gameContainer {
+            position: relative; /* Needed for absolute positioning of UI */
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        canvas {
+            display: block; /* Remove extra space below canvas */
+            width: 100%;   /* Ensure canvas tries to fill container */
+            height: 100%;
+        }
+
+        #uiOverlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 10;
+            pointer-events: none; /* Allow clicks to pass through overlay */
+        }
+
+         #controls, #info {
+            display: flex;
+            gap: 10px;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #0ff;
+            box-shadow: 0 0 5px #0ff;
+            pointer-events: auto; /* Enable pointer events for buttons */
+         }
+
+        #info {
+             flex-direction: column;
+             align-items: flex-start;
+             font-size: 0.8em;
+        }
+         #info span {
+             color: #fff; /* White text for info */
+             text-shadow: 0 0 2px #000;
+         }
+
+
+        button {
+            font-family: 'Press Start 2P', cursive;
+            background: linear-gradient(145deg, #222, #000);
+            color: #0ff;
+            border: 1px solid #0ff;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-shadow: 0 0 2px #0ff;
+            box-shadow: 0 0 3px #0ff, inset 0 0 2px #333;
+            transition: all 0.2s ease;
+            font-size: 0.8em;
+        }
+
+        button:hover, button:focus {
+            background: linear-gradient(145deg, #333, #111);
+            color: #fff;
+            box-shadow: 0 0 6px #0ff, 0 0 10px #0ff, inset 0 0 3px #444;
+            transform: scale(1.05);
+            outline: none;
+        }
+
+        button:active {
+            transform: scale(0.98);
+            box-shadow: 0 0 2px #0ff, inset 0 0 3px #555;
+        }
+
+        #messageBox {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.85);
+            color: #fff;
+            padding: 30px 40px;
+            border: 2px solid #0ff;
+            box-shadow: 0 0 15px #0ff;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 1.2em;
+            display: none;
+            z-index: 20;
+            pointer-events: auto;
+        }
+         #messageBox p {
+             margin-bottom: 20px;
+             white-space: pre-wrap; /* Allow line breaks */
+         }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="uiOverlay">
+            <div id="controls">
+                <button id="startButton">Start</button>
+                <button id="resetButton">Reset</button>
+                <button id="fullscreenButton">Full Screen</button>
+                <button id="cameraButton">Toggle Cam (Chase)</button>
+            </div>
+             <div id="info">
+                <span id="statusText">Status: Idle</span>
+                <span id="controlInfo">Controls: Arrows/WASD/Gamepad</span>
+            </div>
+        </div>
+
+        <div id="messageBox">
+            <p id="messageText">Welcome to 3D Tron!</p>
+            <button id="closeMessageButton">OK</button>
+        </div>
+
+        </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- Three.js Setup ---
+        let scene, camera, renderer;
+        let gameContainer;
+        let clock = new THREE.Clock();
+
+        // --- Game Constants ---
+        const GRID_UNIT = 5; // Size of one grid step in 3D space
+        const ARENA_SIZE = 150; // Half-size of the arena (extends from -SIZE to +SIZE)
+        const GAME_SPEED = 0.15; // Time in seconds per game tick (lower is faster)
+        const PLAYER_COLOR = 0x00ffff; // Cyan
+        const AI_COLOR = 0xffa500; // Orange
+        const TRAIL_HEIGHT = GRID_UNIT * 0.8;
+        const TRAIL_THICKNESS = GRID_UNIT * 0.2;
+        const BIKE_SIZE = { width: GRID_UNIT * 0.5, height: GRID_UNIT * 0.4, depth: GRID_UNIT * 1.2 };
+
+        // --- Game State ---
+        let player, ai;
+        let gameTime = 0;
+        let running = false;
+        let gameOver = false;
+        let gamepadIndex = null;
+        let cameraMode = 'chase'; // 'chase' or 'firstPerson'
+        let allTrails = []; // Store all trail segment meshes for collision
+
+        // --- DOM Elements ---
+        const startButton = document.getElementById('startButton');
+        const resetButton = document.getElementById('resetButton');
+        const fullscreenButton = document.getElementById('fullscreenButton');
+        const cameraButton = document.getElementById('cameraButton');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const closeMessageButton = document.getElementById('closeMessageButton');
+        const statusText = document.getElementById('statusText');
+
+        // --- Initialization ---
+        function init() {
+            gameContainer = document.getElementById('gameContainer');
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, ARENA_SIZE * 1.5, ARENA_SIZE * 2.5); // Fog effect
+
+            // Camera (Perspective)
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, ARENA_SIZE * 3);
+            // Initial camera position will be set in resetGame based on player
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true; // Enable shadows
+            gameContainer.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 1); // Soft ambient light
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            directionalLight.position.set(0, 50, 50);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+
+            // Ground Plane (Grid)
+            const gridHelper = new THREE.GridHelper(ARENA_SIZE * 2, ARENA_SIZE * 2 / GRID_UNIT, 0x444444, 0x222222);
+             gridHelper.position.y = -TRAIL_HEIGHT / 2; // Position grid slightly below trails
+            scene.add(gridHelper);
+
+            // Arena Walls (Optional visual boundary)
+            createArenaWalls();
+
+            // Initial Reset
+            resetGame();
+
+            // Start Animation Loop
+            animate();
+        }
+
+        function createArenaWalls() {
+            const wallMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, wireframe: true, transparent: true, opacity: 0.3 });
+            const wallHeight = 20;
+            const wallGeometry = new THREE.PlaneGeometry(ARENA_SIZE * 2, wallHeight);
+
+            // Create 4 walls
+            const wallPositions = [
+                { x: 0, y: wallHeight/2 - TRAIL_HEIGHT/2, z: -ARENA_SIZE, rotY: 0 },
+                { x: 0, y: wallHeight/2 - TRAIL_HEIGHT/2, z: ARENA_SIZE, rotY: Math.PI },
+                { x: -ARENA_SIZE, y: wallHeight/2 - TRAIL_HEIGHT/2, z: 0, rotY: Math.PI / 2 },
+                { x: ARENA_SIZE, y: wallHeight/2 - TRAIL_HEIGHT/2, z: 0, rotY: -Math.PI / 2 }
+            ];
+
+            wallPositions.forEach(pos => {
+                const wall = new THREE.Mesh(wallGeometry, wallMaterial);
+                wall.position.set(pos.x, pos.y, pos.z);
+                wall.rotation.y = pos.rotY;
+                scene.add(wall);
+            });
+        }
+
+
+        // --- Light Cycle Object ---
+        function createLightCycle(color, startPos, startDir) {
+            // Bike Body
+            const bikeGeometry = new THREE.BoxGeometry(BIKE_SIZE.width, BIKE_SIZE.height, BIKE_SIZE.depth);
+            const bikeMaterial = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color, // Make it glow
+                emissiveIntensity: 0.8,
+                shininess: 80
+            });
+            const bikeMesh = new THREE.Mesh(bikeGeometry, bikeMaterial);
+            bikeMesh.castShadow = true;
+            bikeMesh.position.copy(startPos);
+             // Rotate mesh to align with initial direction
+             const angle = Math.atan2(startDir.x, startDir.z);
+             bikeMesh.rotation.y = angle;
+
+
+            // Trail Material
+            const trailMaterial = new THREE.MeshPhongMaterial({
+                color: color,
+                emissive: color,
+                emissiveIntensity: 0.6,
+                side: THREE.DoubleSide // Render both sides
+            });
+
+            return {
+                mesh: bikeMesh,
+                position: startPos.clone(), // Current grid position
+                direction: startDir.clone(), // THREE.Vector3
+                color: color,
+                trailSegments: [], // Array of trail mesh objects
+                trailPoints: [startPos.clone()], // Array of Vector3 points defining the trail path
+                material: bikeMaterial,
+                trailMaterial: trailMaterial,
+                canTurn: true,
+                isAI: false // Flag for AI identification
+            };
+        }
+
+        // --- Trail Management ---
+        function addTrailSegment(cycle) {
+            const lastPoint = cycle.trailPoints[cycle.trailPoints.length - 1];
+            const secondLastPoint = cycle.trailPoints[cycle.trailPoints.length - 2];
+
+            if (!secondLastPoint) return; // Need at least two points
+
+            // Calculate segment properties
+            const direction = new THREE.Vector3().subVectors(lastPoint, secondLastPoint);
+            const length = direction.length();
+            if (length < 0.1) return; // Avoid zero-length segments
+
+            const center = new THREE.Vector3().addVectors(lastPoint, secondLastPoint).multiplyScalar(0.5);
+
+            // Create mesh (a thin box)
+            const trailGeometry = new THREE.BoxGeometry(TRAIL_THICKNESS, TRAIL_HEIGHT, length);
+            const trailMesh = new THREE.Mesh(trailGeometry, cycle.trailMaterial);
+            trailMesh.position.copy(center);
+             // Align segment rotation with its direction
+             trailMesh.lookAt(lastPoint); // Look towards the end point
+             trailMesh.position.y = 0; // Keep trails on the ground plane (y=0)
+
+            trailMesh.castShadow = true;
+            scene.add(trailMesh);
+            cycle.trailSegments.push(trailMesh);
+            allTrails.push(trailMesh); // Add to global list for collision checks
+        }
+
+        // --- Game Loop (Animation) ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = clock.getDelta();
+
+            if (running && !gameOver) {
+                gameTime += delta;
+                if (gameTime >= GAME_SPEED) {
+                    gameTime = 0; // Reset timer
+                    updateGame(); // Run game logic tick
+                }
+            } else if (!running) {
+                 // Allow camera movement even when paused/idle
+                 handleGamepadInput(); // Check for gamepad connection/disconnection
+            }
+
+
+            // Always update camera regardless of game state
+            updateCamera();
+            renderer.render(scene, camera);
+        }
+
+        // --- Game Logic Update (called every GAME_SPEED seconds) ---
+        function updateGame() {
+            if (!running || gameOver) return;
+
+            statusText.textContent = "Status: Running";
+
+            // Handle Input (Keyboard is event-driven, Gamepad polled here)
+            handleGamepadInput();
+
+            // Update AI
+            updateAI(ai, player);
+
+            // Move Players and Check Collisions
+            moveCycle(player);
+            if (!gameOver) { // Check if player crashed before moving AI
+                moveCycle(ai);
+            }
+
+            // Reset turn flags
+            player.canTurn = true;
+            ai.canTurn = true;
+        }
+
+        // --- Movement & Collision ---
+        function moveCycle(cycle) {
+            if (gameOver) return;
+
+            const nextPos = cycle.position.clone().add(cycle.direction.clone().multiplyScalar(GRID_UNIT));
+
+            // 1. Boundary Collision
+            if (Math.abs(nextPos.x) > ARENA_SIZE || Math.abs(nextPos.z) > ARENA_SIZE) {
+                endGame(cycle === player ? "Player hit the boundary!" : "AI hit the boundary!");
+                return;
+            }
+
+            // 2. Trail Collision (Check against ALL trail points)
+             // Need to check the *midpoint* of the next segment against existing points
+             const checkPoint = cycle.position.clone().add(cycle.direction.clone().multiplyScalar(GRID_UNIT / 2));
+             if (checkSelfCollision(cycle, checkPoint) || checkOpponentCollision(cycle, checkPoint)) {
+                 endGame(cycle === player ? "Player crashed into a trail!" : "AI crashed into a trail!");
+                 return;
+             }
+
+
+            // If no collision, update position and trail
+            cycle.position.copy(nextPos);
+            cycle.mesh.position.copy(nextPos); // Update 3D model position
+            cycle.trailPoints.push(nextPos.clone());
+            addTrailSegment(cycle); // Create the visual trail segment for the *previous* step
+
+             // Update mesh rotation if direction changed (already handled in input)
+             const angle = Math.atan2(cycle.direction.x, cycle.direction.z);
+             cycle.mesh.rotation.y = angle;
+        }
+
+        function checkSelfCollision(cycle, checkPoint) {
+            // Check against own trail points (ignore the most recent points)
+            for (let i = 0; i < cycle.trailPoints.length - 2; i++) {
+                const p1 = cycle.trailPoints[i];
+                const p2 = cycle.trailPoints[i+1];
+                if (isPointOnLineSegment(checkPoint, p1, p2, GRID_UNIT / 2)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function checkOpponentCollision(cycle, checkPoint) {
+             const opponent = (cycle === player) ? ai : player;
+             // Check against opponent's trail points
+             for (let i = 0; i < opponent.trailPoints.length - 1; i++) {
+                 const p1 = opponent.trailPoints[i];
+                 const p2 = opponent.trailPoints[i+1];
+                 if (isPointOnLineSegment(checkPoint, p1, p2, GRID_UNIT / 2)) {
+                     return true;
+                 }
+             }
+             // Check against opponent's current head position (approximation)
+             if (checkPoint.distanceTo(opponent.position) < GRID_UNIT * 0.8) {
+                 return true; // Head-on collision
+             }
+             return false;
+         }
+
+        // Helper function to check if a point is on a line segment (XZ plane)
+        function isPointOnLineSegment(point, lineStart, lineEnd, tolerance) {
+            const distPointLine = point.distanceTo(lineStart) + point.distanceTo(lineEnd);
+            const distLine = lineStart.distanceTo(lineEnd);
+            // Check if the point is collinear and within the segment bounds
+            return Math.abs(distPointLine - distLine) < tolerance;
+        }
+
+
+        // --- AI Logic ---
+        function updateAI(aiCycle, playerCycle) {
+            if (!aiCycle.canTurn) return;
+
+             // Check directly ahead
+             const lookAheadPos = aiCycle.position.clone().add(aiCycle.direction.clone().multiplyScalar(GRID_UNIT));
+             const lookAheadCheckPoint = aiCycle.position.clone().add(aiCycle.direction.clone().multiplyScalar(GRID_UNIT / 2));
+
+             let collisionAhead = false;
+             if (Math.abs(lookAheadPos.x) > ARENA_SIZE || Math.abs(lookAheadPos.z) > ARENA_SIZE ||
+                 checkSelfCollision(aiCycle, lookAheadCheckPoint) ||
+                 checkOpponentCollision(aiCycle, lookAheadCheckPoint)) {
+                 collisionAhead = true;
+             }
+
+             if (collisionAhead) {
+                 // Need to turn! Try left or right randomly.
+                 const possibleTurns = ['left', 'right'];
+                 const turnDirection = possibleTurns[Math.floor(Math.random() * possibleTurns.length)];
+
+                 if (turnDirection === 'left') {
+                     turnCycle(aiCycle, 'left');
+                 } else {
+                     turnCycle(aiCycle, 'right');
+                 }
+                 aiCycle.canTurn = false; // Turned this tick
+             }
+             // Add more sophisticated AI later (e.g., targeting player, avoiding traps)
+        }
+
+
+        // --- Input Handling ---
+         function handleKeyDown(e) {
+             if (!player || !player.canTurn || gameOver) return;
+
+             let turned = false;
+             switch (e.key) {
+                 case 'ArrowUp': case 'w': turned = turnCycle(player, 'forward'); break; // Should not happen if already moving
+                 case 'ArrowDown': case 's': turned = turnCycle(player, 'backward'); break; // Should not happen if already moving
+                 case 'ArrowLeft': case 'a': turned = turnCycle(player, 'left'); break;
+                 case 'ArrowRight': case 'd': turned = turnCycle(player, 'right'); break;
+                 case 'Enter':
+                     if (!running) {
+                         if (gameOver) resetGame();
+                         startGame();
+                     }
+                     break;
+             }
+             if (turned) player.canTurn = false;
+         }
+
+         function handleGamepadInput() {
+             // Check connection status first
+             const gamepads = navigator.getGamepads();
+             let activeGp = null;
+             if (gamepadIndex !== null && gamepads[gamepadIndex]) {
+                 activeGp = gamepads[gamepadIndex];
+             } else {
+                 // Try to find the first connected gamepad if ours is disconnected
+                 for (let i = 0; i < gamepads.length; i++) {
+                     if (gamepads[i] && gamepads[i].connected) {
+                         if (gamepadIndex === null) { // Only show message on first connect
+                             console.log("Gamepad connected:", gamepads[i].id);
+                             showMessage(`Controller Connected:\n${gamepads[i].id}`);
+                             setTimeout(hideMessage, 2000);
+                         }
+                         gamepadIndex = i;
+                         activeGp = gamepads[i];
+                         break; // Use the first one found
+                     }
+                 }
+                 if (activeGp === null && gamepadIndex !== null) {
+                     // A previously connected gamepad was disconnected
+                     console.log("Gamepad disconnected.");
+                     showMessage("Controller Disconnected.");
+                     setTimeout(hideMessage, 2000);
+                     gamepadIndex = null;
+                 }
+             }
+
+
+             if (!activeGp || !player || !player.canTurn || gameOver || !running) return;
+
+             const gp = activeGp;
+             let turned = false;
+             const threshold = 0.6; // Analog stick deadzone
+
+             // D-pad or Left Stick
+             if (gp.buttons[12]?.pressed || gp.axes[1] < -threshold) { // Up (Forward relative to current dir - not useful here)
+                 // turned = turnCycle(player, 'forward'); // Doesn't make sense for Tron
+             } else if (gp.buttons[13]?.pressed || gp.axes[1] > threshold) { // Down (Backward relative to current dir - not useful here)
+                 // turned = turnCycle(player, 'backward'); // Doesn't make sense for Tron
+             } else if (gp.buttons[14]?.pressed || gp.axes[0] < -threshold) { // Left
+                 turned = turnCycle(player, 'left');
+             } else if (gp.buttons[15]?.pressed || gp.axes[0] > threshold) { // Right
+                 turned = turnCycle(player, 'right');
+             }
+
+              // Start button (index 9)
+             if (gp.buttons[9]?.pressed) {
+                 if (!running) {
+                     if (gameOver) resetGame();
+                     startGame();
+                 }
+             }
+
+             if (turned) player.canTurn = false;
+         }
+
+         // Helper function to turn a cycle 90 degrees left/right
+         function turnCycle(cycle, turn) {
+             const currentDir = cycle.direction;
+             let newDir = currentDir.clone();
+             let turned = false;
+
+             if (turn === 'left') {
+                 // Rotate 90 degrees left (around Y axis)
+                 newDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+                 turned = true;
+             } else if (turn === 'right') {
+                 // Rotate 90 degrees right (around Y axis)
+                 newDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2);
+                 turned = true;
+             }
+             // Ignore 'forward' and 'backward' turns as they don't change direction relative to world
+
+             // Normalize and round to prevent floating point errors accumulating
+             newDir.x = Math.round(newDir.x);
+             newDir.y = Math.round(newDir.y);
+             newDir.z = Math.round(newDir.z);
+
+
+             // Only update if the direction actually changed (and isn't reversing)
+             // Check dot product - should be 0 for 90 degree turn, 1 for same, -1 for reverse
+             if (turned && currentDir.dot(newDir) < 0.1) { // Allow dot product near 0
+                 cycle.direction.copy(newDir);
+                 // Update mesh rotation immediately for visual feedback
+                 const angle = Math.atan2(cycle.direction.x, cycle.direction.z);
+                 cycle.mesh.rotation.y = angle;
+                 return true; // Indicate successful turn
+             }
+             return false; // No turn occurred
+         }
+
+        // --- Camera Control ---
+        function updateCamera() {
+            if (!player || !player.mesh) return; // Don't update if player doesn't exist
+
+            const bikePos = player.mesh.position;
+            const bikeDir = player.direction.clone().normalize(); // Ensure it's normalized
+
+            if (cameraMode === 'chase') {
+                // Calculate desired camera position: behind and above the bike
+                const offset = bikeDir.clone().multiplyScalar(-GRID_UNIT * 3).add(new THREE.Vector3(0, GRID_UNIT * 1.5, 0));
+                const desiredPos = bikePos.clone().add(offset);
+
+                // Smoothly interpolate camera position and lookAt
+                camera.position.lerp(desiredPos, 0.1); // Adjust lerp factor for smoothness
+                camera.lookAt(bikePos.clone().add(bikeDir.clone().multiplyScalar(GRID_UNIT * 2))); // Look slightly ahead of the bike
+
+            } else if (cameraMode === 'firstPerson') {
+                // Position camera slightly above and in front of the bike's center
+                 const fpOffset = bikeDir.clone().multiplyScalar(BIKE_SIZE.depth * 0.1).add(new THREE.Vector3(0, BIKE_SIZE.height * 1.1, 0)); // Adjust Y for height
+                const cameraPos = bikePos.clone().add(fpOffset);
+
+                // Calculate target lookAt point far ahead in the direction of travel
+                const lookAtTarget = bikePos.clone().add(bikeDir.clone().multiplyScalar(GRID_UNIT * 10)); // Look far ahead
+
+                camera.position.copy(cameraPos); // No lerp for first person for direct feel
+                camera.lookAt(lookAtTarget);
+            }
+        }
+
+        function toggleCamera() {
+            if (cameraMode === 'chase') {
+                cameraMode = 'firstPerson';
+                cameraButton.textContent = 'Toggle Cam (1st Person)';
+            } else {
+                cameraMode = 'chase';
+                cameraButton.textContent = 'Toggle Cam (Chase)';
+            }
+             // Immediately update camera position for the new mode
+             updateCamera();
+        }
+
+
+        // --- Game State Management ---
+        function startGame() {
+            if (running) return;
+            hideMessage();
+            resetGame(); // Ensure clean state before starting
+            running = true;
+            gameOver = false;
+            gameTime = 0; // Reset game tick timer
+            statusText.textContent = "Status: Running";
+            console.log("Game Started");
+        }
+
+        function endGame(reason) {
+            if (gameOver) return; // Prevent multiple calls
+            running = false;
+            gameOver = true;
+            showMessage(`Game Over!\n${reason}`);
+            statusText.textContent = `Status: Game Over!`;
+            console.log("Game Over:", reason);
+        }
+
+        function resetGame() {
+            console.log("Resetting game...");
+            running = false;
+            gameOver = false;
+            gameTime = 0;
+            statusText.textContent = "Status: Idle";
+
+            // Clear existing objects from scene
+            if (player) scene.remove(player.mesh);
+            if (ai) scene.remove(ai.mesh);
+            allTrails.forEach(trailMesh => scene.remove(trailMesh));
+            allTrails = []; // Clear the reference array too
+
+            // Create new players
+            const playerStartPos = new THREE.Vector3(-ARENA_SIZE / 2, 0, 0);
+            const playerStartDir = new THREE.Vector3(1, 0, 0); // Moving right
+            player = createLightCycle(PLAYER_COLOR, playerStartPos, playerStartDir);
+            player.isAI = false;
+            scene.add(player.mesh);
+
+            const aiStartPos = new THREE.Vector3(ARENA_SIZE / 2, 0, 0);
+            const aiStartDir = new THREE.Vector3(-1, 0, 0); // Moving left
+            ai = createLightCycle(AI_COLOR, aiStartPos, aiStartDir);
+            ai.isAI = true;
+            scene.add(ai.mesh);
+
+             // Reset camera to default chase view
+             cameraMode = 'chase';
+             cameraButton.textContent = 'Toggle Cam (Chase)';
+             // Set initial camera position based on player
+             const bikePos = player.mesh.position;
+             const bikeDir = player.direction;
+             const offset = bikeDir.clone().multiplyScalar(-GRID_UNIT * 3).add(new THREE.Vector3(0, GRID_UNIT * 1.5, 0));
+             camera.position.copy(bikePos.clone().add(offset));
+             camera.lookAt(bikePos);
+             updateCamera(); // Apply initial lookAt
+
+
+            hideMessage();
+            // Redraw immediately
+             if (renderer) renderer.render(scene, camera);
+        }
+
+        function showMessage(text) {
+            messageText.innerHTML = text.replace(/\n/g, '<br>'); // Replace newline chars with <br>
+            messageBox.style.display = 'block';
+            closeMessageButton.focus();
+        }
+
+        function hideMessage() {
+            messageBox.style.display = 'none';
+        }
+
+        // --- Fullscreen API ---
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                gameContainer.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                    showMessage(`Fullscreen Error:\n${err.message}`);
+                });
+                 fullscreenButton.textContent = "Exit Full Screen";
+            } else {
+                document.exitFullscreen();
+                 fullscreenButton.textContent = "Full Screen";
+            }
+        }
+
+        // --- Event Listeners ---
+        window.addEventListener('resize', () => {
+            // Update camera aspect ratio and renderer size
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        document.addEventListener('keydown', handleKeyDown);
+
+         // Gamepad connection listeners (handled within handleGamepadInput polling)
+
+        startButton.addEventListener('click', startGame);
+        resetButton.addEventListener('click', resetGame);
+        fullscreenButton.addEventListener('click', toggleFullScreen);
+        cameraButton.addEventListener('click', toggleCamera);
+        closeMessageButton.addEventListener('click', () => {
+             hideMessage();
+             if(gameOver) {
+                 resetGame(); // Reset if closing message after game over
+             }
+        });
+
+        // --- Start ---
+         window.onload = () => {
+             init();
+             showMessage("3D Tron Light Cycle\nUse Arrows/WASD/Gamepad\nPress Start or Enter!");
+         };
+
+    </script>
+</body>
+</html>
