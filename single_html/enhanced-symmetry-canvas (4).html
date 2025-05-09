@@ -1,0 +1,3042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CircuitCanvas Pro - Advanced Design Studio</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg-color: #0f1729;
+      --panel-color: #131c33;
+      --accent-color: #4361ee;
+      --accent-color-alt: #3b82f6;
+      --text-color: #f3f4f6;
+      --secondary-text: #b2b2b2;
+      --border-color: #2c3e50;
+      --tool-hover: #2a3656;
+      --tool-active: #4361ee;
+      --grid-color: rgba(65, 90, 150, 0.1);
+      --success-color: #10b981;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+
+    .app-container {
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 40px);
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .left-panel {
+      display: flex;
+      flex-direction: column;
+      width: 70px;
+      transition: width 0.3s ease;
+    }
+
+    .left-panel.expanded {
+      width: 250px;
+    }
+
+    .toolbar {
+      background-color: var(--panel-color);
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px 0;
+      border-right: 1px solid var(--border-color);
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .tool-btn {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      border: none;
+      background: transparent;
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 18px;
+      position: relative;
+    }
+
+    .tool-btn:hover {
+      background: var(--tool-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .tool-btn.active {
+      background: var(--tool-active);
+      color: white;
+      box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    }
+
+    .tool-btn.pro::after {
+      content: "PRO";
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      background: var(--accent-color-alt);
+      color: white;
+      font-size: 8px;
+      font-weight: bold;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .tool-separator {
+      width: 40px;
+      height: 1px;
+      background: var(--border-color);
+      margin: 15px 0;
+    }
+
+    .tool-group-title {
+      width: 100%;
+      text-align: center;
+      font-size: 11px;
+      text-transform: uppercase;
+      color: var(--secondary-text);
+      margin: 5px 0 10px 0;
+      letter-spacing: 1px;
+      display: none;
+    }
+
+    .left-panel.expanded .tool-group-title {
+      display: block;
+    }
+
+    .main-area {
+      flex: 1;
+      display: flex;
+      position: relative;
+    }
+
+    .canvas-container {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      background-color: var(--bg-color);
+    }
+
+    .canvas-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+
+    .grid-pattern {
+      width: 100%;
+      height: 100%;
+      background-image:
+        linear-gradient(var(--grid-color) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+      background-size: 20px 20px;
+      transition: background-size 0.3s ease;
+    }
+
+    .dots-pattern {
+      width: 100%;
+      height: 100%;
+      background-image: radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+      background-size: 20px 20px;
+      transition: background-size 0.3s ease;
+    }
+
+    .rulers {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      z-index: 5;
+      display: none; /* Hidden by default, controlled by JS */
+    }
+
+    .ruler-h, .ruler-v {
+      position: absolute;
+      background: rgba(30, 40, 60, 0.8);
+    }
+
+    .ruler-h {
+      top: 0;
+      left: 20px; /* Offset for vertical ruler */
+      right: 0;
+      height: 20px;
+    }
+
+    .ruler-v {
+      top: 20px; /* Offset for horizontal ruler */
+      left: 0;
+      bottom: 0;
+      width: 20px;
+    }
+
+    .ruler-corner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 20px;
+      height: 20px;
+      background: rgba(40, 50, 70, 0.9);
+      z-index: 6;
+    }
+
+    .ruler-h-marks, .ruler-v-marks {
+      position: absolute;
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 9px;
+    }
+
+    .ruler-h-marks {
+      top: 3px;
+      left: 0;
+      width: 100%;
+    }
+
+    .ruler-v-marks {
+      left: 3px;
+      top: 0;
+      height: 100%;
+      writing-mode: vertical-lr;
+      transform: rotate(180deg);
+    }
+
+    .canvas-wrapper {
+      position: relative;
+      z-index: 1;
+      /* Added for zoom/pan */
+      transform-origin: top left;
+      transition: transform 0.1s linear;
+    }
+
+    #canvas {
+      background: white;
+      box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+      cursor: crosshair;
+      /* transition: transform 0.3s ease; */ /* Removed to prevent conflict with wrapper */
+      display: block; /* Prevents extra space below canvas */
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      z-index: 10;
+      display: block; /* Prevents extra space below canvas */
+    }
+
+    .settings-panel {
+      width: 320px;
+      background: var(--panel-color);
+      border-left: 1px solid var(--border-color);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-tabs {
+      display: flex;
+      background: rgba(0, 0, 0, 0.2);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .settings-tab {
+      padding: 12px 15px;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      flex: 1;
+      text-align: center;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+      color: var(--secondary-text);
+    }
+
+    .settings-tab:hover {
+      background: rgba(0, 0, 0, 0.1);
+      color: var(--text-color);
+    }
+
+    .settings-tab.active {
+      color: var(--accent-color);
+      border-bottom-color: var(--accent-color);
+      background: rgba(67, 97, 238, 0.1);
+    }
+
+    .settings-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .panel-section {
+      margin-bottom: 25px;
+      animation: fadeIn 0.3s ease-out;
+    }
+     .panel-section.collapsed .panel-content,
+     .panel-section.collapsed .panel-subtitle,
+     .panel-section.collapsed .control-group,
+     .panel-section.collapsed .color-picker,
+     .panel-section.collapsed .pcb-colors,
+     .panel-section.collapsed .custom-color,
+     .panel-section.collapsed .symmetry-types,
+     .panel-section.collapsed .toggle-wrapper,
+     .panel-section.collapsed .preset-symmetry,
+     .panel-section.collapsed .brush-presets,
+     .panel-section.collapsed .gradient-control,
+     .panel-section.collapsed .export-options,
+     .panel-section.collapsed .save-project,
+     .panel-section.collapsed .open-project,
+     .panel-section.collapsed .filter-effects,
+     .panel-section.collapsed #shadow-controls,
+     .panel-section.collapsed .pattern-options,
+     .panel-section.collapsed .sensor-templates,
+     .panel-section.collapsed .pcb-properties {
+       display: none;
+     }
+
+    .panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 15px;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer; /* Added for collapse */
+    }
+
+    .panel-title i {
+      margin-right: 8px;
+      color: var(--accent-color);
+    }
+
+    .panel-subtitle {
+      font-size: 13px;
+      color: var(--secondary-text);
+      margin: -10px 0 15px 24px;
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .panel-collapse-btn {
+      background: transparent;
+      border: none;
+      color: var(--secondary-text);
+      cursor: pointer;
+      font-size: 14px;
+      width: 22px;
+      height: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: transform 0.2s ease; /* Added for rotation */
+    }
+
+    .panel-collapse-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-color);
+    }
+    .panel-section.collapsed .panel-collapse-btn i {
+      transform: rotate(180deg);
+    }
+
+
+    .control-group {
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+      color: var(--secondary-text);
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      -webkit-appearance: none;
+      background: #2d3748;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+    }
+
+    input[type="number"] {
+      width: 60px;
+      background: #2d3748;
+      border: 1px solid var(--border-color); /* Added border */
+      color: white;
+      padding: 5px;
+      border-radius: 4px;
+      text-align: center;
+      outline: none; /* Added outline */
+    }
+     /* Remove spinners from number inputs */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield; /* Firefox */
+    }
+
+
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      background: #2d3748;
+      border: 1px solid var(--border-color); /* Added border */
+      color: white;
+      border-radius: 4px;
+      outline: none;
+      cursor: pointer;
+      appearance: none; /* Remove default arrow */
+      background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23B2B2B2%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E');
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 8px 8px;
+    }
+
+
+    .checkbox-wrapper {
+      display: flex;
+      align-items: center;
+    }
+
+    .checkbox-wrapper label {
+      margin: 0 0 0 8px;
+    }
+
+    .color-picker {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .color-option {
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.2s, border-color 0.2s; /* Added border transition */
+    }
+
+    .color-option:hover {
+      transform: scale(1.1);
+    }
+
+    .color-option.active {
+      border-color: white;
+      transform: scale(1.1);
+    }
+
+    .custom-color {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      cursor: pointer;
+      padding: 0; /* Ensure no padding affects size */
+      border: 1px solid var(--border-color); /* Add slight border */
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 4px;
+    }
+
+    .symmetry-types {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .symmetry-type {
+      flex: 1;
+      text-align: center;
+      padding: 8px;
+      background: #2d3748;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 12px;
+    }
+
+    .symmetry-type:hover {
+      background: var(--tool-hover);
+    }
+
+    .symmetry-type.active {
+      background: var(--tool-active);
+      color: white;
+    }
+
+    .btn {
+      background: var(--accent-color);
+      color: white;
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+      display: inline-flex; /* Align icon and text */
+      align-items: center;
+      justify-content: center;
+      gap: 5px; /* Space between icon and text */
+    }
+
+    .btn:hover {
+      background: #3050db;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-secondary {
+      background: #2d3748;
+    }
+
+    .btn-secondary:hover {
+      background: #3b485e;
+    }
+
+    .footer {
+      height: 40px;
+      background: var(--panel-color);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .canvas-info {
+      color: var(--secondary-text);
+    }
+
+    .history-buttons {
+      display: flex;
+      gap: 15px;
+    }
+
+    .history-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.2s;
+      font-size: 16px;
+    }
+
+    .history-btn:hover {
+      opacity: 1;
+    }
+
+    .history-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .opacity-control {
+      width: 100%;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .opacity-control input[type="range"] {
+      flex: 1;
+    }
+
+    .opacity-value {
+      width: 40px;
+      text-align: right; /* Align right */
+      font-size: 13px; /* Slightly smaller */
+      color: var(--secondary-text);
+    }
+
+
+    .brush-preview {
+      width: 50px;
+      height: 50px;
+      border-radius: 4px;
+      background: #2d3748;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-left: 10px;
+      overflow: hidden; /* Ensure dot stays within */
+    }
+
+    .brush-dot {
+      background: white;
+      border-radius: 50%;
+      transition: width 0.1s, height 0.1s; /* Add transition */
+    }
+
+    .gradient-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .gradient-control {
+      display: flex;
+      flex-direction: column; /* Stack toggle and options */
+      gap: 10px;
+    }
+
+    .gradient-color {
+      flex: 1;
+    }
+
+    .download-options {
+      display: flex;
+      gap: 10px;
+    }
+
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 110%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+      z-index: 1001; /* Ensure tooltip is on top */
+    }
+
+    .tooltip:hover::after {
+      opacity: 1;
+    }
+
+    .stroke-preview {
+      height: 30px;
+      background: #2d3748;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 10px;
+      overflow: hidden; /* Clip the line */
+    }
+
+    .stroke-line {
+      background: white;
+      height: 2px; /* Default solid */
+      /* Dynamic styles applied by JS */
+    }
+
+    .pattern-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .pattern-option {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      background: #2d3748;
+      border: 2px solid transparent;
+      cursor: pointer;
+      overflow: hidden;
+      transition: border-color 0.2s; /* Added transition */
+      position: relative; /* For pro badge */
+    }
+
+    .pattern-option.active {
+      border-color: white;
+    }
+    .pattern-option .pro-badge { /* Style badge inside pattern option */
+        top: 2px;
+        right: 2px;
+        font-size: 7px;
+        padding: 1px 3px;
+    }
+
+
+    .pattern-dots {
+      background-image: radial-gradient(circle, white 2px, transparent 2px);
+      background-size: 10px 10px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pattern-lines {
+      background-image: linear-gradient(to right, white 1px, transparent 1px);
+      background-size: 5px;
+      width: 100%;
+      height: 100%;
+    }
+
+    .pattern-zigzag {
+      position: relative;
+    }
+
+    .pattern-zigzag::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-image: linear-gradient(135deg, white 25%, transparent 25%, transparent 50%, white 50%, white 75%, transparent 75%, transparent);
+      background-size: 8px 8px;
+    }
+
+    .modal {
+      display: none; /* Initially hidden */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s ease-out; /* Fade in animation */
+    }
+    .modal.active {
+      display: flex; /* Show when active */
+    }
+
+
+    .modal-content {
+      background: var(--panel-color);
+      padding: 20px;
+      border-radius: 8px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3); /* Added shadow */
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid var(--border-color); /* Add separator */
+      padding-bottom: 10px; /* Spacing */
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--secondary-text); /* Use secondary text color */
+      font-size: 24px; /* Slightly larger */
+      cursor: pointer;
+      transition: color 0.2s; /* Add transition */
+    }
+    .modal-close:hover {
+        color: var(--text-color); /* Brighter on hover */
+    }
+
+    .modal-body {
+      margin-bottom: 20px;
+      color: var(--secondary-text); /* Style body text */
+      font-size: 14px; /* Standard text size */
+      line-height: 1.6; /* Better readability */
+    }
+
+
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      border-top: 1px solid var(--border-color); /* Add separator */
+      padding-top: 15px; /* Spacing */
+    }
+
+    .brush-preview-icon {
+      width: 40px;
+      height: 40px;
+      background-size: contain;
+      background-position: center;
+      background-repeat: no-repeat;
+      margin-bottom: 5px;
+    }
+
+    .brush-preset-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .brush-preset {
+      width: 60px;
+      height: 75px;
+      background: #2d3748;
+      border-radius: 6px;
+      border: 2px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 5px;
+    }
+
+    .brush-preset span {
+      font-size: 11px;
+      text-align: center;
+      margin-top: 3px; /* Add space */
+      color: var(--secondary-text); /* Dimmer text */
+    }
+
+
+    .brush-preset:hover {
+      background: var(--tool-hover);
+      transform: translateY(-2px);
+    }
+
+    .brush-preset.active {
+      border-color: var(--accent-color);
+      background: rgba(67, 97, 238, 0.2);
+    }
+     .brush-preset.active span {
+       color: var(--text-color); /* Active text color */
+     }
+
+
+    .layer-properties {
+      margin-top: 15px;
+      margin-bottom: 15px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .layers-list {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+      border: 1px solid var(--border-color); /* Add border */
+      border-radius: 4px; /* Add radius */
+      padding: 5px; /* Add padding */
+    }
+
+    .layer-item {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      background: rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .layer-item:hover {
+      background: rgba(255, 255, 255, 0.05); /* Subtle hover */
+    }
+
+    .layer-item.active {
+      background: rgba(67, 97, 238, 0.2);
+    }
+
+    .layer-visibility {
+      width: 24px;
+      text-align: center;
+      opacity: 0.8; /* Slightly dimmer */
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .layer-visibility:hover {
+        opacity: 1;
+    }
+
+    .layer-preview {
+      width: 20px;
+      height: 20px;
+      border-radius: 3px;
+      margin-right: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1); /* Add border */
+    }
+
+
+    .layer-name {
+      flex: 1;
+      font-size: 12px;
+      margin-right: 8px; /* Space before options */
+      white-space: nowrap; /* Prevent wrapping */
+      overflow: hidden; /* Ellipsis if too long */
+      text-overflow: ellipsis;
+    }
+
+    .layer-options {
+      width: 24px;
+      text-align: center;
+      opacity: 0.6;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .layer-options:hover {
+      opacity: 1;
+    }
+
+    .property-row {
+      display: flex;
+      margin-bottom: 15px;
+      align-items: center;
+      gap: 10px; /* Add gap */
+    }
+
+    .property-label {
+      width: 40%;
+      font-size: 13px;
+      color: var(--secondary-text);
+      text-align: right; /* Align label right */
+      flex-shrink: 0; /* Prevent shrinking */
+    }
+
+    .property-value {
+      flex: 1;
+    }
+
+    .template-category {
+      margin-bottom: 20px;
+    }
+
+    .template-category h4 {
+      margin: 0 0 10px 0;
+      font-size: 14px;
+      color: var(--text-color);
+      font-weight: 500;
+      border-bottom: 1px solid var(--border-color); /* Add separator */
+      padding-bottom: 5px; /* Spacing */
+    }
+
+
+    .template-items {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .template-item {
+      width: 70px;
+      height: 90px;
+      background: #2d3748;
+      border-radius: 6px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      border: 2px solid transparent; /* Add border for hover effect */
+    }
+
+    .template-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      border-color: var(--tool-hover); /* Highlight on hover */
+    }
+
+    .template-preview {
+      width: 100%;
+      height: 70px;
+      background-size: 80%;
+      background-position: center;
+      background-repeat: no-repeat;
+      background-color: #1a2035;
+    }
+
+    .template-name {
+      font-size: 10px;
+      text-align: center;
+      padding: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--secondary-text); /* Dimmer text */
+    }
+
+    .pro-badge {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: var(--accent-color-alt);
+      color: white;
+      font-size: 8px;
+      font-weight: bold;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+
+    .toggle-wrapper, .panel-actions {
+      /* margin-bottom: 15px; */ /* Removed redundant margin */
+    }
+    .toggle-wrapper {
+        margin-bottom: 15px; /* Keep margin here */
+    }
+
+    .preset-btn, .template-btn, .filter-btn {
+      padding: 6px 10px;
+      background: #2d3748;
+      border: none;
+      border-radius: 4px;
+      color: var(--text-color);
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+      flex-grow: 1; /* Make buttons fill space */
+      text-align: center;
+    }
+
+    .preset-buttons, .template-buttons, .filter-buttons {
+      display: flex;
+      gap: 8px;
+      margin-top: 5px; /* Space above buttons */
+    }
+
+
+    .preset-btn:hover, .template-btn:hover, .filter-btn:hover {
+      background: var(--tool-hover);
+    }
+
+    .preset-btn.active, .template-btn.active, .filter-btn.active {
+      background: var(--tool-active);
+    }
+
+    .canvas-controls {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      z-index: 10;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      background: rgba(19, 28, 51, 0.8);
+      border-radius: 20px;
+      padding: 5px 10px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .zoom-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    #zoom-level {
+      margin: 0 10px;
+      font-size: 14px;
+      width: 50px;
+      text-align: center;
+      user-select: none; /* Prevent text selection */
+    }
+
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 40px;
+      height: 20px;
+      flex-shrink: 0; /* Prevent switch from shrinking */
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #2d3748;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: var(--accent-color);
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(20px);
+    }
+
+    .toggle-wrapper {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .toggle-wrapper label:first-child { /* Style the label text */
+      margin: 0;
+      flex-grow: 1; /* Allow label to take space */
+      padding-right: 10px; /* Space before switch */
+      color: var(--secondary-text);
+      font-size: 14px;
+    }
+
+
+    .pcb-colors {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0;
+    }
+
+    @media (max-width: 1200px) {
+      .settings-panel {
+        width: 300px;
+      }
+    }
+
+    @media (max-width: 900px) {
+      .app-container {
+        flex-direction: column;
+        height: 100vh; /* Take full height */
+      }
+      .footer {
+        display: none; /* Hide footer on small screens */
+      }
+      .left-panel {
+          width: 100%; /* Full width */
+          height: auto; /* Auto height */
+          flex-direction: row; /* Horizontal layout */
+          overflow-x: auto; /* Allow horizontal scrolling */
+          border-bottom: 1px solid var(--border-color);
+          border-right: none;
+      }
+      .toolbar {
+        width: auto; /* Fit content */
+        height: 60px;
+        flex-direction: row;
+        padding: 0 10px;
+        justify-content: flex-start; /* Align left */
+        border-right: none;
+        border-bottom: none; /* Remove bottom border here */
+        flex: none; /* Don't allow toolbar to grow */
+      }
+      .app-logo { display: none; } /* Hide logo in toolbar */
+      .tool-group-title { display: none; } /* Hide titles */
+
+      .tool-btn {
+        margin: 0 5px;
+        margin-bottom: 0; /* Remove bottom margin */
+        flex-shrink: 0; /* Prevent buttons shrinking */
+      }
+
+      .tool-separator {
+        width: 1px;
+        height: 30px;
+        margin: 0 8px;
+      }
+
+      .main-area {
+        flex-direction: column;
+        flex: 1; /* Take remaining space */
+        overflow: hidden; /* Prevent overall scroll */
+      }
+       .canvas-container {
+         flex: 1; /* Canvas takes available space */
+       }
+
+      .settings-panel {
+        width: 100%;
+        border-left: none;
+        border-top: 1px solid var(--border-color);
+        max-height: 40vh; /* Limit height */
+        min-height: 200px; /* Minimum height */
+      }
+      .settings-content {
+          padding: 15px; /* Reduce padding */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="left-panel">
+      <div class="toolbar">
+        <div class="app-logo" style="margin-bottom: 20px;">
+          <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 24 24' fill='none' stroke='%234361ee' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'%3E%3C/circle%3E%3Cpath d='M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z'%3E%3C/path%3E%3Cpath d='M2 12h20'%3E%3C/path%3E%3C/svg%3E" alt="CircuitCanvas Pro" style="filter: drop-shadow(0 2px 5px rgba(67, 97, 238, 0.5));">
+        </div>
+
+        <div class="tool-group-title">Core Tools</div>
+        <button class="tool-btn active tooltip" data-tool="pen" data-tooltip="Brush Tool (B)">
+          <i class="fas fa-paint-brush"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="line" data-tooltip="Line Tool (L)">
+          <i class="fas fa-slash"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="circle" data-tooltip="Circle Tool (C)">
+          <i class="far fa-circle"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="rect" data-tooltip="Rectangle Tool (R)">
+          <i class="far fa-square"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="polygon" data-tooltip="Polygon Tool (P)">
+          <i class="fas fa-draw-polygon"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="eraser" data-tooltip="Eraser Tool (E)">
+          <i class="fas fa-eraser"></i>
+        </button>
+
+        <div class="tool-separator"></div>
+        <div class="tool-group-title">PCB Tools</div>
+        <button class="tool-btn tooltip" data-tool="trace" data-tooltip="Trace Tool (T)">
+          <i class="fas fa-route"></i>
+        </button>
+        <button class="tool-btn tooltip pro" data-tool="pad" data-tooltip="Pad Tool">
+          <i class="fas fa-dot-circle"></i>
+        </button>
+        <button class="tool-btn tooltip pro" data-tool="via" data-tooltip="Via Tool">
+          <i class="fas fa-circle-notch"></i>
+        </button>
+        <button class="tool-btn tooltip pro" data-tool="component" data-tooltip="Component Tool">
+          <i class="fas fa-microchip"></i>
+        </button>
+
+        <div class="tool-separator"></div>
+        <div class="tool-group-title">Touch Sensors</div>
+        <button class="tool-btn tooltip" data-tool="touch-pad" data-tooltip="Touch Pad">
+          <i class="fas fa-square"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="touch-slider" data-tooltip="Touch Slider">
+          <i class="fas fa-sliders-h"></i>
+        </button>
+        <button class="tool-btn tooltip pro" data-tool="touch-wheel" data-tooltip="Touch Wheel">
+          <i class="fas fa-circle"></i>
+        </button>
+        <button class="tool-btn tooltip pro" data-tool="electrode" data-tooltip="Custom Electrode">
+          <i class="fas fa-fingerprint"></i>
+        </button>
+
+        <div class="tool-separator"></div>
+        <div class="tool-group-title">Utilities</div>
+        <button class="tool-btn tooltip" data-tool="fill" data-tooltip="Fill Tool (F)">
+          <i class="fas fa-fill-drip"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="eyedropper" data-tooltip="Color Picker (I)">
+          <i class="fas fa-eye-dropper"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="text" data-tooltip="Text Tool (T)">
+          <i class="fas fa-font"></i>
+        </button>
+        <button class="tool-btn tooltip" data-tool="measure" data-tooltip="Measure Tool (M)">
+          <i class="fas fa-ruler"></i>
+        </button>
+
+        <div class="tool-separator"></div>
+        <div class="tool-group-title">Actions</div>
+        <button class="tool-btn tooltip" id="layer-manager-btn" data-tooltip="Layer Manager (L)">
+          <i class="fas fa-layer-group"></i>
+        </button>
+        <button class="tool-btn tooltip" id="clear-canvas-btn" data-tooltip="Clear Canvas">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+        <button class="tool-btn tooltip" id="save-btn" data-tooltip="Save/Export">
+          <i class="fas fa-download"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="main-area">
+      <div class="canvas-container">
+        <div class="canvas-bg">
+          <div class="grid-pattern"></div>
+          </div>
+        <div class="rulers">
+          <div class="ruler-corner"></div>
+          <div class="ruler-h"><div class="ruler-h-marks"></div></div>
+          <div class="ruler-v"><div class="ruler-v-marks"></div></div>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas id="canvas" width="800" height="800"></canvas>
+          <canvas class="canvas-overlay" id="overlay-canvas" width="800" height="800"></canvas>
+        </div>
+        <div class="canvas-controls">
+          <div class="zoom-controls">
+            <button id="zoom-out" class="zoom-btn tooltip" data-tooltip="Zoom Out (-)"><i class="fas fa-search-minus"></i></button>
+            <span id="zoom-level">100%</span>
+            <button id="zoom-in" class="zoom-btn tooltip" data-tooltip="Zoom In (+)"><i class="fas fa-search-plus"></i></button>
+            <button id="zoom-fit" class="zoom-btn tooltip" data-tooltip="Fit to Screen"><i class="fas fa-expand"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-panel">
+        <div class="settings-tabs">
+          <div class="settings-tab active" data-tab="design">Design</div>
+          <div class="settings-tab" data-tab="layers">Layers</div>
+          <div class="settings-tab" data-tab="properties">Properties</div>
+          <div class="settings-tab" data-tab="templates">Templates</div>
+        </div>
+
+        <div class="settings-content">
+          <div class="tab-content active" id="design-tab">
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-palette"></i> Color</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+               <div class="panel-content">
+                  <div class="color-picker">
+                    <div class="color-option active" style="background-color: #000000;" data-color="#000000"></div>
+                    <div class="color-option" style="background-color: #ffffff;" data-color="#ffffff"></div>
+                    <div class="color-option" style="background-color: #ff0000;" data-color="#ff0000"></div>
+                    <div class="color-option" style="background-color: #ff9900;" data-color="#ff9900"></div>
+                    <div class="color-option" style="background-color: #ffff00;" data-color="#ffff00"></div>
+                    <div class="color-option" style="background-color: #00ff00;" data-color="#00ff00"></div>
+                    <div class="color-option" style="background-color: #00ffff;" data-color="#00ffff"></div>
+                    <div class="color-option" style="background-color: #0000ff;" data-color="#0000ff"></div>
+                    <div class="color-option" style="background-color: #9900ff;" data-color="#9900ff"></div>
+                    <div class="color-option" style="background-color: #ff00ff;" data-color="#ff00ff"></div>
+                  </div>
+
+                  <div class="pcb-colors">
+                    <div class="color-option tooltip" style="background-color: #417e5a;" data-color="#417e5a" data-tooltip="Solder Mask Green"></div>
+                    <div class="color-option tooltip" style="background-color: #cd9575;" data-color="#cd9575" data-tooltip="Copper"></div>
+                    <div class="color-option tooltip" style="background-color: #e0e0e0;" data-color="#e0e0e0" data-tooltip="Silkscreen White"></div>
+                    <div class="color-option tooltip" style="background-color: #333333;" data-color="#333333" data-tooltip="Carbon/Board Black"></div>
+                  </div>
+
+                  <div class="custom-color">
+                    <input type="color" id="color-picker" value="#000000">
+                    <div class="opacity-control">
+                      <label style="margin-bottom: 0;">Opacity:</label>
+                      <input type="range" id="opacity" min="0" max="1" step="0.01" value="1">
+                      <span class="opacity-value">100%</span>
+                    </div>
+                  </div>
+
+                  <div class="gradient-control" style="margin-top: 15px;">
+                    <div class="toggle-wrapper" style="margin-bottom: 5px;">
+                      <label>Use Gradient</label>
+                      <label class="toggle-switch">
+                        <input type="checkbox" id="use-gradient">
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
+                    <div id="gradient-options" style="display: none; margin-top: 10px;">
+                      <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="color" id="gradient-color-1" value="#000000" style="flex: 1;">
+                        <input type="color" id="gradient-color-2" value="#4361ee" style="flex: 1;">
+                      </div>
+                      <select id="gradient-type" style="margin-bottom: 10px;">
+                        <option value="linear">Linear Gradient</option>
+                        <option value="radial">Radial Gradient</option>
+                      </select>
+                      <div id="gradient-angle-control" style="display: flex; align-items: center; gap: 10px;">
+                        <label style="margin-bottom: 0;">Angle:</label>
+                        <input type="range" id="gradient-angle" min="0" max="360" value="90" style="flex: 1;">
+                        <span id="gradient-angle-value" style="width: 40px; text-align: right;">90°</span>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-star-of-life"></i> Symmetry</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+              <div class="panel-subtitle">Create perfectly balanced designs</div>
+              <div class="panel-content">
+                  <div class="symmetry-types">
+                    <div class="symmetry-type active" data-type="radial">Radial</div>
+                    <div class="symmetry-type" data-type="mirror">Mirror</div>
+                    <div class="symmetry-type" data-type="kaleidoscope">Kaleido</div>
+                    <div class="symmetry-type" data-type="mandala">Mandala</div>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="symmetry">Symmetry Count: <span id="symmetry-value">6</span></label>
+                    <input type="range" id="symmetry" min="1" max="36" value="6">
+                  </div>
+
+                  <div class="control-group" id="rotation-control">
+                    <label for="rotation">Rotation: <span id="rotation-value">0°</span></label>
+                    <input type="range" id="rotation" min="0" max="360" value="0">
+                  </div>
+
+                  <div class="control-group" id="offset-control">
+                    <label for="offset">Offset: <span id="offset-value">0</span>px</label>
+                    <input type="range" id="offset" min="0" max="100" value="0">
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="show-guide">Show Symmetry Guide</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="show-guide">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="dynamic-center">Center at Mouse Position</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="dynamic-center">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="auto-complete">Auto-complete Shapes</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="auto-complete">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="preset-symmetry" style="margin-top: 15px;">
+                    <label>Presets:</label>
+                    <div class="preset-buttons">
+                      <button class="preset-btn" data-preset="tri-sym">Triangle</button>
+                      <button class="preset-btn" data-preset="quad-sym">Square</button>
+                      <button class="preset-btn" data-preset="hex-sym">Hexagon</button>
+                      <button class="preset-btn" data-preset="oct-sym">Octagon</button>
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-paint-brush"></i> Brush Settings</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+              <div class="panel-content">
+                  <div class="brush-presets">
+                    <label>Brush Type:</label>
+                    <div class="brush-preset-container">
+                      <div class="brush-preset active tooltip" data-brush="standard" data-tooltip="Standard round brush">
+                        <div class="brush-preview-icon" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'10\' fill=\'%23fff\'/%3E%3C/svg%3E');"></div>
+                        <span>Standard</span>
+                      </div>
+                      <div class="brush-preset tooltip" data-brush="airbrush" data-tooltip="Soft, feathered edges">
+                        <div class="brush-preview-icon" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'%3E%3Cdefs%3E%3CradialGradient id=\'grad1\' cx=\'50%25\' cy=\'50%25\' r=\'50%25\' fx=\'50%25\' fy=\'50%25\'%3E%3Cstop offset=\'0%25\' style=\'stop-color:rgb(255,255,255);stop-opacity:1\' /%3E%3Cstop offset=\'100%25\' style=\'stop-color:rgb(255,255,255);stop-opacity:0\' /%3E%3C/radialGradient%3E%3C/defs%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'15\' fill=\'url(%23grad1)\'/%3E%3C/svg%3E');"></div>
+                        <span>Airbrush</span>
+                      </div>
+                      <div class="brush-preset tooltip" data-brush="calligraphy" data-tooltip="Angled nib for varied width">
+                        <div class="brush-preview-icon" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'%3E%3Cellipse cx=\'20\' cy=\'20\' rx=\'15\' ry=\'5\' fill=\'%23fff\' transform=\'rotate(45, 20, 20)\'/%3E%3C/svg%3E');"></div>
+                        <span>Calligraphy</span>
+                      </div>
+                       <div class="brush-preset tooltip" data-brush="square" data-tooltip="Square brush tip">
+                        <div class="brush-preview-icon" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 40 40\'%3E%3Crect x=\'10\' y=\'10\' width=\'20\' height=\'20\' fill=\'%23fff\'/%3E%3C/svg%3E');"></div>
+                        <span>Square</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="weight">Size: <span id="size-value">2</span>px</label>
+                    <div style="display: flex; align-items: center;">
+                      <input type="range" id="weight" min="1" max="100" value="2" style="flex: 1;">
+                      <div class="brush-preview">
+                        <div class="brush-dot" style="width: 2px; height: 2px;"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="hardness">Hardness: <span id="hardness-value">100</span>%</label>
+                    <input type="range" id="hardness" min="0" max="100" value="100">
+                  </div>
+
+                  <div class="control-group">
+                    <label for="flow">Flow: <span id="flow-value">100</span>%</label>
+                    <input type="range" id="flow" min="10" max="100" value="100">
+                  </div>
+
+                  <div class="control-group">
+                    <label for="strokeCap">Cap Style:</label>
+                    <select id="strokeCap">
+                      <option value="round">Round</option>
+                      <option value="square">Square</option>
+                      <option value="butt">Flat</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="strokeType">Stroke Type:</label>
+                    <select id="strokeType">
+                      <option value="solid">Solid</option>
+                      <option value="dashed">Dashed</option>
+                      <option value="dotted">Dotted</option>
+                      <option value="double">Double Line</option>
+                      <option value="wavy">Wavy</option>
+                      <option value="custom">Custom Pattern</option>
+                    </select>
+                    <div class="stroke-preview">
+                      <div class="stroke-line" style="width: 80%;"></div>
+                    </div>
+                  </div>
+
+                  <div id="custom-stroke-pattern" class="control-group" style="display: none;">
+                    <label for="dash-pattern">Custom Pattern:</label>
+                    <input type="text" id="dash-pattern" placeholder="e.g., 5,5,1,5" style="width: 100%; padding: 8px; background: #2d3748; border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+                    <div class="stroke-help" style="margin-top: 5px; font-size: 11px; color: var(--secondary-text);">
+                      Format: dash,gap,dash,gap... (in pixels)
+                    </div>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="pressure-sensitivity">Pressure Sensitivity</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="pressure-sensitivity">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="autoSmooth">Smooth Stroke</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="autoSmooth" checked>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+              </div>
+            </div>
+
+             <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-sliders-h"></i> Effects</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+              <div class="panel-content">
+                  <div class="toggle-wrapper">
+                    <label for="shadow-effect">Shadow Effect</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="shadow-effect">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div id="shadow-controls" style="display: none; margin-top: 10px; padding-left: 15px; border-left: 2px solid var(--border-color);">
+                    <div class="control-group">
+                      <label for="shadow-blur">Shadow Blur: <span id="shadow-blur-value">5</span>px</label>
+                      <input type="range" id="shadow-blur" min="0" max="20" value="5">
+                    </div>
+                    <div class="control-group">
+                      <label for="shadow-offset">Shadow Offset: <span id="shadow-offset-value">3</span>px</label>
+                      <input type="range" id="shadow-offset" min="0" max="20" value="3">
+                    </div>
+                    <div class="control-group">
+                      <label for="shadow-color">Shadow Color:</label>
+                      <input type="color" id="shadow-color" value="#000000" style="width: 100%;">
+                    </div>
+                  </div>
+
+                  <div class="control-group" style="margin-top: 15px;">
+                    <label>Fill Pattern:</label>
+                    <div class="pattern-options">
+                      <div class="pattern-option active tooltip" data-pattern="none" data-tooltip="No Pattern">
+                        <div style="width: 100%; height: 100%; background: transparent;"></div>
+                      </div>
+                      <div class="pattern-option tooltip" data-pattern="dots" data-tooltip="Dots">
+                        <div class="pattern-dots"></div>
+                      </div>
+                      <div class="pattern-option tooltip" data-pattern="lines" data-tooltip="Lines">
+                        <div class="pattern-lines"></div>
+                      </div>
+                      <div class="pattern-option tooltip" data-pattern="zigzag" data-tooltip="Zigzag">
+                        <div class="pattern-zigzag"></div>
+                      </div>
+                      <div class="pattern-option tooltip" data-pattern="grid" data-tooltip="Grid">
+                        <div style="width: 100%; height: 100%; background-image: linear-gradient(white 1px, transparent 1px), linear-gradient(90deg, white 1px, transparent 1px); background-size: 5px 5px;"></div>
+                      </div>
+                      <div class="pattern-option tooltip" data-pattern="crosshatch" data-tooltip="Crosshatch">
+                        <div style="width: 100%; height: 100%; background-image: linear-gradient(45deg, white 25%, transparent 25%, transparent 75%, white 75%), linear-gradient(135deg, white 25%, transparent 25%, transparent 75%, white 75%); background-size: 6px 6px;"></div>
+                      </div>
+                      <div class="pattern-option pro tooltip" data-pattern="circuit" data-tooltip="Circuit Pattern (Pro)">
+                        <div style="width: 100%; height: 100%; position: relative; overflow: hidden;">
+                          <div style="position: absolute; top: 5px; left: 5px; width: 30px; height: 30px; border: 1px solid white; border-radius: 2px;"></div>
+                          <div style="position: absolute; top: 20px; left: 20px; width: 15px; height: 15px; background: white; border-radius: 50%;"></div>
+                        </div>
+                         <div class="pro-badge">PRO</div>
+                      </div>
+                      <div class="pattern-option pro tooltip" data-pattern="custom" data-tooltip="Custom Pattern (Pro)">
+                        <div style="width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; font-size: 18px; color: white;">
+                          <i class="fas fa-plus"></i>
+                        </div>
+                         <div class="pro-badge">PRO</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="control-group" id="pattern-scale-control" style="display: none;">
+                    <label for="pattern-scale">Pattern Scale: <span id="pattern-scale-value">1</span>x</label>
+                    <input type="range" id="pattern-scale" min="0.5" max="5" step="0.1" value="1">
+                  </div>
+
+                  <div class="control-group" style="margin-top: 15px;">
+                    <label for="blend-mode">Blend Mode:</label>
+                    <select id="blend-mode">
+                      <option value="source-over">Normal</option>
+                      <option value="multiply">Multiply</option>
+                      <option value="screen">Screen</option>
+                      <option value="overlay">Overlay</option>
+                      <option value="darken">Darken</option>
+                      <option value="lighten">Lighten</option>
+                      <option value="color-dodge">Color Dodge</option>
+                      <option value="color-burn">Color Burn</option>
+                      <option value="hard-light">Hard Light</option>
+                      <option value="soft-light">Soft Light</option>
+                      <option value="difference">Difference</option>
+                      <option value="exclusion">Exclusion</option>
+                    </select>
+                  </div>
+
+                  <div class="filter-effects" style="margin-top: 15px;">
+                    <label>Filters:</label>
+                    <div class="filter-buttons">
+                      <button class="filter-btn active" data-filter="none">None</button>
+                      <button class="filter-btn" data-filter="invert">Invert</button>
+                      <button class="filter-btn" data-filter="grayscale">Grayscale</button>
+                      <button class="filter-btn pro" data-filter="blur">Blur</button>
+                      <button class="filter-btn pro" data-filter="sharpen">Sharpen</button>
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-cog"></i> Technical Settings</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+              <div class="panel-subtitle">Fine-tune for PCB and touch sensor design</div>
+              <div class="panel-content">
+                  <div class="control-group">
+                    <label>Snap to Grid:</label>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <label class="toggle-switch">
+                        <input type="checkbox" id="snap-to-grid">
+                        <span class="toggle-slider"></span>
+                      </label>
+                      <select id="grid-size" style="flex: 1;">
+                        <option value="5">5px</option>
+                        <option value="10">10px</option>
+                        <option value="20" selected>20px</option>
+                        <option value="25">25px</option>
+                        <option value="50">50px</option>
+                        <option value="custom">Custom...</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="show-measurements">Show Measurements</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="show-measurements">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="show-rulers">Show Rulers</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="show-rulers">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="unit-type">Units:</label>
+                    <select id="unit-type">
+                      <option value="px">Pixels (px)</option>
+                      <option value="mm">Millimeters (mm)</option>
+                      <option value="in">Inches (in)</option>
+                      <option value="mil">Mils (1/1000 in)</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="scale">Scale: 1px = <span id="scale-value">1</span> <span id="scale-unit">px</span></label>
+                    <input type="range" id="scale" min="0.1" max="10" step="0.1" value="1">
+                  </div>
+
+                  <div class="control-group">
+                    <label for="background-type">Background:</label>
+                    <select id="background-type">
+                      <option value="white">White</option>
+                      <option value="transparent">Transparent</option>
+                      <option value="grid" selected>Grid Pattern</option>
+                      <option value="dots">Dots Pattern</option>
+                      <option value="pcb-green">PCB Green</option>
+                      <option value="pcb-blue">PCB Blue</option>
+                      <option value="pcb-black">PCB Black</option>
+                      <option value="custom">Custom Color</option>
+                    </select>
+                  </div>
+
+                  <div id="custom-bg-color" style="display: none; margin-top: 10px;">
+                    <input type="color" id="bg-color-picker" value="#ffffff" style="width: 100%;">
+                  </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-fingerprint"></i> Touch Sensor Settings</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+              <div class="panel-subtitle">Design parameters for capacitive sensors</div>
+              <div class="panel-content">
+                  <div class="control-group">
+                    <label for="electrode-type">Electrode Type:</label>
+                    <select id="electrode-type">
+                      <option value="pad">Touch Pad</option>
+                      <option value="slider">Linear Slider</option>
+                      <option value="wheel">Radial Wheel</option>
+                      <option value="button">Button</option>
+                      <option value="custom">Custom Shape</option>
+                    </select>
+                  </div>
+
+                  <div class="control-group">
+                    <label for="trace-width">Trace Width: <span id="trace-width-value">5</span>px</label>
+                    <input type="range" id="trace-width" min="1" max="50" value="5">
+                  </div>
+
+                  <div class="control-group">
+                    <label for="pad-size">Pad Size: <span id="pad-size-value">20</span>px</label>
+                    <input type="range" id="pad-size" min="5" max="100" value="20">
+                  </div>
+
+                  <div class="control-group">
+                    <label for="pad-spacing">Pad Spacing: <span id="pad-spacing-value">5</span>px</label>
+                    <input type="range" id="pad-spacing" min="0" max="50" value="5">
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="show-sensitivity">Show Sensitivity Map</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="show-sensitivity">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="auto-route">Auto-route Traces</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="auto-route">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="sensor-templates" style="margin-top: 15px;">
+                    <label>Templates:</label>
+                    <div class="template-buttons">
+                      <button class="template-btn" data-template="3x3-pad">3×3 Matrix</button>
+                      <button class="template-btn" data-template="slider-5">5-Seg Slider</button>
+                      <button class="template-btn" data-template="wheel-8">8-Seg Wheel</button>
+                      <button class="template-btn pro" data-template="custom">Custom</button>
+                    </div>
+                  </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-save"></i> Export & Share</div>
+                <div class="panel-actions">
+                  <button class="panel-collapse-btn"><i class="fas fa-chevron-up"></i></button>
+                </div>
+              </div>
+              <div class="panel-content">
+                  <div class="export-options">
+                    <label>Image Export:</label>
+                    <div class="btn-group">
+                      <button class="btn" id="export-png">PNG</button>
+                      <button class="btn" id="export-jpg">JPG</button>
+                      <button class="btn btn-secondary" id="export-svg">SVG</button>
+                    </div>
+                  </div>
+
+                  <div class="export-options" style="margin-top: 15px;">
+                    <label>Technical Export:</label>
+                    <div class="btn-group">
+                      <button class="btn btn-secondary pro tooltip" id="export-gerber" data-tooltip="Export Gerber Files (Pro)">Gerber</button>
+                      <button class="btn btn-secondary pro tooltip" id="export-dxf" data-tooltip="Export DXF/CAD (Pro)">DXF/CAD</button>
+                      <button class="btn btn-secondary" id="export-pdf">PDF</button>
+                    </div>
+                  </div>
+
+                  <div class="control-group" style="margin-top: 15px;">
+                    <label for="export-resolution">Resolution:</label>
+                    <select id="export-resolution">
+                      <option value="1">1× (800×800)</option>
+                      <option value="2" selected>2× (1600×1600)</option>
+                      <option value="4">4× (3200×3200)</option>
+                      <option value="custom">Custom Size...</option>
+                    </select>
+                  </div>
+
+                  <div class="save-project" style="margin-top: 15px;">
+                    <button class="btn" id="save-project-btn" style="width: 100%;">
+                      <i class="fas fa-save"></i> Save Project
+                    </button>
+                  </div>
+
+                  <div class="open-project" style="margin-top: 10px;">
+                     <input type="file" id="open-project-input" accept=".circuitcanvas" style="display: none;">
+                    <button class="btn btn-secondary" id="open-project-btn" style="width: 100%;">
+                      <i class="fas fa-folder-open"></i> Open Project
+                    </button>
+                  </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="layers-tab">
+             <div class="panel-section">
+                <div class="panel-title">
+                  <div><i class="fas fa-layer-group"></i> Layers</div>
+                  <div class="panel-actions">
+                    <button class="btn btn-secondary tooltip" id="add-layer-btn" data-tooltip="Add New Layer" style="padding: 2px 8px; font-size: 12px;">
+                      <i class="fas fa-plus"></i> Add
+                    </button>
+                  </div>
+                </div>
+
+                <div class="layers-list" id="layers-list-container">
+                  <div class="layer-item active" data-layer-id="layer-1">
+                    <div class="layer-visibility">
+                      <i class="fas fa-eye"></i>
+                    </div>
+                    <div class="layer-preview" style="background-color: rgba(0, 0, 0, 0.1);"></div>
+                    <input class="layer-name" value="Layer 1" readonly>
+                    <div class="layer-options tooltip" data-tooltip="Layer Options">
+                      <i class="fas fa-ellipsis-v"></i>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="layer-properties">
+                  <div class="control-group">
+                    <label for="layer-opacity">Opacity: <span id="layer-opacity-value">100</span>%</label>
+                    <input type="range" id="layer-opacity" min="0" max="100" value="100">
+                  </div>
+
+                  <div class="control-group">
+                    <label for="layer-blend-mode">Blend Mode:</label>
+                    <select id="layer-blend-mode">
+                       <option value="source-over">Normal</option>
+                      <option value="multiply">Multiply</option>
+                      <option value="screen">Screen</option>
+                      <option value="overlay">Overlay</option>
+                       <option value="darken">Darken</option>
+                      <option value="lighten">Lighten</option>
+                    </select>
+                  </div>
+
+                  <div class="btn-group" style="margin-top: 15px;">
+                    <button class="btn btn-secondary tooltip" id="merge-layers-btn" data-tooltip="Merge Selected Layer Down">Merge Down</button>
+                    <button class="btn btn-secondary tooltip" id="duplicate-layer-btn" data-tooltip="Duplicate Selected Layer">Duplicate</button>
+                     <button class="btn btn-secondary tooltip" id="delete-layer-btn" data-tooltip="Delete Selected Layer" style="background-color: #e74c3c; color: white;">Delete</button>
+                  </div>
+                </div>
+              </div>
+          </div>
+
+          <div class="tab-content" id="properties-tab">
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-info-circle"></i> Canvas Properties</div>
+              </div>
+              <div class="panel-content">
+                  <div class="property-row">
+                    <div class="property-label">Canvas Size:</div>
+                    <div class="property-value">
+                      <div style="display: flex; gap: 5px; align-items: center;">
+                        <input type="number" id="canvas-width" value="800" min="100" max="5000" style="width: 70px;">
+                        <span style="line-height: 28px;">×</span>
+                        <input type="number" id="canvas-height" value="800" min="100" max="5000" style="width: 70px;">
+                         <span style="line-height: 28px; color: var(--secondary-text); font-size: 12px;">px</span>
+                        <button class="btn btn-secondary" id="resize-canvas-btn" style="padding: 5px 8px; font-size: 12px; margin-left: 5px;">Apply</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="property-row">
+                    <div class="property-label">Project Name:</div>
+                    <div class="property-value">
+                      <input type="text" id="project-name" value="Untitled Design" style="width: 100%; padding: 5px; background: #2d3748; border: 1px solid var(--border-color); color: white; border-radius: 4px;">
+                    </div>
+                  </div>
+
+                  <div class="property-row">
+                    <div class="property-label">Precision:</div>
+                    <div class="property-value">
+                      <select id="precision-level">
+                        <option value="1">Normal (1x)</option>
+                        <option value="2">High (2x)</option>
+                        <option value="4">Ultra (4x)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="property-row">
+                    <div class="property-label">Color Profile:</div>
+                    <div class="property-value">
+                      <select id="color-profile">
+                        <option value="rgb">sRGB</option>
+                        <option value="cmyk" disabled>CMYK (Pro)</option>
+                        <option value="grayscale">Grayscale</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="anti-aliasing">Anti-aliasing</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="anti-aliasing" checked>
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-wrapper">
+                    <label for="auto-save">Auto-save (Local)</label>
+                    <label class="toggle-switch">
+                      <input type="checkbox" id="auto-save">
+                      <span class="toggle-slider"></span>
+                    </label>
+                  </div>
+              </div>
+            </div>
+
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-ruler-combined"></i> PCB Parameters</div>
+              </div>
+               <div class="panel-content">
+                  <div class="pcb-properties">
+                    <div class="property-row">
+                      <div class="property-label">Board Type:</div>
+                      <div class="property-value">
+                        <select id="board-type">
+                          <option value="single">Single-sided</option>
+                          <option value="double">Double-sided</option>
+                          <option value="multi" disabled>Multi-layer (Pro)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="property-row">
+                      <div class="property-label">Copper Weight:</div>
+                      <div class="property-value">
+                        <select id="copper-weight">
+                          <option value="1oz">1oz (35µm)</option>
+                          <option value="2oz">2oz (70µm)</option>
+                          <option value="3oz">3oz (105µm)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="property-row">
+                      <div class="property-label">Min Trace Width:</div>
+                      <div class="property-value">
+                        <select id="min-trace-width">
+                          <option value="6">6mil (0.15mm)</option>
+                          <option value="8">8mil (0.2mm)</option>
+                          <option value="10">10mil (0.25mm)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="property-row">
+                      <div class="property-label">Min Clearance:</div>
+                      <div class="property-value">
+                        <select id="min-clearance">
+                          <option value="6">6mil (0.15mm)</option>
+                          <option value="8">8mil (0.2mm)</option>
+                          <option value="10">10mil (0.25mm)</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="tab-content" id="templates-tab">
+            <div class="panel-section">
+              <div class="panel-title">
+                <div><i class="fas fa-shapes"></i> Design Templates</div>
+              </div>
+              <div class="panel-content">
+                  <div class="templates-grid">
+                    <div class="template-category">
+                      <h4>Touch Sensors</h4>
+                      <div class="template-items">
+                        <div class="template-item tooltip" data-tooltip="4-Button Pad Template">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'10\' y=\'10\' width=\'80\' height=\'80\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'15\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Ccircle cx=\'70\' cy=\'30\' r=\'15\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Ccircle cx=\'30\' cy=\'70\' r=\'15\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Ccircle cx=\'70\' cy=\'70\' r=\'15\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">4-Button Pad</div>
+                        </div>
+                        <div class="template-item tooltip" data-tooltip="Touch Wheel Template">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Cpath d=\'M50,10 L90,50 L50,90 L10,50 Z\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cpath d=\'M50,20 L80,50 L50,80 L20,50 Z\' fill=\'white\' fill-opacity=\'0.2\'/%3E%3Cpath d=\'M50,30 L70,50 L50,70 L30,50 Z\' fill=\'white\' fill-opacity=\'0.4\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Touch Wheel</div>
+                        </div>
+                        <div class="template-item tooltip" data-tooltip="Slider Bar Template">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'10\' y=\'40\' width=\'80\' height=\'20\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Crect x=\'15\' y=\'45\' width=\'10\' height=\'10\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Crect x=\'35\' y=\'45\' width=\'10\' height=\'10\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Crect x=\'55\' y=\'45\' width=\'10\' height=\'10\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Crect x=\'75\' y=\'45\' width=\'10\' height=\'10\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Slider Bar</div>
+                        </div>
+                        <div class="template-item pro tooltip" data-tooltip="Trackpad Template (Pro)">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'10\' y=\'10\' width=\'80\' height=\'80\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cpath d=\'M30,30 L70,70 M30,70 L70,30\' stroke=\'white\' stroke-width=\'2\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Trackpad</div>
+                          <div class="pro-badge">PRO</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="template-category">
+                      <h4>PCB Components</h4>
+                      <div class="template-items">
+                        <div class="template-item tooltip" data-tooltip="Resistor Footprint">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'30\' y=\'20\' width=\'40\' height=\'60\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'50\' y1=\'20\' x2=\'50\' y2=\'10\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'50\' y1=\'80\' x2=\'50\' y2=\'90\' stroke=\'white\' stroke-width=\'2\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Resistor</div>
+                        </div>
+                        <div class="template-item tooltip" data-tooltip="Capacitor Footprint">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'25\' y=\'30\' width=\'50\' height=\'40\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'25\' y1=\'50\' x2=\'10\' y2=\'50\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'75\' y1=\'50\' x2=\'90\' y2=\'50\' stroke=\'white\' stroke-width=\'2\'/%3E%3Crect x=\'35\' y=\'40\' width=\'30\' height=\'5\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3Crect x=\'35\' y=\'55\' width=\'30\' height=\'5\' fill=\'white\' fill-opacity=\'0.5\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Capacitor</div>
+                        </div>
+                        <div class="template-item tooltip" data-tooltip="IC Package Footprint">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'30\' y=\'30\' width=\'40\' height=\'40\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Ccircle cx=\'20\' cy=\'30\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'20\' cy=\'70\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'80\' cy=\'30\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'80\' cy=\'70\' r=\'5\' fill=\'white\'/%3E%3Cline x1=\'20\' y1=\'30\' x2=\'30\' y2=\'30\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'20\' y1=\'70\' x2=\'30\' y2=\'70\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'70\' y1=\'30\' x2=\'80\' y2=\'30\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'70\' y1=\'70\' x2=\'80\' y2=\'70\' stroke=\'white\' stroke-width=\'2\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">IC Package</div>
+                        </div>
+                        <div class="template-item pro tooltip" data-tooltip="Microcontroller Footprint (Pro)">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'30\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'10\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'50\' y1=\'20\' x2=\'50\' y2=\'10\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'50\' y1=\'80\' x2=\'50\' y2=\'90\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'20\' y1=\'50\' x2=\'10\' y2=\'50\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cline x1=\'80\' y1=\'50\' x2=\'90\' y2=\'50\' stroke=\'white\' stroke-width=\'2\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Microcontroller</div>
+                          <div class="pro-badge">PRO</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="template-category">
+                      <h4>Enclosure Patterns</h4>
+                      <div class="template-items">
+                        <div class="template-item tooltip" data-tooltip="Box Panel Template">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Crect x=\'10\' y=\'10\' width=\'80\' height=\'80\' fill=\'none\' stroke=\'white\' stroke-width=\'2\' rx=\'5\' ry=\'5\'/%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'20\' cy=\'80\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'80\' cy=\'20\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'80\' cy=\'80\' r=\'5\' fill=\'white\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Box Panel</div>
+                        </div>
+                        <div class="template-item tooltip" data-tooltip="Display Cutout Template">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Cpath d=\'M20,20 L80,20 L80,80 L20,80 Z\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cpath d=\'M30,30 L70,30 L70,70 L30,70 Z\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cpath d=\'M20,20 L30,30 M80,20 L70,30 M20,80 L30,70 M80,80 L70,70\' stroke=\'white\' stroke-width=\'2\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Display Cutout</div>
+                        </div>
+                        <div class="template-item tooltip" data-tooltip="Circular Panel Template">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'40\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Ccircle cx=\'50\' cy=\'50\' r=\'35\' fill=\'none\' stroke=\'white\' stroke-width=\'1\' stroke-dasharray=\'5,5\'/%3E%3Ccircle cx=\'30\' cy=\'30\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'70\' cy=\'30\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'30\' cy=\'70\' r=\'5\' fill=\'white\'/%3E%3Ccircle cx=\'70\' cy=\'70\' r=\'5\' fill=\'white\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Circular Panel</div>
+                        </div>
+                        <div class="template-item pro tooltip" data-tooltip="Custom Case Template (Pro)">
+                          <div class="template-preview" style="background-image: url('data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\' width=\'100\' height=\'100\'%3E%3Cpath d=\'M20,30 L80,30 L80,80 L20,80 Z\' fill=\'none\' stroke=\'white\' stroke-width=\'2\'/%3E%3Cpath d=\'M30,30 L30,20 L70,20 L70,30\' stroke=\'white\' stroke-width=\'2\' fill=\'none\'/%3E%3Crect x=\'30\' y=\'40\' width=\'40\' height=\'10\' fill=\'white\' fill-opacity=\'0.3\'/%3E%3Crect x=\'30\' y=\'60\' width=\'40\' height=\'10\' fill=\'white\' fill-opacity=\'0.3\'/%3E%3C/svg%3E');"></div>
+                          <div class="template-name">Custom Case</div>
+                          <div class="pro-badge">PRO</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+              </div>
+            </div>
+          </div>
+
+        </div> </div> </div> </div> <div class="footer">
+    <div class="canvas-info" id="canvas-pos-info">X: 0, Y: 0</div>
+    <div class="history-buttons">
+      <button class="history-btn tooltip" id="undo-btn" data-tooltip="Undo (Ctrl+Z)" disabled><i class="fas fa-undo-alt"></i></button>
+      <button class="history-btn tooltip" id="redo-btn" data-tooltip="Redo (Ctrl+Y)" disabled><i class="fas fa-redo-alt"></i></button>
+    </div>
+    <div class="zoom-level-footer" id="zoom-info">Zoom: 100%</div>
+  </div>
+
+  <div class="modal" id="clear-confirm-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Confirm Clear Canvas</div>
+          <button class="modal-close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+          Are you sure you want to clear the entire canvas? This action cannot be undone.
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button class="btn" id="confirm-clear-btn" style="background-color: #e74c3c;">Clear Canvas</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="save-export-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title">Save / Export Options</div>
+          <button class="modal-close" data-dismiss="modal">&times;</button>
+        </div>
+        <div class="modal-body">
+           Select your desired format and settings.
+           <div id="modal-export-options" style="margin-top: 15px;">
+               <div class="export-options">
+                    <label>Image Export:</label>
+                    <div class="btn-group">
+                      <button class="btn" id="modal-export-png">PNG</button>
+                      <button class="btn" id="modal-export-jpg">JPG</button>
+                      <button class="btn btn-secondary" id="modal-export-svg">SVG</button>
+                    </div>
+                </div>
+                 <div class="control-group" style="margin-top: 15px;">
+                    <label for="modal-export-resolution">Resolution:</label>
+                    <select id="modal-export-resolution">
+                      <option value="1">1×</option>
+                      <option value="2" selected>2×</option>
+                      <option value="4">4×</option>
+                    </select>
+                </div>
+           </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-dismiss="modal">Close</button>
+          </div>
+      </div>
+    </div>
+
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const canvas = document.getElementById('canvas');
+        const overlayCanvas = document.getElementById('overlay-canvas');
+        const ctx = canvas.getContext('2d');
+        const overlayCtx = overlayCanvas.getContext('2d');
+        const canvasContainer = document.querySelector('.canvas-container');
+        const canvasWrapper = document.querySelector('.canvas-wrapper');
+
+        // --- State Variables ---
+        let isDrawing = false;
+        let lastX = 0;
+        let lastY = 0;
+        let currentTool = 'pen'; // Default tool
+        let brushColor = '#000000';
+        let brushSize = 2;
+        let brushOpacity = 1;
+        let symmetryCount = 6;
+        let symmetryType = 'radial'; // 'radial', 'mirror', 'kaleidoscope', 'mandala'
+        let showSymmetryGuide = false;
+        let dynamicSymmetryCenter = false;
+        let symmetryCenterX = canvas.width / 2;
+        let symmetryCenterY = canvas.height / 2;
+        let globalCompositeOperation = 'source-over';
+        let lineCap = 'round';
+        let zoomLevel = 1;
+        let panX = 0;
+        let panY = 0;
+        let isPanning = false;
+        let panStartX = 0;
+        let panStartY = 0;
+
+
+        // --- DOM Element References ---
+        const toolBtns = document.querySelectorAll('.tool-btn');
+        const colorOptions = document.querySelectorAll('.color-option');
+        const customColorPicker = document.getElementById('color-picker');
+        const opacitySlider = document.getElementById('opacity');
+        const opacityValueSpan = document.querySelector('.opacity-value');
+        const sizeSlider = document.getElementById('weight');
+        const sizeValueSpan = document.getElementById('size-value');
+        const brushDot = document.querySelector('.brush-dot');
+        const symmetrySlider = document.getElementById('symmetry');
+        const symmetryValueSpan = document.getElementById('symmetry-value');
+        const symmetryTypes = document.querySelectorAll('.symmetry-type');
+        const showGuideCheckbox = document.getElementById('show-guide');
+        const dynamicCenterCheckbox = document.getElementById('dynamic-center');
+        const clearCanvasBtn = document.getElementById('clear-canvas-btn');
+        const settingsTabs = document.querySelectorAll('.settings-tab');
+        const tabContents = document.querySelectorAll('.tab-content');
+        const panelCollapseBtns = document.querySelectorAll('.panel-collapse-btn');
+        const panelTitles = document.querySelectorAll('.panel-title');
+        const blendModeSelect = document.getElementById('blend-mode');
+        const strokeCapSelect = document.getElementById('strokeCap');
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        const zoomFitBtn = document.getElementById('zoom-fit');
+        const zoomLevelDisplay = document.getElementById('zoom-level');
+        const zoomInfoFooter = document.getElementById('zoom-info');
+        const canvasPosInfo = document.getElementById('canvas-pos-info');
+        const showRulersCheckbox = document.getElementById('show-rulers');
+        const rulersElement = document.querySelector('.rulers');
+        const rulerHMarks = document.querySelector('.ruler-h-marks');
+        const rulerVMarks = document.querySelector('.ruler-v-marks');
+        const modals = document.querySelectorAll('.modal');
+        const modalDismissBtns = document.querySelectorAll('[data-dismiss="modal"]');
+        const clearConfirmModal = document.getElementById('clear-confirm-modal');
+        const confirmClearBtn = document.getElementById('confirm-clear-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const saveExportModal = document.getElementById('save-export-modal');
+        const exportPngBtn = document.getElementById('export-png');
+         const modalExportPngBtn = document.getElementById('modal-export-png'); // Added
+
+
+        // --- Canvas Setup ---
+        function resizeCanvases() {
+            // Keep logical size same, adjust display size if needed (e.g., high DPI)
+            // For simplicity, we'll keep it fixed for now.
+            // Adjust overlay canvas size to match main canvas
+             overlayCanvas.width = canvas.width;
+             overlayCanvas.height = canvas.height;
+             // Reset symmetry center on resize
+             symmetryCenterX = canvas.width / 2;
+             symmetryCenterY = canvas.height / 2;
+             drawOverlay(); // Redraw guides etc.
+             applyCanvasTransform(); // Reapply zoom/pan
+        }
+        resizeCanvases(); // Initial size
+
+
+        // --- Drawing Logic ---
+        function getMousePos(canvasEl, evt) {
+            const rect = canvasEl.getBoundingClientRect();
+            // Adjust for canvas scaling and panning
+            const scaleX = canvasEl.width / (rect.width / zoomLevel);
+            const scaleY = canvasEl.height / (rect.height / zoomLevel);
+
+             // Use changedTouches for touch events
+            const clientX = evt.changedTouches ? evt.changedTouches[0].clientX : evt.clientX;
+            const clientY = evt.changedTouches ? evt.changedTouches[0].clientY : evt.clientY;
+
+            return {
+                x: (clientX - rect.left) * scaleX - panX * scaleX / zoomLevel,
+                y: (clientY - rect.top) * scaleY - panY * scaleY / zoomLevel
+            };
+        }
+
+
+        function drawLine(context, x1, y1, x2, y2) {
+            context.beginPath();
+            context.moveTo(x1, y1);
+            context.lineTo(x2, y2);
+            context.stroke();
+        }
+
+         function draw(e) {
+            if (!isDrawing || isPanning) return; // Don't draw if not drawing or if panning
+
+            const { x, y } = getMousePos(canvas, e);
+
+            ctx.strokeStyle = brushColor;
+            ctx.lineWidth = brushSize;
+            ctx.globalAlpha = brushOpacity;
+            ctx.lineCap = lineCap;
+            ctx.lineJoin = 'round'; // Keep lines smooth
+            ctx.globalCompositeOperation = blendModeSelect.value; // Use selected blend mode
+
+
+            const angleStep = (Math.PI * 2) / symmetryCount;
+            const canvasCenterX = symmetryCenterX;
+            const canvasCenterY = symmetryCenterY;
+
+             // Translate coordinates relative to the symmetry center
+            const relX = x - canvasCenterX;
+            const relY = y - canvasCenterY;
+            const lastRelX = lastX - canvasCenterX;
+            const lastRelY = lastY - canvasCenterY;
+
+
+            for (let i = 0; i < symmetryCount; i++) {
+                const angle = i * angleStep;
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+
+                let currentSymX, currentSymY, lastSymX, lastSymY;
+
+                 // Rotate the relative coordinates
+                if (symmetryType === 'radial' || symmetryType === 'mandala' || symmetryType === 'kaleidoscope') {
+                     currentSymX = relX * cosA - relY * sinA;
+                     currentSymY = relX * sinA + relY * cosA;
+                     lastSymX = lastRelX * cosA - lastRelY * sinA;
+                     lastSymY = lastRelX * sinA + lastRelY * cosA;
+
+                     // Additional reflection for Kaleidoscope/Mandala
+                     if (symmetryType === 'kaleidoscope' || symmetryType === 'mandala') {
+                        // Reflect across the symmetry line
+                         const reflectedX = currentSymX;
+                         const reflectedY = -currentSymY;
+                         const lastReflectedX = lastSymX;
+                         const lastReflectedY = -lastSymY;
+
+                        // Draw reflected line
+                        drawLine(ctx,
+                                 lastReflectedX + canvasCenterX, lastReflectedY + canvasCenterY,
+                                 reflectedX + canvasCenterX, reflectedY + canvasCenterY);
+
+                         if (symmetryType === 'mandala') {
+                             // Reflect across the next symmetry line as well
+                             const nextAngle = (i + 0.5) * angleStep; // Midpoint angle
+                             const midCos = Math.cos(nextAngle);
+                             const midSin = Math.sin(nextAngle);
+                             const dist = Math.sqrt(relX*relX + relY*relY);
+                             const originalAngle = Math.atan2(relY, relX);
+                             const reflectedAngle = 2 * nextAngle - originalAngle;
+
+                             const currentMandalaX = dist * Math.cos(reflectedAngle);
+                             const currentMandalaY = dist * Math.sin(reflectedAngle);
+
+                             const lastDist = Math.sqrt(lastRelX*lastRelX + lastRelY*lastRelY);
+                             const lastOriginalAngle = Math.atan2(lastRelY, lastRelX);
+                             const lastReflectedAngle = 2 * nextAngle - lastOriginalAngle;
+
+                             const lastMandalaX = lastDist * Math.cos(lastReflectedAngle);
+                             const lastMandalaY = lastDist * Math.sin(lastReflectedAngle);
+
+                            drawLine(ctx,
+                                    lastMandalaX + canvasCenterX, lastMandalaY + canvasCenterY,
+                                    currentMandalaX + canvasCenterX, currentMandalaY + canvasCenterY);
+                         }
+                     }
+
+                } else if (symmetryType === 'mirror') {
+                    // Mirror symmetry assumes symmetryCount is 2 (vertical mirror)
+                    // Horizontal mirror needs adjustment or separate logic
+                    if (i === 0) { // Original
+                        currentSymX = relX;
+                        currentSymY = relY;
+                        lastSymX = lastRelX;
+                        lastSymY = lastRelY;
+                    } else { // Mirrored across Y-axis relative to center
+                        currentSymX = -relX;
+                        currentSymY = relY;
+                        lastSymX = -lastRelX;
+                        lastSymY = lastRelY;
+                    }
+                }
+
+
+                // Translate back to canvas coordinates and draw
+                 if (currentSymX !== undefined) { // Ensure calculations were done
+                     drawLine(ctx,
+                              lastSymX + canvasCenterX, lastSymY + canvasCenterY,
+                              currentSymX + canvasCenterX, currentSymY + canvasCenterY);
+                 }
+            }
+
+            // Update last position for the *original* mouse coordinates
+            lastX = x;
+            lastY = y;
+
+            // Draw guides on overlay if needed
+            drawOverlay();
+        }
+
+        function startDrawing(e) {
+             // Prevent drawing if right-click or middle-click (for panning)
+            if (e.button === 2 || e.button === 1) return;
+
+            isDrawing = true;
+            const pos = getMousePos(canvas, e);
+            [lastX, lastY] = [pos.x, pos.y];
+
+             if (dynamicSymmetryCenter) {
+                symmetryCenterX = pos.x;
+                symmetryCenterY = pos.y;
+            }
+
+            // Prevent default touch behavior like scrolling
+             if (e.touches) e.preventDefault();
+        }
+
+        function stopDrawing() {
+            if (isDrawing) {
+              isDrawing = false;
+              // Maybe add to history stack here
+            }
+             // Clear temporary guides from overlay
+            drawOverlay(); // Redraw permanent guides if needed
+        }
+
+        // --- Overlay Canvas for Guides ---
+        function drawOverlay() {
+            overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+            if (showSymmetryGuide && symmetryCount > 1) {
+                overlayCtx.strokeStyle = 'rgba(150, 150, 250, 0.5)';
+                overlayCtx.lineWidth = 1;
+                overlayCtx.setLineDash([4, 4]); // Dashed lines
+
+                const angleStep = (Math.PI * 2) / symmetryCount;
+                const guideCenterX = symmetryCenterX;
+                const guideCenterY = symmetryCenterY;
+                const guideRadius = Math.max(overlayCanvas.width, overlayCanvas.height) * 1.5; // Ensure lines reach edge
+
+
+                for (let i = 0; i < symmetryCount; i++) {
+                    const angle = i * angleStep;
+                    const endX = guideCenterX + guideRadius * Math.cos(angle);
+                    const endY = guideCenterY + guideRadius * Math.sin(angle);
+
+                    overlayCtx.beginPath();
+                    overlayCtx.moveTo(guideCenterX, guideCenterY);
+                    overlayCtx.lineTo(endX, endY);
+                    overlayCtx.stroke();
+
+                     // Add reflection lines for kaleidoscope/mandala
+                    if (symmetryType === 'kaleidoscope' || symmetryType === 'mandala') {
+                         const midAngle = (i + 0.5) * angleStep;
+                         const midEndX = guideCenterX + guideRadius * Math.cos(midAngle);
+                         const midEndY = guideCenterY + guideRadius * Math.sin(midAngle);
+                         overlayCtx.setLineDash([2, 2]); // Smaller dashes for reflection lines
+                         overlayCtx.strokeStyle = 'rgba(250, 150, 150, 0.4)';
+                         overlayCtx.beginPath();
+                         overlayCtx.moveTo(guideCenterX, guideCenterY);
+                         overlayCtx.lineTo(midEndX, midEndY);
+                         overlayCtx.stroke();
+                         overlayCtx.strokeStyle = 'rgba(150, 150, 250, 0.5)'; // Reset style
+                         overlayCtx.setLineDash([4, 4]);
+                    }
+                }
+
+                 // Draw center point
+                 overlayCtx.fillStyle = 'rgba(150, 150, 250, 0.8)';
+                 overlayCtx.beginPath();
+                 overlayCtx.arc(guideCenterX, guideCenterY, 4, 0, Math.PI * 2);
+                 overlayCtx.fill();
+
+                overlayCtx.setLineDash([]); // Reset line dash
+            }
+        }
+
+
+        // --- Tool & Settings Logic ---
+        function setActiveTool(tool) {
+            currentTool = tool;
+            toolBtns.forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.tool === tool);
+            });
+            // Update cursor based on tool
+            if (tool === 'pen' || tool === 'eraser') {
+                canvas.style.cursor = 'crosshair'; // Or a custom cursor
+            } else if (tool === 'fill') {
+                 canvas.style.cursor = 'url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMTcgMy43NWwtMTQgMTRoLDRsMy4yNS0zLjI1IDEuNzUgMS43NS0uNzUuNzVoLTZsNi41IDYuNWMyLjkyLTEuMTYgNS4yLTEzLjQ0IDUuMi0xMy40NGwtMy4yLTMuMjV6TTMgMTkuNzV2LTJoM3YtMy4yNWwxLjQ1IDEuNDUuOCA4eiIvPjwvc3ZnPg==) 8 24, pointer'; // Paint bucket cursor approx hotspot
+            } else if (tool === 'eyedropper') {
+                 canvas.style.cursor = 'url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSIjZmZmZmZmIj48cGF0aCBkPSJNMTEuMzUgMS4zN2MtNC4xMi45LTEuNzUgNC43Ny0xLjc1IDQuNzdzLTMuODcgMi4wMy00Ljc3IDUuNzNjLS43MyAzLjAxIDEuNzIgNi4zMyAyLjEyIDcuMTMgMS4xMyAyLjEgMy4yMyAyLjAzIDQuMTEgMS45MyAyLjAyLS4yNCA0LjgtMS4zOSA1Ljc5LTQuNTMuODEtMi42OS0xLjI1LTYuMTQtMS44My03LjM3LS41OC0xLjIzLTMuNDgtNy42Ni01LjY3LTcuNjd6bS42NSAxLjM4YzEuNS4wMSAzLjU4IDUuNDUgNC4wMyA2LjQ4LjY1IDEuNDUgMi4yOSA0LjU4IDEuNjMgNi43My0uNzEgMi4zLTEuNzcgMi44OC0zLjEyIDIuOTYtMS4yOS4wOC0yLjcuMDYtMy43OC0uNjUtMS4xNC0uNzYtMi4xLTEuODctMi4zNy0zLjEyLS4zMS0xLjQyLjM5LTMuNTQgMS4xNC00Ljk4LjgzLTEuNjMgMy4zNS0zLjU0IDMuMzUtMy41NHoiLz48L3N2Zz4=) 0 32, crosshair'; // Eyedropper approx hotspot
+            }
+            else {
+                canvas.style.cursor = 'default';
+            }
+
+            console.log("Tool changed to:", currentTool);
+        }
+
+         function setActiveColor(color, updatePicker = true) {
+            brushColor = color;
+            // Update UI
+            colorOptions.forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.color === color);
+            });
+            if (updatePicker) {
+                customColorPicker.value = color;
+            }
+            console.log("Color changed to:", brushColor);
+        }
+
+         function setActiveSymmetryType(type) {
+             symmetryType = type;
+             symmetryTypes.forEach(btn => {
+                 btn.classList.toggle('active', btn.dataset.type === type);
+             });
+              // Special handling for mirror - typically 2 segments
+             if (type === 'mirror' && symmetryCount !== 2) {
+                  symmetrySlider.value = 2;
+                  symmetryCount = 2;
+                  symmetryValueSpan.textContent = symmetryCount;
+                  symmetrySlider.disabled = true; // Disable slider for mirror
+             } else {
+                 symmetrySlider.disabled = false; // Enable slider for others
+             }
+             drawOverlay(); // Update guide display
+             console.log("Symmetry type:", symmetryType);
+         }
+
+         function updateBrushPreview() {
+            const displaySize = Math.max(1, Math.min(brushSize, 46)); // Cap preview size
+            brushDot.style.width = `${displaySize}px`;
+            brushDot.style.height = `${displaySize}px`;
+         }
+
+         function switchTab(tabId) {
+            settingsTabs.forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.tab === tabId);
+            });
+            tabContents.forEach(content => {
+                content.classList.toggle('active', content.id === `${tabId}-tab`);
+            });
+            console.log("Switched to tab:", tabId);
+         }
+
+        function togglePanelCollapse(panelSection) {
+            panelSection.classList.toggle('collapsed');
+        }
+
+        // --- Zoom & Pan ---
+        function applyCanvasTransform() {
+            canvasWrapper.style.transform = `scale(${zoomLevel}) translate(${panX}px, ${panY}px)`;
+             drawOverlay(); // Redraw overlay potentially affected by transform
+             updateRulers(); // Update rulers based on new view
+             updateFooterInfo();
+        }
+
+         function updateFooterInfo() {
+             zoomInfoFooter.textContent = `Zoom: ${Math.round(zoomLevel * 100)}%`;
+             // Position info updated on mouse move
+         }
+
+        function zoom(factor, centerX, centerY) {
+            const newZoomLevel = Math.max(0.1, Math.min(zoomLevel * factor, 10)); // Clamp zoom level
+            const zoomRatio = newZoomLevel / zoomLevel;
+
+            // Calculate new pan to keep the zoom centered on the mouse position
+             // Convert center coordinates to be relative to the canvas wrapper's top-left
+             const wrapperRect = canvasWrapper.getBoundingClientRect();
+             const centerRelX = centerX - wrapperRect.left;
+             const centerRelY = centerY - wrapperRect.top;
+
+             // Calculate the new pan values
+             panX = centerRelX / zoomLevel - centerRelX / newZoomLevel + panX * zoomRatio;
+             panY = centerRelY / zoomLevel - centerRelY / newZoomLevel + panY * zoomRatio;
+
+            zoomLevel = newZoomLevel;
+            zoomLevelDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+            applyCanvasTransform();
+        }
+
+         function fitToScreen() {
+            const containerWidth = canvasContainer.clientWidth;
+            const containerHeight = canvasContainer.clientHeight;
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            const scaleX = containerWidth / canvasWidth;
+            const scaleY = containerHeight / canvasHeight;
+            const newZoom = Math.min(scaleX, scaleY) * 0.95; // Fit with a little padding
+
+             // Center the canvas
+             const newPanX = (containerWidth - canvasWidth * newZoom) / (2 * newZoom);
+             const newPanY = (containerHeight - canvasHeight * newZoom) / (2 * newZoom);
+
+
+            zoomLevel = newZoom;
+             panX = newPanX;
+             panY = newPanY;
+             zoomLevelDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+            applyCanvasTransform();
+         }
+
+         function startPan(e) {
+             if (e.button === 1 || (e.button === 0 && e.altKey)) { // Middle mouse or Alt+Left Click
+                 isPanning = true;
+                 isDrawing = false; // Ensure drawing stops if pan starts mid-draw
+                 panStartX = e.clientX;
+                 panStartY = e.clientY;
+                 canvas.style.cursor = 'grabbing';
+                 e.preventDefault(); // Prevent default middle-click scroll
+             }
+         }
+
+         function doPan(e) {
+             if (!isPanning) return;
+
+             const dx = (e.clientX - panStartX) / zoomLevel;
+             const dy = (e.clientY - panStartY) / zoomLevel;
+
+             panX += dx;
+             panY += dy;
+
+             panStartX = e.clientX;
+             panStartY = e.clientY;
+
+             applyCanvasTransform();
+         }
+
+         function endPan(e) {
+             if (isPanning) {
+                 isPanning = false;
+                 // Restore cursor based on the selected tool
+                 setActiveTool(currentTool);
+             }
+         }
+
+         // --- Rulers ---
+        function updateRulers() {
+            if (!showRulersCheckbox.checked) return;
+
+            rulersElement.style.display = 'block';
+            rulerHMarks.innerHTML = '';
+            rulerVMarks.innerHTML = '';
+
+            const interval = (zoomLevel > 2) ? 50 : (zoomLevel > 0.5 ? 100 : 200); // Adjust interval based on zoom
+            const numSize = (zoomLevel > 1) ? 10 : 8; // Adjust number size
+
+             const startX = -panX * zoomLevel;
+             const startY = -panY * zoomLevel;
+
+            // Horizontal Ruler
+             const firstMarkX = Math.ceil(startX / (interval * zoomLevel)) * interval;
+            for (let x = firstMarkX; x * zoomLevel < startX + canvasContainer.clientWidth ; x += interval) {
+                 const markPos = (x + panX) * zoomLevel;
+                 if (markPos >= 0) { // Only draw marks within the visible ruler area
+                     const mark = document.createElement('div');
+                     mark.style.position = 'absolute';
+                     mark.style.left = `${markPos}px`;
+                     mark.style.top = '0';
+                     mark.style.width = '1px';
+                     mark.style.height = '5px';
+                     mark.style.background = 'rgba(255, 255, 255, 0.7)';
+
+                     const num = document.createElement('span');
+                     num.textContent = x;
+                     num.style.position = 'absolute';
+                     num.style.left = `${markPos + 3}px`;
+                     num.style.top = '7px';
+                     num.style.fontSize = `${numSize}px`;
+
+                     rulerHMarks.appendChild(mark);
+                     rulerHMarks.appendChild(num);
+                 }
+
+                 // Minor ticks
+                 for (let minor = 1; minor < 5; minor++) {
+                     const minorX = x - interval + (interval / 5) * minor;
+                     const minorMarkPos = (minorX + panX) * zoomLevel;
+                     if (minorMarkPos >= 0) {
+                        const minorMark = document.createElement('div');
+                        minorMark.style.position = 'absolute';
+                        minorMark.style.left = `${minorMarkPos}px`;
+                        minorMark.style.top = '0';
+                        minorMark.style.width = '1px';
+                        minorMark.style.height = '3px';
+                        minorMark.style.background = 'rgba(255, 255, 255, 0.4)';
+                        rulerHMarks.appendChild(minorMark);
+                     }
+                 }
+            }
+
+            // Vertical Ruler (similar logic)
+            const firstMarkY = Math.ceil(startY / (interval * zoomLevel)) * interval;
+            for (let y = firstMarkY; y * zoomLevel < startY + canvasContainer.clientHeight; y += interval) {
+                const markPos = (y + panY) * zoomLevel;
+                 if (markPos >= 0) {
+                     const mark = document.createElement('div');
+                     mark.style.position = 'absolute';
+                     mark.style.top = `${markPos}px`;
+                     mark.style.left = '15px'; /* Position from right edge of vert ruler */
+                     mark.style.width = '5px';
+                     mark.style.height = '1px';
+                     mark.style.background = 'rgba(255, 255, 255, 0.7)';
+
+                     const num = document.createElement('span');
+                     num.textContent = y;
+                     num.style.position = 'absolute';
+                     num.style.top = `${markPos + 3}px`;
+                     num.style.left = '5px';
+                     num.style.fontSize = `${numSize}px`;
+                     num.style.writingMode = 'vertical-lr';
+                     num.style.transform = 'rotate(180deg)';
+
+
+                     rulerVMarks.appendChild(mark);
+                     rulerVMarks.appendChild(num);
+                 }
+                 // Minor ticks
+                 for (let minor = 1; minor < 5; minor++) {
+                     const minorY = y - interval + (interval / 5) * minor;
+                     const minorMarkPos = (minorY + panY) * zoomLevel;
+                     if (minorMarkPos >= 0) {
+                        const minorMark = document.createElement('div');
+                        minorMark.style.position = 'absolute';
+                        minorMark.style.top = `${minorMarkPos}px`;
+                        minorMark.style.left = '17px';
+                        minorMark.style.width = '3px';
+                        minorMark.style.height = '1px';
+                        minorMark.style.background = 'rgba(255, 255, 255, 0.4)';
+                        rulerVMarks.appendChild(minorMark);
+                     }
+                 }
+            }
+        }
+
+
+         // --- Modals ---
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('active');
+            }
+        }
+
+        function hideModal(modal) {
+            modal.classList.remove('active');
+        }
+
+        function hideAllModals() {
+            modals.forEach(hideModal);
+        }
+
+         // --- Clear Canvas ---
+        function clearCanvas() {
+             ctx.clearRect(0, 0, canvas.width, canvas.height);
+             overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+             // Potentially reset history here
+             console.log("Canvas cleared");
+              hideAllModals(); // Hide confirmation modal after clearing
+         }
+
+
+        // --- Export ---
+         function exportCanvas(format = 'png') {
+             const tempCanvas = document.createElement('canvas');
+             const tempCtx = tempCanvas.getContext('2d');
+             const originalWidth = canvas.width;
+             const originalHeight = canvas.height;
+
+             // Consider export resolution if needed (simple export for now)
+             tempCanvas.width = originalWidth;
+             tempCanvas.height = originalHeight;
+
+             // Set background if needed (e.g., for transparent bg option)
+             const bgType = document.getElementById('background-type').value;
+             if (bgType === 'white' || bgType === 'pcb-green' || bgType === 'pcb-blue' || bgType === 'pcb-black' || bgType === 'custom') {
+                 let bgColor = '#ffffff';
+                 if (bgType === 'pcb-green') bgColor = '#417e5a'; // Example PCB green
+                 else if (bgType === 'pcb-blue') bgColor = '#2c3e50'; // Example PCB blue
+                 else if (bgType === 'pcb-black') bgColor = '#1a1a1a'; // Example PCB black
+                 else if (bgType === 'custom') bgColor = document.getElementById('bg-color-picker').value;
+                 tempCtx.fillStyle = bgColor;
+                 tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+             } else if (bgType === 'grid' || bgType === 'dots') {
+                 // Draw grid/dots pattern onto temp canvas if desired
+                 tempCtx.fillStyle = '#ffffff'; // Assume white bg for grid/dots export
+                 tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                 // Add grid/dot drawing logic here if needed for export
+             }
+
+
+             // Draw the main canvas content onto the temporary canvas
+             tempCtx.drawImage(canvas, 0, 0);
+
+             // Create download link
+             const link = document.createElement('a');
+             link.download = `circuit-canvas-export.${format}`;
+             link.href = tempCanvas.toDataURL(`image/${format}`); // Use appropriate mime type
+             link.click();
+             console.log(`Exported as ${format}`);
+              hideAllModals(); // Hide export modal after export
+         }
+
+        // --- Event Listeners ---
+        // Canvas drawing events
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing); // Stop if mouse leaves canvas
+
+         // Touch events
+         canvas.addEventListener('touchstart', startDrawing);
+         canvas.addEventListener('touchmove', draw);
+         canvas.addEventListener('touchend', stopDrawing);
+         canvas.addEventListener('touchcancel', stopDrawing); // Handle interruption
+
+
+        // Tool selection
+        toolBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (!btn.classList.contains('pro') || confirm("Pro feature!")) { // Simple PRO check
+                    setActiveTool(btn.dataset.tool);
+                }
+            });
+        });
+
+        // Color selection
+        colorOptions.forEach(opt => {
+            opt.addEventListener('click', () => setActiveColor(opt.dataset.color));
+        });
+        customColorPicker.addEventListener('input', (e) => setActiveColor(e.target.value, false));
+        customColorPicker.addEventListener('change', (e) => setActiveColor(e.target.value)); // Update swatches on final selection
+
+        // Opacity slider
+        opacitySlider.addEventListener('input', (e) => {
+            brushOpacity = parseFloat(e.target.value);
+            opacityValueSpan.textContent = `${Math.round(brushOpacity * 100)}%`;
+        });
+
+        // Size slider
+        sizeSlider.addEventListener('input', (e) => {
+            brushSize = parseInt(e.target.value, 10);
+            sizeValueSpan.textContent = `${brushSize}px`;
+            updateBrushPreview();
+        });
+
+        // Symmetry controls
+        symmetrySlider.addEventListener('input', (e) => {
+            symmetryCount = parseInt(e.target.value, 10);
+            symmetryValueSpan.textContent = symmetryCount;
+            drawOverlay();
+        });
+        symmetryTypes.forEach(typeBtn => {
+            typeBtn.addEventListener('click', () => setActiveSymmetryType(typeBtn.dataset.type));
+        });
+        showGuideCheckbox.addEventListener('change', (e) => {
+            showSymmetryGuide = e.target.checked;
+            drawOverlay();
+        });
+         dynamicCenterCheckbox.addEventListener('change', (e) => {
+            dynamicSymmetryCenter = e.target.checked;
+            // Reset center if unchecked
+            if (!dynamicSymmetryCenter) {
+                symmetryCenterX = canvas.width / 2;
+                symmetryCenterY = canvas.height / 2;
+                drawOverlay();
+            }
+        });
+
+
+        // Clear canvas button
+        clearCanvasBtn.addEventListener('click', () => showModal('clear-confirm-modal'));
+         confirmClearBtn.addEventListener('click', clearCanvas);
+
+
+         // Settings Tabs
+         settingsTabs.forEach(tab => {
+             tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+         });
+
+         // Panel Collapse/Expand
+         panelTitles.forEach(title => {
+             const panelSection = title.closest('.panel-section');
+             const collapseBtn = title.querySelector('.panel-collapse-btn');
+             if (panelSection && collapseBtn) {
+                 title.addEventListener('click', (e) => {
+                      // Only collapse if clicking the title area, not the button itself
+                     if (!collapseBtn.contains(e.target)) {
+                         togglePanelCollapse(panelSection);
+                     }
+                 });
+                  collapseBtn.addEventListener('click', (e) => {
+                      e.stopPropagation(); // Prevent title click event
+                      togglePanelCollapse(panelSection);
+                  });
+             }
+         });
+
+
+        // Blend Mode & Line Cap
+         blendModeSelect.addEventListener('change', (e) => {
+            globalCompositeOperation = e.target.value;
+            // Note: This affects future drawing, not existing content directly without redrawing.
+         });
+         strokeCapSelect.addEventListener('change', (e) => {
+            lineCap = e.target.value;
+         });
+
+         // Zoom Controls
+         zoomInBtn.addEventListener('click', (e) => zoom(1.2, e.clientX, e.clientY));
+         zoomOutBtn.addEventListener('click', (e) => zoom(1 / 1.2, e.clientX, e.clientY));
+         zoomFitBtn.addEventListener('click', fitToScreen);
+         canvasContainer.addEventListener('wheel', (e) => {
+             e.preventDefault(); // Prevent page scroll
+             const delta = e.deltaY > 0 ? 1 / 1.1 : 1.1; // Zoom direction
+             zoom(delta, e.clientX, e.clientY);
+         }, { passive: false }); // Need passive: false to preventDefault
+
+         // Pan Controls
+         canvasContainer.addEventListener('mousedown', startPan);
+         canvasContainer.addEventListener('mousemove', doPan);
+         canvasContainer.addEventListener('mouseup', endPan);
+         canvasContainer.addEventListener('mouseleave', endPan); // Stop panning if mouse leaves container
+
+        // Rulers Toggle
+         showRulersCheckbox.addEventListener('change', (e) => {
+             rulersElement.style.display = e.target.checked ? 'block' : 'none';
+             if (e.target.checked) {
+                 updateRulers();
+             }
+         });
+
+         // Update mouse position in footer
+         canvasContainer.addEventListener('mousemove', (e) => {
+            if (isPanning) return; // Don't update if panning
+            const pos = getMousePos(canvas, e); // Use canvas relative coords
+            canvasPosInfo.textContent = `X: ${Math.round(pos.x)}, Y: ${Math.round(pos.y)}`;
+         });
+         canvasContainer.addEventListener('mouseout', () => {
+             // Optionally clear position or leave last known
+             // canvasPosInfo.textContent = `X: -, Y: -`;
+         });
+
+          // Modal Dismiss
+         modalDismissBtns.forEach(btn => {
+             btn.addEventListener('click', () => hideModal(btn.closest('.modal')));
+         });
+         modals.forEach(modal => {
+             modal.addEventListener('click', (e) => {
+                 // Hide if clicking on the modal background (overlay)
+                 if (e.target === modal) {
+                     hideModal(modal);
+                 }
+             });
+         });
+
+
+        // Save/Export Button
+        saveBtn.addEventListener('click', () => showModal('save-export-modal'));
+        exportPngBtn.addEventListener('click', () => exportCanvas('png'));
+         modalExportPngBtn.addEventListener('click', () => exportCanvas('png')); // Also trigger from modal
+
+
+        // --- Initial Setup ---
+        setActiveTool(currentTool); // Set initial active tool UI
+        setActiveColor(brushColor); // Set initial color UI
+        setActiveSymmetryType(symmetryType); // Set initial symmetry UI
+        updateBrushPreview(); // Set initial brush preview size
+        drawOverlay(); // Draw initial guides if enabled
+        updateRulers(); // Initial ruler draw if enabled
+         updateFooterInfo(); // Initial footer info
+        fitToScreen(); // Fit canvas initially
+
+        console.log("CircuitCanvas Pro Initialized!");
+    });
+  </script>
+</body>
+</html>
