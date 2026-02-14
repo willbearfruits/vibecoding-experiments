@@ -41,6 +41,8 @@ python python-microcontroller-ide.py
 
 These are experimental projects and may not be fully functional or documented. They represent snapshots of creative coding sessions and exploratory development.
 
+Personal names and identifiers have been scrubbed from project-facing content where found.
+
 ---
 
 *Archived experiments from various vibecoding sessions*
@@ -54,3 +56,12 @@ Open `library/index.html` to browse an explorable gallery with thumbnails and de
 This repository deploys automatically to GitHub Pages from `main` using:
 
 - `.github/workflows/deploy-pages.yml`
+
+## Security
+
+- Landing pages include a restrictive baseline CSP and referrer policy.
+- Report vulnerabilities per `SECURITY.md`.
+
+## License
+
+MIT (`LICENSE`)

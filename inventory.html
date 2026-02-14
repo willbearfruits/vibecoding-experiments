@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Yaniv’s Studio Pyramid</title>
+<title>Studio Pyramid</title>
 <link rel="preconnect" href="https://fonts.gstatic.com" />
 <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet" />
 <style>
@@ -35,7 +35,7 @@
 </style>
 </head>
 <body>
-<h1>Yaniv’s Studio Pyramid • Dashboard</h1>
+<h1>Studio Pyramid • Dashboard</h1>
 <div id="app">
   <div id="pyramid"></div>
   <div id="side">
@@ -127,7 +127,7 @@ const DEFAULT_DATA = {
     {"code":"CH-ACETONE","tier":"5","name":"Acetone"}
   ]
 };
-const STORAGE_KEY = "yanivStudioInventory";
+const STORAGE_KEY = "studioInventory";
 function loadData(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||DEFAULT_DATA;}catch(e){return DEFAULT_DATA;}}
 function saveData(d){localStorage.setItem(STORAGE_KEY,JSON.stringify(d));}
 function renderPyramid(d){const c=document.getElementById("pyramid");c.innerHTML="";const g={};d.items.forEach(i=>(g[i.tier]=g[i.tier]||[]).push(i));["0","1","2","3A","3D","4","5"].forEach(t=>{if(!g[t])return;const tdiv=document.createElement("div");tdiv.className="tier";tdiv.dataset.tier=t;tdiv.innerHTML=`<span class=code>Tier ${t}</span><span class=name> (${g[t].length})</span>`;const ch=document.createElement("div");ch.className="children";g[t].sort((a,b)=>a.code.localeCompare(b.code)).forEach(i=>{const it=document.createElement("div");it.style.padding="0.2rem 0.8rem";it.innerHTML=`<span class=code>${i.code}</span> <span class=name>${i.name}</span>`;ch.appendChild(it);});tdiv.appendChild(ch);tdiv.addEventListener('click',e=>{if(e.target===tdiv)tdiv.classList.toggle('collapsed')});c.appendChild(tdiv);});}
