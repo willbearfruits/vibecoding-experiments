@@ -1,0 +1,583 @@
+[
+  {
+    "file": "3d-studio-explorer.html",
+    "title": "3d studio explorer",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: 3d studio explorer.",
+    "scope": "root"
+  },
+  {
+    "file": "inventory.html",
+    "title": "inventory",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: inventory.",
+    "scope": "root"
+  },
+  {
+    "file": "python-microcontroller-ide.py",
+    "title": "python microcontroller ide",
+    "category": "python",
+    "description": "Python desktop/tooling experiment: python microcontroller ide.",
+    "scope": "root"
+  },
+  {
+    "file": "single_html/3d-studio-explorer.html",
+    "title": "3d studio explorer",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: 3d studio explorer.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/alien-invasion-interface.html",
+    "title": "alien invasion interface",
+    "category": "interface",
+    "description": "UI/UX interface concept or product mockup: alien invasion interface.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/audio-enclosure-designer.html",
+    "title": "audio enclosure designer",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: audio enclosure designer.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/audio-shader.html",
+    "title": "audio shader",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: audio shader.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/boxbuilder.html",
+    "title": "boxbuilder",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: boxbuilder.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/buildboss_media.html",
+    "title": "buildboss media",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: buildboss media.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/buildboss_single.html",
+    "title": "buildboss single",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: buildboss single.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/buildboss_with_docs.html",
+    "title": "buildboss with docs",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: buildboss with docs.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/character.html",
+    "title": "character",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: character.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/claude-code-gui.html",
+    "title": "claude code gui",
+    "category": "code",
+    "description": "Code/editor/dev-tool experiment: claude code gui.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/code (1).html",
+    "title": "code",
+    "category": "code",
+    "description": "Code/editor/dev-tool experiment: code.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/code (2).html",
+    "title": "code",
+    "category": "code",
+    "description": "Code/editor/dev-tool experiment: code.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/code.html",
+    "title": "code",
+    "category": "code",
+    "description": "Code/editor/dev-tool experiment: code.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/dayplan.html",
+    "title": "dayplan",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: dayplan.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/dedmenandpygz.html",
+    "title": "dedmenandpygz",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: dedmenandpygz.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/doom-labyrinth.html",
+    "title": "doom labyrinth",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: doom labyrinth.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/dos-timer.html",
+    "title": "dos timer",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: dos timer.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/dreados.html",
+    "title": "dreados",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: dreados.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/enhanced-symmetry-canvas (1).html",
+    "title": "enhanced symmetry canvas",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: enhanced symmetry canvas.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/enhanced-symmetry-canvas (2).html",
+    "title": "enhanced symmetry canvas",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: enhanced symmetry canvas.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/enhanced-symmetry-canvas (3).html",
+    "title": "enhanced symmetry canvas",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: enhanced symmetry canvas.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/enhanced-symmetry-canvas (4).html",
+    "title": "enhanced symmetry canvas",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: enhanced symmetry canvas.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/enhanced-symmetry-canvas.html",
+    "title": "enhanced symmetry canvas",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: enhanced symmetry canvas.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/esp32-web-interface.html",
+    "title": "esp32 web interface",
+    "category": "interface",
+    "description": "UI/UX interface concept or product mockup: esp32 web interface.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/falling-stone-text.html",
+    "title": "falling stone text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: falling stone text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/fractal-walker (1).html",
+    "title": "fractal walker",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: fractal walker.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/fractal-walker (2).html",
+    "title": "fractal walker",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: fractal walker.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/fractal-walker (3).html",
+    "title": "fractal walker",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: fractal walker.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/fractal-walker.html",
+    "title": "fractal walker",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: fractal walker.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/fractalboy2.html",
+    "title": "fractalboy2",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: fractalboy2.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/fractaldith.html",
+    "title": "fractaldith",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: fractaldith.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/game.html",
+    "title": "game",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: game.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/heart-complete-improved.html",
+    "title": "heart complete improved",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: heart complete improved.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/heart-complete.html",
+    "title": "heart complete",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: heart complete.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/heart-databend-vanilla.html",
+    "title": "heart databend vanilla",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: heart databend vanilla.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/html-liquid-drop.html",
+    "title": "html liquid drop",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: html liquid drop.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/index.html",
+    "title": "index",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: index.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/invaders.html",
+    "title": "invaders",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: invaders.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/liquid-heart-moon-fixed.html",
+    "title": "liquid heart moon fixed",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: liquid heart moon fixed.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/liquid-heart-moon.html",
+    "title": "liquid heart moon",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: liquid heart moon.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/liquid-heart-shader-fixed.html",
+    "title": "liquid heart shader fixed",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: liquid heart shader fixed.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/lsjcity.html",
+    "title": "lsjcity",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: lsjcity.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/modern-guitar-simulation (1).html",
+    "title": "modern guitar simulation",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: modern guitar simulation.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/modern-guitar-simulation (2).html",
+    "title": "modern guitar simulation",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: modern guitar simulation.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/modern-guitar-simulation (3).html",
+    "title": "modern guitar simulation",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: modern guitar simulation.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/modern-guitar-simulation.html",
+    "title": "modern guitar simulation",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: modern guitar simulation.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/modular-audio-prototype.html",
+    "title": "modular audio prototype",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: modular audio prototype.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/multi-screen-seder.html",
+    "title": "multi screen seder",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: multi screen seder.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/music-device-product-page (1).html",
+    "title": "music device product page",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: music device product page.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/music-device-product-page (2).html",
+    "title": "music device product page",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: music device product page.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/music-device-product-page (3).html",
+    "title": "music device product page",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: music device product page.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/music-device-product-page (4).html",
+    "title": "music device product page",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: music device product page.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/music-device-product-page.html",
+    "title": "music device product page",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: music device product page.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text (1).html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text (2).html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text (3).html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text (4).html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text (5).html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text (6).html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/optimized-falling-text.html",
+    "title": "optimized falling text",
+    "category": "text",
+    "description": "Text-focused visual/interaction experiment: optimized falling text.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/particle-simulator.html",
+    "title": "particle simulator",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: particle simulator.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/pomodoro-html.html",
+    "title": "pomodoro html",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: pomodoro html.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/puzzle-game.html",
+    "title": "puzzle game",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: puzzle game.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/quantum-resonator (1).html",
+    "title": "quantum resonator",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: quantum resonator.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/quantum-resonator.html",
+    "title": "quantum resonator",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: quantum resonator.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/raycaster-game-enhanced.html",
+    "title": "raycaster game enhanced",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: raycaster game enhanced.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/raycaster-game.html",
+    "title": "raycaster game",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: raycaster game.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/raycaster-html.html",
+    "title": "raycaster html",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: raycaster html.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/shader-viewer.html",
+    "title": "shader viewer",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: shader viewer.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/sound-interface-html.html",
+    "title": "sound interface html",
+    "category": "audio",
+    "description": "Audio-reactive or sound-oriented experiment: sound interface html.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/space invaders.html",
+    "title": "space invaders",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: space invaders.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/store-creator-portal.html",
+    "title": "store creator portal",
+    "category": "interface",
+    "description": "UI/UX interface concept or product mockup: store creator portal.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/svg-metric-resizer-html (1).html",
+    "title": "svg metric resizer html",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: svg metric resizer html.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/svg-metric-resizer-html (2).html",
+    "title": "svg metric resizer html",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: svg metric resizer html.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/svg-metric-resizer-html.html",
+    "title": "svg metric resizer html",
+    "category": "utility",
+    "description": "Utility/tool style interface experiment: svg metric resizer html.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/test.html",
+    "title": "test",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: test.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/text-visualization.html",
+    "title": "text visualization",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: text visualization.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/tron.html",
+    "title": "tron",
+    "category": "game",
+    "description": "Interactive game or play-style prototype: tron.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/vanilla-fractal-dithering.html",
+    "title": "vanilla fractal dithering",
+    "category": "visual",
+    "description": "Generative or shader-style visual experiment: vanilla fractal dithering.",
+    "scope": "single_html"
+  },
+  {
+    "file": "single_html/walken-positive-comparison.html",
+    "title": "walken positive comparison",
+    "category": "misc",
+    "description": "General creative vibecoding experiment: walken positive comparison.",
+    "scope": "single_html"
+  }
+]

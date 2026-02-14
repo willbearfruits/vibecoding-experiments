@@ -2,6 +2,11 @@
 
 A collection of experimental HTML/JavaScript projects and prototypes created during creative coding sessions.
 
+## Live Demo
+
+- GitHub Pages: https://willbearfruits.github.io/vibecoding-experiments/
+- Library: https://willbearfruits.github.io/vibecoding-experiments/library/
+
 ## Contents
 
 This repository serves as an archive of various web-based experiments and tools:
@@ -39,3 +44,13 @@ These are experimental projects and may not be fully functional or documented. T
 ---
 
 *Archived experiments from various vibecoding sessions*
+
+## Vibecoding Experiment Library
+
+Open `library/index.html` to browse an explorable gallery with thumbnails and descriptions of experiments.
+
+## Deploy (GitHub Pages)
+
+This repository deploys automatically to GitHub Pages from `main` using:
+
+- `.github/workflows/deploy-pages.yml`

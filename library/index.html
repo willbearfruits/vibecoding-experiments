@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vibecoding Library</title>
+  <style>
+    :root {
+      --bg: #0f1014;
+      --bg2: #171a22;
+      --ink: #f3f5ff;
+      --muted: #99a1b8;
+      --line: #2a3042;
+      --accent: #8cf4d4;
+      --chip: #22283a;
+      --card: #121625;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 700px at 10% -10%, #24314f 0%, transparent 55%),
+        radial-gradient(1100px 700px at 100% 0%, #1e3b3b 0%, transparent 55%),
+        linear-gradient(180deg, var(--bg), #0b0c11 70%);
+      min-height: 100vh;
+    }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+      background: rgba(12, 14, 20, 0.8);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .wrap {
+      width: min(1400px, 94vw);
+      margin: 0 auto;
+    }
+
+    .head {
+      padding: 18px 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.2rem, 2.2vw, 1.9rem);
+      letter-spacing: 0.01em;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin: 0;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      padding-bottom: 12px;
+    }
+
+    @media (min-width: 900px) {
+      .controls { grid-template-columns: 1.4fr 1fr; }
+    }
+
+    input, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #0d1120;
+      color: var(--ink);
+      padding: 11px 12px;
+      border-radius: 10px;
+      outline: none;
+    }
+
+    input:focus, select:focus { border-color: var(--accent); }
+
+    main { padding: 16px 0 36px; }
+
+    .stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+
+    .chip {
+      font-size: 0.78rem;
+      border: 1px solid var(--line);
+      background: var(--chip);
+      border-radius: 999px;
+      padding: 6px 10px;
+      color: #cbd3ea;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0)) , var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: 145px auto;
+    }
+
+    .thumb {
+      position: relative;
+      background: #0b0e18;
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+
+    .thumb iframe {
+      pointer-events: none;
+      border: 0;
+      width: 1280px;
+      height: 720px;
+      transform-origin: top left;
+      transform: scale(0.2);
+      opacity: 0.95;
+    }
+
+    .thumb .placeholder {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      color: #9fb1dd;
+      font-size: 0.82rem;
+      background: radial-gradient(circle at 40% 20%, #243a64, #0b0e18 65%);
+      text-align: center;
+      padding: 8px;
+    }
+
+    .body {
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 0.95rem;
+      line-height: 1.22;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.72rem;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .desc {
+      color: #c7cee3;
+      font-size: 0.79rem;
+      line-height: 1.35;
+      margin: 0;
+      min-height: 2.7em;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      text-align: center;
+      text-decoration: none;
+      color: #0c1a18;
+      background: var(--accent);
+      border-radius: 8px;
+      padding: 8px 9px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .btn.secondary {
+      background: #24324d;
+      color: #d9e6ff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <div class="head">
+        <h1>Vibecoding Experiment Library</h1>
+        <p class="sub">Explorable dump with live thumbnails, quick descriptions, and direct launch links.</p>
+        <div class="controls">
+          <input id="search" type="search" placeholder="Search by name, file, or description..." />
+          <select id="category">
+            <option value="all">All categories</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="stats" class="stats"></div>
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <script src="./catalog.js"></script>
+  <script>
+    const grid = document.getElementById('grid');
+    const search = document.getElementById('search');
+    const category = document.getElementById('category');
+    const stats = document.getElementById('stats');
+
+    let catalog = [];
+
+    function isHtml(file) {
+      return file.toLowerCase().endsWith('.html');
+    }
+
+    function card(item) {
+      const fileHref = `../${item.file}`;
+      const openHref = fileHref;
+      const sourceHref = fileHref;
+
+      const thumb = isHtml(item.file)
+        ? `<iframe loading="lazy" src="${fileHref}"></iframe>`
+        : `<div class="placeholder">Python Tool<br>${item.title}</div>`;
+
+      return `
+        <article class="card">
+          <div class="thumb">${thumb}</div>
+          <div class="body">
+            <h3 class="title">${item.title}</h3>
+            <div class="meta">
+              <span class="chip">${item.category}</span>
+              <span class="chip">${item.scope}</span>
+            </div>
+            <p class="desc">${item.description}</p>
+            <div class="actions">
+              <a class="btn" href="${openHref}" target="_blank" rel="noopener">Open</a>
+              <a class="btn secondary" href="${sourceHref}" target="_blank" rel="noopener">Source</a>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      const cat = category.value;
+
+      const filtered = catalog.filter((item) => {
+        const hay = `${item.title} ${item.file} ${item.description}`.toLowerCase();
+        const okQ = !q || hay.includes(q);
+        const okC = cat === 'all' || item.category === cat;
+        return okQ && okC;
+      });
+
+      stats.innerHTML = [
+        `<span class="chip">Total: ${catalog.length}</span>`,
+        `<span class="chip">Showing: ${filtered.length}</span>`
+      ].join('');
+
+      grid.innerHTML = filtered.map(card).join('');
+    }
+
+    function initCategories() {
+      const cats = [...new Set(catalog.map((i) => i.category))].sort();
+      for (const c of cats) {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        category.appendChild(opt);
+      }
+    }
+
+    function boot() {
+      catalog = Array.isArray(window.VIBE_CATALOG) ? window.VIBE_CATALOG : [];
+      initCategories();
+      render();
+    }
+
+    search.addEventListener('input', render);
+    category.addEventListener('change', render);
+    boot();
+  </script>
+</body>
+</html>
